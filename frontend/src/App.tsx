@@ -7,6 +7,7 @@ import { ProjectsPage } from './pages/Projects';
 import { ProjectDetailPage } from './pages/ProjectDetail';
 import { AssetReviewPage } from './pages/AssetReview';
 import { CreativeQueuePage } from './pages/CreativeQueue';
+import { ReviewQueuePage } from './pages/ReviewQueue';
 import { RequestDetailPage } from './pages/RequestDetail';
 import { AdminUsersPage } from './pages/AdminUsers';
 import { AdminSettingsPage } from './pages/AdminSettings';
@@ -77,6 +78,7 @@ function App() {
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="assets/:id" element={<AssetReviewPage />} />
           <Route path="queue" element={<CreativeQueuePage />} />
+          <Route path="review-queue" element={<ReviewQueuePage />} />
           <Route path="requests/:id" element={<RequestDetailPage />} />
 
           {/* Admin Routes */}

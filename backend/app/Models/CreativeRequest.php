@@ -61,13 +61,13 @@ class CreativeRequest extends Model
 
     public function isOverdue(): bool
     {
-        return $this->deadline && $this->deadline->isPast() && !in_array($this->status, ['completed', 'cancelled']);
+        return $this->deadline && $this->deadline->isPast() && $this->status !== 'completed';
     }
 
     public function isDueSoon(): bool
     {
         if (!$this->deadline) return false;
-        return $this->deadline->isBetween(now(), now()->addDay()) && !in_array($this->status, ['completed', 'cancelled']);
+        return $this->deadline->isBetween(now(), now()->addDay()) && $this->status !== 'completed';
     }
 
     public function start(): void
@@ -78,11 +78,6 @@ class CreativeRequest extends Model
     public function complete(): void
     {
         $this->update(['status' => 'completed']);
-    }
-
-    public function cancel(): void
-    {
-        $this->update(['status' => 'cancelled']);
     }
 
     public function scopePending($query)
@@ -98,7 +93,7 @@ class CreativeRequest extends Model
     public function scopeOverdue($query)
     {
         return $query->where('deadline', '<', now())
-            ->whereNotIn('status', ['completed', 'cancelled']);
+            ->where('status', '!=', 'completed');
     }
 
     public function scopeForUser($query, User $user)

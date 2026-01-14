@@ -47,7 +47,7 @@ class CreativeRequestController extends Controller
     {
         $query = CreativeRequest::with(['creator', 'project', 'assets'])
             ->where('assigned_to', $request->user()->id)
-            ->whereNotIn('status', ['completed', 'cancelled']);
+            ->where('status', '!=', 'completed');
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -112,7 +112,7 @@ class CreativeRequestController extends Controller
             'deadline' => 'sometimes|date',
             'priority' => 'sometimes|in:low,normal,high,urgent',
             'specs' => 'nullable|array',
-            'status' => 'sometimes|in:pending,in_progress,asset_submitted,completed,cancelled',
+            'status' => 'sometimes|in:pending,in_progress,asset_submitted,completed',
         ]);
 
         $creativeRequest->update($validated);

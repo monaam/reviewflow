@@ -210,10 +210,17 @@ class AssetController extends Controller
             'comment' => $validated['comment'] ?? null,
         ]);
 
+        // Auto-complete linked requests when asset is approved
+        foreach ($asset->creativeRequests as $creativeRequest) {
+            if (!in_array($creativeRequest->status, ['completed', 'cancelled'])) {
+                $creativeRequest->complete();
+            }
+        }
+
         // Send Discord notification
         $this->discord->notifyApproval($asset, $request->user());
 
-        return response()->json($asset->fresh(['approvalLogs.user']));
+        return response()->json($asset->fresh(['approvalLogs.user', 'creativeRequests']));
     }
 
     public function requestRevision(Request $request, Asset $asset): JsonResponse

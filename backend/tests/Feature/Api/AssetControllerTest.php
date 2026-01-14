@@ -457,6 +457,59 @@ class AssetControllerTest extends TestCase
             ->assertJsonPath('status', 'approved');
     }
 
+    public function test_approval_auto_completes_linked_request(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        // Create a request and link it to the asset
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $this->creative->id,
+            'status' => 'asset_submitted',
+        ]);
+        $asset->creativeRequests()->attach($request->id);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/approve");
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'approved');
+
+        // Verify the linked request is auto-completed
+        $this->assertDatabaseHas('creative_requests', [
+            'id' => $request->id,
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_approval_does_not_affect_already_completed_request(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        // Create an already completed request
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $this->creative->id,
+            'status' => 'completed',
+        ]);
+        $asset->creativeRequests()->attach($request->id);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/approve");
+
+        $response->assertOk();
+
+        // Verify the request status is still completed (not changed)
+        $this->assertDatabaseHas('creative_requests', [
+            'id' => $request->id,
+            'status' => 'completed',
+        ]);
+    }
+
     public function test_creative_cannot_approve_asset(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
