@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   Edit2,
   Trash2,
-  XCircle,
   UserCheck,
 } from 'lucide-react';
 import { requestsApi } from '../api/requests';
@@ -87,7 +86,6 @@ export function RequestDetailPage() {
   const canEdit = isCreator || user?.role === 'admin';
   const canDelete = isCreator || user?.role === 'admin';
   const canReassign = (isCreator || user?.role === 'admin') && !['completed', 'cancelled'].includes(request?.status || '');
-  const canCancel = (isCreator || user?.role === 'admin') && !['completed', 'cancelled'].includes(request?.status || '');
 
   const isOverdue = request &&
     new Date(request.deadline) < new Date() &&
@@ -99,15 +97,6 @@ export function RequestDetailPage() {
       navigate(`/projects/${request?.project_id}`);
     } catch (error) {
       console.error('Failed to delete request:', error);
-    }
-  };
-
-  const handleCancel = async () => {
-    try {
-      await requestsApi.update(id!, { status: 'cancelled' });
-      fetchRequest();
-    } catch (error) {
-      console.error('Failed to cancel request:', error);
     }
   };
 
@@ -166,12 +155,6 @@ export function RequestDetailPage() {
               <button onClick={() => setShowReassignModal(true)} className="btn-secondary">
                 <UserCheck className="w-4 h-4 mr-2" />
                 Reassign
-              </button>
-            )}
-            {canCancel && (
-              <button onClick={handleCancel} className="btn-secondary text-orange-600 hover:bg-orange-50">
-                <XCircle className="w-4 h-4 mr-2" />
-                Cancel
               </button>
             )}
             {canDelete && (
