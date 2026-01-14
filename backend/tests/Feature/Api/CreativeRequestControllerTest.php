@@ -378,11 +378,30 @@ class CreativeRequestControllerTest extends TestCase
 
         $this->actingAsAdmin();
         $response = $this->patchJson("/api/requests/{$request->id}", [
-            'status' => 'cancelled',
+            'status' => 'in_progress',
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('status', 'cancelled');
+            ->assertJsonPath('status', 'in_progress');
+    }
+
+    public function test_cannot_set_status_to_cancelled(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $this->creative->id,
+        ]);
+
+        $this->actingAsAdmin();
+        $response = $this->patchJson("/api/requests/{$request->id}", [
+            'status' => 'cancelled',
+        ]);
+
+        // 'cancelled' is not a valid status - use delete instead
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
     }
 
     public function test_assignee_cannot_update_request(): void
