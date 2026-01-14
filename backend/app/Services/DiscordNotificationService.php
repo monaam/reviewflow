@@ -35,7 +35,7 @@ class DiscordNotificationService
                 'fields' => [
                     ['name' => 'Title', 'value' => $request->title, 'inline' => false],
                     ['name' => 'Project', 'value' => $request->project->name, 'inline' => true],
-                    ['name' => 'Assigned To', 'value' => $request->assignee->name, 'inline' => true],
+                    ['name' => 'Assigned To', 'value' => $request->assignee?->name ?? 'Unassigned', 'inline' => true],
                     ['name' => 'Priority', 'value' => ucfirst($request->priority), 'inline' => true],
                     ['name' => 'Deadline', 'value' => $request->deadline->format('M j, Y g:i A'), 'inline' => true],
                 ],
@@ -144,7 +144,7 @@ class DiscordNotificationService
                 'fields' => [
                     ['name' => 'Request', 'value' => $request->title, 'inline' => false],
                     ['name' => 'Project', 'value' => $request->project->name, 'inline' => true],
-                    ['name' => 'Assigned To', 'value' => $request->assignee->name, 'inline' => true],
+                    ['name' => 'Assigned To', 'value' => $request->assignee?->name ?? 'Unassigned', 'inline' => true],
                     ['name' => 'Due', 'value' => $request->deadline->format('M j, Y g:i A'), 'inline' => false],
                 ],
                 'footer' => ['text' => 'Due in less than 24 hours'],
@@ -162,7 +162,7 @@ class DiscordNotificationService
                 'fields' => [
                     ['name' => 'Request', 'value' => $request->title, 'inline' => false],
                     ['name' => 'Project', 'value' => $request->project->name, 'inline' => true],
-                    ['name' => 'Assigned To', 'value' => $request->assignee->name, 'inline' => true],
+                    ['name' => 'Assigned To', 'value' => $request->assignee?->name ?? 'Unassigned', 'inline' => true],
                     ['name' => 'Was Due', 'value' => $request->deadline->format('M j, Y g:i A'), 'inline' => false],
                 ],
                 'footer' => ['text' => "Overdue by {$request->deadline->diffForHumans()}"],

@@ -155,6 +155,36 @@ class CreativeRequestControllerTest extends TestCase
             ->assertJsonCount(3, 'data');
     }
 
+    public function test_my_queue_includes_unassigned_requests(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        // Assigned to this creative
+        CreativeRequest::factory()->pending()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $this->creative->id,
+        ]);
+        // Unassigned - should also appear
+        CreativeRequest::factory()->pending()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => null,
+        ]);
+        // Assigned to another creative - should NOT appear
+        $otherCreative = User::factory()->creative()->create();
+        CreativeRequest::factory()->pending()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $otherCreative->id,
+        ]);
+
+        $this->actingAsCreative();
+        $response = $this->getJson('/api/requests/my-queue');
+
+        $response->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
     public function test_my_queue_can_be_filtered_by_status(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
@@ -247,7 +277,7 @@ class CreativeRequestControllerTest extends TestCase
             ->assertJsonValidationErrors(['title']);
     }
 
-    public function test_request_requires_assigned_to(): void
+    public function test_request_can_be_created_without_assigned_to(): void
     {
         $project = $this->createProjectWithMembers($this->pm);
 
@@ -258,8 +288,8 @@ class CreativeRequestControllerTest extends TestCase
             'deadline' => now()->addWeek()->toIso8601String(),
         ]);
 
-        $response->assertUnprocessable()
-            ->assertJsonValidationErrors(['assigned_to']);
+        $response->assertCreated()
+            ->assertJsonPath('assigned_to', null);
     }
 
     public function test_request_deadline_must_be_in_future(): void
@@ -517,6 +547,51 @@ class CreativeRequestControllerTest extends TestCase
         $response = $this->postJson("/api/requests/{$request->id}/start");
 
         $response->assertForbidden();
+    }
+
+    public function test_creative_can_view_unassigned_request(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm);
+        $request = CreativeRequest::factory()->pending()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => null,
+        ]);
+
+        $this->actingAsCreative();
+        $response = $this->getJson("/api/requests/{$request->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('id', $request->id);
+    }
+
+    public function test_creative_can_start_unassigned_request_and_gets_assigned(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm);
+        $request = CreativeRequest::factory()->pending()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => null,
+        ]);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/requests/{$request->id}/start");
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'in_progress')
+            ->assertJsonPath('assigned_to', $this->creative->id);
+
+        // Verify assigned to request
+        $this->assertDatabaseHas('creative_requests', [
+            'id' => $request->id,
+            'assigned_to' => $this->creative->id,
+        ]);
+
+        // Verify added as project member
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $project->id,
+            'user_id' => $this->creative->id,
+        ]);
     }
 
     // COMPLETE TESTS

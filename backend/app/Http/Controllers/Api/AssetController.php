@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
 use App\Models\AssetVersion;
+use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\VersionLock;
 use App\Services\DiscordNotificationService;
@@ -87,6 +88,12 @@ class AssetController extends Controller
         // Link to request if provided
         if (isset($validated['request_id'])) {
             $asset->creativeRequests()->attach($validated['request_id']);
+
+            // Auto-assign uploader if request has no assignee
+            $creativeRequest = CreativeRequest::find($validated['request_id']);
+            if ($creativeRequest && $creativeRequest->assigned_to === null) {
+                $creativeRequest->update(['assigned_to' => $request->user()->id]);
+            }
         }
 
         // Send Discord notification
@@ -270,10 +277,24 @@ class AssetController extends Controller
 
         $asset->creativeRequests()->syncWithoutDetaching([$validated['request_id']]);
 
-        // Update request status if needed
-        $creativeRequest = \App\Models\CreativeRequest::find($validated['request_id']);
-        if ($creativeRequest && $creativeRequest->status === 'in_progress') {
-            $creativeRequest->update(['status' => 'asset_submitted']);
+        // Update request status and auto-assign if needed
+        $creativeRequest = CreativeRequest::find($validated['request_id']);
+        if ($creativeRequest) {
+            $updates = [];
+
+            // Auto-assign uploader if request has no assignee
+            if ($creativeRequest->assigned_to === null) {
+                $updates['assigned_to'] = $request->user()->id;
+            }
+
+            // Update status if in progress
+            if ($creativeRequest->status === 'in_progress') {
+                $updates['status'] = 'asset_submitted';
+            }
+
+            if (!empty($updates)) {
+                $creativeRequest->update($updates);
+            }
         }
 
         return response()->json($asset->fresh('creativeRequests'));

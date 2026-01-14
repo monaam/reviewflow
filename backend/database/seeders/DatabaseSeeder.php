@@ -183,7 +183,7 @@ class DatabaseSeeder extends Seeder
         AssetVersion::create([
             'asset_id' => $asset1->id,
             'version_number' => 1,
-            'file_url' => '/storage/assets/sample-banner-1.png',
+            'file_url' => config('app.url') . '/storage/assets/sample-banner-1.png',
             'file_path' => 'assets/sample-banner-1.png',
             'file_size' => 1024000,
             'file_meta' => ['width' => 1920, 'height' => 1080, 'mime_type' => 'image/png'],
@@ -203,7 +203,7 @@ class DatabaseSeeder extends Seeder
         AssetVersion::create([
             'asset_id' => $asset2->id,
             'version_number' => 1,
-            'file_url' => '/storage/assets/product-v1.mp4',
+            'file_url' => config('app.url') . '/storage/assets/product-v1.mp4',
             'file_path' => 'assets/product-v1.mp4',
             'file_size' => 50000000,
             'file_meta' => ['duration' => 30, 'mime_type' => 'video/mp4'],
@@ -213,7 +213,7 @@ class DatabaseSeeder extends Seeder
         AssetVersion::create([
             'asset_id' => $asset2->id,
             'version_number' => 2,
-            'file_url' => '/storage/assets/product-v2.mp4',
+            'file_url' => config('app.url') . '/storage/assets/product-v2.mp4',
             'file_path' => 'assets/product-v2.mp4',
             'file_size' => 48000000,
             'file_meta' => ['duration' => 28, 'mime_type' => 'video/mp4'],
@@ -233,7 +233,7 @@ class DatabaseSeeder extends Seeder
         AssetVersion::create([
             'asset_id' => $asset3->id,
             'version_number' => 1,
-            'file_url' => '/storage/assets/techflow-logo-a.svg',
+            'file_url' => config('app.url') . '/storage/assets/techflow-logo-a.svg',
             'file_path' => 'assets/techflow-logo-a.svg',
             'file_size' => 50000,
             'file_meta' => ['mime_type' => 'image/svg+xml'],
