@@ -1,0 +1,154 @@
+export type UserRole = 'admin' | 'pm' | 'creative' | 'reviewer';
+export type ProjectStatus = 'active' | 'on_hold' | 'completed' | 'archived';
+export type AssetStatus = 'pending_review' | 'in_review' | 'approved' | 'revision_requested';
+export type AssetType = 'image' | 'video' | 'pdf' | 'design';
+export type RequestStatus = 'pending' | 'in_progress' | 'asset_submitted' | 'completed' | 'cancelled';
+export type Priority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  client_name: string | null;
+  deadline: string | null;
+  cover_image: string | null;
+  status: ProjectStatus;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  creator?: User;
+  members?: User[];
+  assets_count?: number;
+  creative_requests_count?: number;
+}
+
+export interface Asset {
+  id: string;
+  project_id: string;
+  uploaded_by: string;
+  title: string;
+  description: string | null;
+  type: AssetType;
+  status: AssetStatus;
+  current_version: number;
+  deadline: string | null;
+  created_at: string;
+  updated_at: string;
+  project?: Project;
+  uploader?: User;
+  versions?: AssetVersion[];
+  latest_version?: AssetVersion;
+  comments?: Comment[];
+  approval_logs?: ApprovalLog[];
+}
+
+export interface AssetVersion {
+  id: string;
+  asset_id: string;
+  version_number: number;
+  file_url: string;
+  file_path: string;
+  file_size: number;
+  file_meta: Record<string, unknown>;
+  uploaded_by: string;
+  created_at: string;
+  uploader?: User;
+}
+
+export interface Comment {
+  id: string;
+  asset_id: string;
+  asset_version: number;
+  user_id: string;
+  content: string;
+  rectangle: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+  video_timestamp: number | null;
+  is_resolved: boolean;
+  resolved_by: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  user?: User;
+  resolver?: User;
+}
+
+export interface CreativeRequest {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  created_by: string;
+  assigned_to: string;
+  deadline: string;
+  priority: Priority;
+  status: RequestStatus;
+  specs: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+  project?: Project;
+  creator?: User;
+  assignee?: User;
+  attachments?: RequestAttachment[];
+  assets?: Asset[];
+}
+
+export interface RequestAttachment {
+  id: string;
+  request_id: string;
+  file_url: string;
+  file_name: string;
+  uploaded_by: string;
+  created_at: string;
+  uploader?: User;
+}
+
+export interface ApprovalLog {
+  id: string;
+  asset_id: string;
+  asset_version: number;
+  user_id: string;
+  action: 'approved' | 'revision_requested' | 'reopened';
+  comment: string | null;
+  created_at: string;
+  user?: User;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  current_page: number;
+  last_page: number;
+  per_page: number;
+  total: number;
+}
+
+export interface DashboardData {
+  role: UserRole;
+  stats: Record<string, number>;
+  pending_approvals?: Asset[];
+  my_projects?: Project[];
+  my_queue?: CreativeRequest[];
+  revision_needed?: Asset[];
+  recent_uploads?: Asset[];
+  overdue_requests?: CreativeRequest[];
+  recent_activity?: Array<{
+    type: string;
+    data: unknown;
+    created_at: string;
+  }>;
+}
