@@ -14,19 +14,18 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
-    public function __construct()
+    protected function checkAdmin(Request $request): void
     {
-        $this->middleware(function ($request, $next) {
-            if (!$request->user()->isAdmin()) {
-                abort(403, 'Admin access required');
-            }
-            return $next($request);
-        });
+        if (!$request->user()->isAdmin()) {
+            abort(403, 'Admin access required');
+        }
     }
 
     // User Management
     public function users(Request $request): JsonResponse
     {
+        $this->checkAdmin($request);
+
         $query = User::query();
 
         if ($request->has('role')) {
@@ -52,6 +51,8 @@ class AdminController extends Controller
 
     public function createUser(Request $request): JsonResponse
     {
+        $this->checkAdmin($request);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -72,6 +73,8 @@ class AdminController extends Controller
 
     public function updateUser(Request $request, User $user): JsonResponse
     {
+        $this->checkAdmin($request);
+
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $user->id,
@@ -91,6 +94,8 @@ class AdminController extends Controller
 
     public function deleteUser(Request $request, User $user): JsonResponse
     {
+        $this->checkAdmin($request);
+
         if ($user->id === $request->user()->id) {
             return response()->json(['error' => 'Cannot delete your own account'], 400);
         }
@@ -101,8 +106,10 @@ class AdminController extends Controller
     }
 
     // Settings
-    public function settings(): JsonResponse
+    public function settings(Request $request): JsonResponse
     {
+        $this->checkAdmin($request);
+
         $settings = Setting::all()->pluck('value', 'key');
 
         return response()->json($settings);
@@ -110,6 +117,8 @@ class AdminController extends Controller
 
     public function updateSettings(Request $request): JsonResponse
     {
+        $this->checkAdmin($request);
+
         $validated = $request->validate([
             'discord_webhook_url' => 'nullable|url',
         ]);
@@ -124,6 +133,8 @@ class AdminController extends Controller
     // Analytics
     public function analytics(Request $request): JsonResponse
     {
+        $this->checkAdmin($request);
+
         $period = $request->input('period', 30);
         $startDate = now()->subDays($period);
 
