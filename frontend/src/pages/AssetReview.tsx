@@ -12,6 +12,9 @@ import {
   Upload,
   CheckCircle,
   Circle,
+  Edit2,
+  Trash2,
+  Download,
 } from 'lucide-react';
 import { assetsApi } from '../api/assets';
 import { Asset, Comment, AssetVersion } from '../types';
@@ -36,6 +39,8 @@ export function AssetReviewPage() {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Annotation state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -190,8 +195,43 @@ export function AssetReviewPage() {
   const canApprove = user?.role === 'admin' || user?.role === 'pm';
   const canUploadVersion = user?.role === 'admin' || user?.role === 'pm' ||
     (user?.role === 'creative' && asset?.uploaded_by === user.id);
+  const canEdit = user?.role === 'admin' || user?.role === 'pm' ||
+    (user?.role === 'creative' && asset?.uploaded_by === user.id);
+  const canDelete = user?.role === 'admin' || user?.role === 'pm' ||
+    (user?.role === 'creative' && asset?.uploaded_by === user.id);
 
   const currentVersionData = asset?.versions?.find((v) => v.version_number === selectedVersion);
+
+  const handleDelete = async () => {
+    try {
+      await assetsApi.delete(id!);
+      navigate(`/projects/${asset?.project_id}`);
+    } catch (error) {
+      console.error('Failed to delete asset:', error);
+    }
+  };
+
+  const handleDownload = () => {
+    if (currentVersionData?.file_url) {
+      const link = document.createElement('a');
+      link.href = currentVersionData.file_url;
+      link.download = `${asset?.title || 'asset'}-v${selectedVersion}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleDownloadAll = () => {
+    asset?.versions?.forEach((version) => {
+      const link = document.createElement('a');
+      link.href = version.file_url;
+      link.download = `${asset?.title || 'asset'}-v${version.version_number}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  };
 
   if (isLoading) {
     return (
@@ -232,8 +272,48 @@ export function AssetReviewPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={asset.status} type="asset" />
+
+          <button
+            onClick={handleDownload}
+            className="btn-secondary"
+            title="Download current version"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </button>
+
+          {asset.versions && asset.versions.length > 1 && (
+            <button
+              onClick={handleDownloadAll}
+              className="btn-secondary"
+              title="Download all versions"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              All Versions
+            </button>
+          )}
+
+          {canEdit && (
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="btn-secondary"
+            >
+              <Edit2 className="w-4 h-4 mr-2" />
+              Edit
+            </button>
+          )}
+
+          {canDelete && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="btn-secondary text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </button>
+          )}
 
           {canUploadVersion && asset.status === 'revision_requested' && (
             <button
@@ -554,6 +634,28 @@ export function AssetReviewPage() {
           onUpload={handleUploadVersion}
         />
       )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <EditAssetModal
+          asset={asset}
+          onClose={() => setShowEditModal(false)}
+          onUpdated={(updated) => {
+            setAsset(updated);
+            setShowEditModal(false);
+          }}
+        />
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          title="Delete Asset"
+          message={`Are you sure you want to delete "${asset.title}"? This will remove all versions and comments. This action cannot be undone.`}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   );
 }
@@ -676,6 +778,146 @@ function UploadVersionModal({
             className="btn-primary"
           >
             Upload
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditAssetModal({
+  asset,
+  onClose,
+  onUpdated,
+}: {
+  asset: Asset;
+  onClose: () => void;
+  onUpdated: (asset: Asset) => void;
+}) {
+  const [title, setTitle] = useState(asset.title);
+  const [description, setDescription] = useState(asset.description || '');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const updated = await assetsApi.update(asset.id, {
+        title,
+        description: description || undefined,
+      });
+      onUpdated(updated);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to update asset');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          Edit Asset
+        </h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="asset-title" className="label">
+              Title *
+            </label>
+            <input
+              id="asset-title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="input"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="asset-description" className="label">
+              Description
+            </label>
+            <textarea
+              id="asset-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="input"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmModal({
+  title,
+  message,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  message: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    await onConfirm();
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          {title}
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button onClick={onClose} className="btn-secondary" disabled={isLoading}>
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="btn-primary bg-red-600 hover:bg-red-700"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>

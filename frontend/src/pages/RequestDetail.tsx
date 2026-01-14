@@ -9,10 +9,15 @@ import {
   PlayCircle,
   CheckCircle,
   AlertTriangle,
+  Edit2,
+  Trash2,
+  XCircle,
+  UserCheck,
 } from 'lucide-react';
 import { requestsApi } from '../api/requests';
 import { assetsApi } from '../api/assets';
-import { CreativeRequest, Asset } from '../types';
+import { adminApi } from '../api/admin';
+import { CreativeRequest, Asset, User as UserType } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
 
@@ -23,6 +28,9 @@ export function RequestDetailPage() {
   const [request, setRequest] = useState<CreativeRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showReassignModal, setShowReassignModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -76,10 +84,32 @@ export function RequestDetailPage() {
   const isAssignee = user?.id === request?.assigned_to;
   const isCreator = user?.id === request?.created_by;
   const canComplete = (isCreator || user?.role === 'admin') && request?.status === 'asset_submitted';
+  const canEdit = isCreator || user?.role === 'admin';
+  const canDelete = isCreator || user?.role === 'admin';
+  const canReassign = (isCreator || user?.role === 'admin') && !['completed', 'cancelled'].includes(request?.status || '');
+  const canCancel = (isCreator || user?.role === 'admin') && !['completed', 'cancelled'].includes(request?.status || '');
 
   const isOverdue = request &&
     new Date(request.deadline) < new Date() &&
     !['completed', 'cancelled'].includes(request.status);
+
+  const handleDelete = async () => {
+    try {
+      await requestsApi.delete(id!);
+      navigate(`/projects/${request?.project_id}`);
+    } catch (error) {
+      console.error('Failed to delete request:', error);
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await requestsApi.update(id!, { status: 'cancelled' });
+      fetchRequest();
+    } catch (error) {
+      console.error('Failed to cancel request:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -125,7 +155,31 @@ export function RequestDetailPage() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {canEdit && (
+              <button onClick={() => setShowEditModal(true)} className="btn-secondary">
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit
+              </button>
+            )}
+            {canReassign && (
+              <button onClick={() => setShowReassignModal(true)} className="btn-secondary">
+                <UserCheck className="w-4 h-4 mr-2" />
+                Reassign
+              </button>
+            )}
+            {canCancel && (
+              <button onClick={handleCancel} className="btn-secondary text-orange-600 hover:bg-orange-50">
+                <XCircle className="w-4 h-4 mr-2" />
+                Cancel
+              </button>
+            )}
+            {canDelete && (
+              <button onClick={() => setShowDeleteModal(true)} className="btn-secondary text-red-600 hover:bg-red-50">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </button>
+            )}
             {isAssignee && request.status === 'pending' && (
               <button onClick={handleStart} className="btn-primary">
                 <PlayCircle className="w-4 h-4 mr-2" />
@@ -297,6 +351,40 @@ export function RequestDetailPage() {
           onUpload={handleUploadAsset}
         />
       )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <EditRequestModal
+          request={request}
+          onClose={() => setShowEditModal(false)}
+          onUpdated={(updated) => {
+            setRequest(updated);
+            setShowEditModal(false);
+          }}
+        />
+      )}
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          title="Delete Request"
+          message={`Are you sure you want to delete "${request.title}"? This action cannot be undone.`}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+        />
+      )}
+
+      {/* Reassign Modal */}
+      {showReassignModal && (
+        <ReassignModal
+          request={request}
+          onClose={() => setShowReassignModal(false)}
+          onReassigned={(updated) => {
+            setRequest(updated);
+            setShowReassignModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -371,6 +459,293 @@ function UploadAssetModal({
               className="btn-primary"
             >
               {isLoading ? 'Uploading...' : 'Upload'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditRequestModal({
+  request,
+  onClose,
+  onUpdated,
+}: {
+  request: CreativeRequest;
+  onClose: () => void;
+  onUpdated: (request: CreativeRequest) => void;
+}) {
+  const [title, setTitle] = useState(request.title);
+  const [description, setDescription] = useState(request.description);
+  const [deadline, setDeadline] = useState(
+    new Date(request.deadline).toISOString().slice(0, 16)
+  );
+  const [priority, setPriority] = useState(request.priority);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const updated = await requestsApi.update(request.id, {
+        title,
+        description,
+        deadline,
+        priority,
+      });
+      onUpdated(updated);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to update request');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Edit Request
+          </h2>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="edit-title" className="label">
+                Title *
+              </label>
+              <input
+                id="edit-title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-description" className="label">
+                Description *
+              </label>
+              <textarea
+                id="edit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="input"
+                rows={4}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="edit-deadline" className="label">
+                  Deadline *
+                </label>
+                <input
+                  id="edit-deadline"
+                  type="datetime-local"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="input"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-priority" className="label">
+                  Priority
+                </label>
+                <select
+                  id="edit-priority"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as typeof priority)}
+                  className="input"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmModal({
+  title,
+  message,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  message: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    await onConfirm();
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          {title}
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button onClick={onClose} className="btn-secondary" disabled={isLoading}>
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="btn-primary bg-red-600 hover:bg-red-700"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReassignModal({
+  request,
+  onClose,
+  onReassigned,
+}: {
+  request: CreativeRequest;
+  onClose: () => void;
+  onReassigned: (request: CreativeRequest) => void;
+}) {
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState(request.assigned_to);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await adminApi.getUsers({ role: 'creative', active: true });
+        setUsers(response.data);
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId || selectedUserId === request.assigned_to) {
+      onClose();
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const updated = await requestsApi.update(request.id, {
+        assigned_to: selectedUserId,
+      });
+      onReassigned(updated);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to reassign request');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          Reassign Request
+        </h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="reassign-user" className="label">
+              Assign to
+            </label>
+            <select
+              id="reassign-user"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="input"
+              required
+            >
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} {user.id === request.assigned_to ? '(current)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Reassigning...' : 'Reassign'}
             </button>
           </div>
         </form>

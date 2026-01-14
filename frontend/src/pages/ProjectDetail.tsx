@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import {
   ArrowLeft,
@@ -11,6 +11,13 @@ import {
   Users,
   Calendar,
   ClipboardList,
+  Edit2,
+  Trash2,
+  UserPlus,
+  UserMinus,
+  Search,
+  X,
+  Download,
 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { assetsApi } from '../api/assets';
@@ -22,15 +29,20 @@ import { adminApi } from '../api/admin';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const [project, setProject] = useState<Project | null>(null);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [requests, setRequests] = useState<CreativeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'assets' | 'requests'>('assets');
+  const [activeTab, setActiveTab] = useState<'assets' | 'requests' | 'members'>('assets');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -55,12 +67,45 @@ export function ProjectDetailPage() {
     }
   };
 
-  const filteredAssets = filter === 'all'
-    ? assets
-    : assets.filter((a) => a.status === filter);
+  const filteredAssets = assets.filter((a) => {
+    const matchesFilter = filter === 'all' || a.status === filter;
+    const matchesSearch = !searchQuery ||
+      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.uploader?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const filteredRequests = requests.filter((r) => {
+    const matchesSearch = !searchQuery ||
+      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.assignee?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
 
   const canUpload = user?.role === 'admin' || user?.role === 'pm' || user?.role === 'creative';
   const canCreateRequest = user?.role === 'admin' || user?.role === 'pm';
+  const canEditProject = user?.role === 'admin' || user?.role === 'pm';
+  const canDeleteProject = user?.role === 'admin';
+  const canManageMembers = user?.role === 'admin' || user?.role === 'pm';
+
+  const handleDeleteProject = async () => {
+    try {
+      await projectsApi.delete(id!);
+      navigate('/projects');
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+    }
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    try {
+      await projectsApi.removeMember(id!, userId);
+      fetchProject();
+    } catch (error) {
+      console.error('Failed to remove member:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -115,6 +160,24 @@ export function ProjectDetailPage() {
           </div>
 
           <div className="flex gap-2">
+            {canEditProject && (
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="btn-secondary"
+              >
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit
+              </button>
+            )}
+            {canDeleteProject && (
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="btn-secondary text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </button>
+            )}
             {canCreateRequest && (
               <button
                 onClick={() => setShowRequestModal(true)}
@@ -166,8 +229,42 @@ export function ProjectDetailPage() {
           >
             Requests ({requests.length})
           </button>
+          <button
+            onClick={() => setActiveTab('members')}
+            className={`pb-4 px-1 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'members'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Members ({project.members?.length || 0})
+          </button>
         </nav>
       </div>
+
+      {/* Search Bar */}
+      {(activeTab === 'assets' || activeTab === 'requests') && (
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       {activeTab === 'assets' && (
@@ -221,16 +318,18 @@ export function ProjectDetailPage() {
 
       {activeTab === 'requests' && (
         <>
-          {requests.length === 0 ? (
+          {filteredRequests.length === 0 ? (
             <div className="text-center py-12 card">
               <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No requests yet
+                {searchQuery ? 'No matching requests' : 'No requests yet'}
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Create a request to assign work to your creative team.
+                {searchQuery
+                  ? 'Try adjusting your search terms.'
+                  : 'Create a request to assign work to your creative team.'}
               </p>
-              {canCreateRequest && (
+              {!searchQuery && canCreateRequest && (
                 <button
                   onClick={() => setShowRequestModal(true)}
                   className="btn-primary"
@@ -242,12 +341,67 @@ export function ProjectDetailPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {requests.map((request) => (
+              {filteredRequests.map((request) => (
                 <RequestCard key={request.id} request={request} />
               ))}
             </div>
           )}
         </>
+      )}
+
+      {activeTab === 'members' && (
+        <div className="card">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 className="font-medium text-gray-900 dark:text-white">
+              Project Members
+            </h3>
+            {canManageMembers && (
+              <button
+                onClick={() => setShowAddMemberModal(true)}
+                className="btn-primary text-sm"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Member
+              </button>
+            )}
+          </div>
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {project.members?.map((member) => (
+              <div
+                key={member.id}
+                className="p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium">
+                    {member.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {member.name}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {member.email} · <span className="capitalize">{member.role}</span>
+                    </p>
+                  </div>
+                </div>
+                {canManageMembers && member.id !== project.created_by && (
+                  <button
+                    onClick={() => handleRemoveMember(member.id)}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                    title="Remove member"
+                  >
+                    <UserMinus className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {(!project.members || project.members.length === 0) && (
+              <div className="p-8 text-center text-gray-500">
+                No members added to this project yet.
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Upload Modal */}
@@ -270,6 +424,41 @@ export function ProjectDetailPage() {
           onCreated={(request) => {
             setRequests([request, ...requests]);
             setShowRequestModal(false);
+          }}
+        />
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditModal && (
+        <EditProjectModal
+          project={project}
+          onClose={() => setShowEditModal(false)}
+          onUpdated={(updatedProject) => {
+            setProject(updatedProject);
+            setShowEditModal(false);
+          }}
+        />
+      )}
+
+      {/* Delete Project Modal */}
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          title="Delete Project"
+          message={`Are you sure you want to delete "${project.name}"? This action cannot be undone and will remove all assets and requests associated with this project.`}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDeleteProject}
+        />
+      )}
+
+      {/* Add Member Modal */}
+      {showAddMemberModal && (
+        <AddMemberModal
+          projectId={id!}
+          existingMemberIds={project.members?.map((m) => m.id) || []}
+          onClose={() => setShowAddMemberModal(false)}
+          onAdded={() => {
+            fetchProject();
+            setShowAddMemberModal(false);
           }}
         />
       )}
@@ -675,6 +864,311 @@ function CreateRequestModal({
             </div>
           </form>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function EditProjectModal({
+  project,
+  onClose,
+  onUpdated,
+}: {
+  project: Project;
+  onClose: () => void;
+  onUpdated: (project: Project) => void;
+}) {
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description || '');
+  const [clientName, setClientName] = useState(project.client_name || '');
+  const [deadline, setDeadline] = useState(
+    project.deadline ? new Date(project.deadline).toISOString().split('T')[0] : ''
+  );
+  const [status, setStatus] = useState(project.status);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const updated = await projectsApi.update(project.id, {
+        name,
+        description: description || undefined,
+        client_name: clientName || undefined,
+        deadline: deadline || undefined,
+        status,
+      });
+      onUpdated(updated);
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to update project');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+            Edit Project
+          </h2>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="edit-name" className="label">
+                Project Name *
+              </label>
+              <input
+                id="edit-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-description" className="label">
+                Description
+              </label>
+              <textarea
+                id="edit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="input"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-clientName" className="label">
+                Client Name
+              </label>
+              <input
+                id="edit-clientName"
+                type="text"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                className="input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="edit-deadline" className="label">
+                  Deadline
+                </label>
+                <input
+                  id="edit-deadline"
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="edit-status" className="label">
+                  Status
+                </label>
+                <select
+                  id="edit-status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as typeof status)}
+                  className="input"
+                >
+                  <option value="active">Active</option>
+                  <option value="on_hold">On Hold</option>
+                  <option value="completed">Completed</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteConfirmModal({
+  title,
+  message,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  message: string;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    await onConfirm();
+    setIsLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          {title}
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button onClick={onClose} className="btn-secondary" disabled={isLoading}>
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="btn-primary bg-red-600 hover:bg-red-700"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AddMemberModal({
+  projectId,
+  existingMemberIds,
+  onClose,
+  onAdded,
+}: {
+  projectId: string;
+  existingMemberIds: string[];
+  onClose: () => void;
+  onAdded: () => void;
+}) {
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await adminApi.getUsers({ active: true });
+        // Filter out existing members
+        setUsers(response.data.filter((u: User) => !existingMemberIds.includes(u.id)));
+      } catch (error) {
+        console.error('Failed to fetch users:', error);
+      }
+    };
+    fetchUsers();
+  }, [existingMemberIds]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId) return;
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await projectsApi.addMember(projectId, selectedUserId);
+      onAdded();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'Failed to add member');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          Add Team Member
+        </h2>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="member-select" className="label">
+              Select User
+            </label>
+            <select
+              id="member-select"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="input"
+              required
+            >
+              <option value="">Choose a user...</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.email}) - {user.role}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {users.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No available users to add. All active users are already members.
+            </p>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isLoading || !selectedUserId}
+            >
+              {isLoading ? 'Adding...' : 'Add Member'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

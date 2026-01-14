@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList, Clock, AlertTriangle, PlayCircle } from 'lucide-react';
+import { ClipboardList, Clock, AlertTriangle, PlayCircle, Search, X } from 'lucide-react';
 import { requestsApi } from '../api/requests';
 import { CreativeRequest } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -9,6 +9,7 @@ export function CreativeQueuePage() {
   const [requests, setRequests] = useState<CreativeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchQueue();
@@ -39,7 +40,15 @@ export function CreativeQueuePage() {
     new Date(request.deadline) < new Date() &&
     !['completed', 'cancelled'].includes(request.status);
 
-  const sortedRequests = [...requests].sort((a, b) => {
+  const filteredRequests = requests.filter((r) => {
+    const matchesSearch = !searchQuery ||
+      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.project?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  const sortedRequests = [...filteredRequests].sort((a, b) => {
     // Sort by deadline, soonest first
     return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
   });
@@ -53,6 +62,28 @@ export function CreativeQueuePage() {
         <p className="text-gray-600 dark:text-gray-400">
           Requests assigned to you, sorted by deadline
         </p>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search requests..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input pl-10 pr-10"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -81,10 +112,12 @@ export function CreativeQueuePage() {
         <div className="text-center py-12 card">
           <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No requests in your queue
+            {searchQuery ? 'No matching requests' : 'No requests in your queue'}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            You don't have any pending requests at the moment.
+            {searchQuery
+              ? 'Try adjusting your search terms.'
+              : "You don't have any pending requests at the moment."}
           </p>
         </div>
       ) : (
