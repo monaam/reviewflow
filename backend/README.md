@@ -1,59 +1,256 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ReviewFlow Backend API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+The backend API for ReviewFlow, a creative review and approval platform built with Laravel 12.
 
-## About Laravel
+## Overview
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+ReviewFlow streamlines the creative review process by replacing scattered Discord threads and Google Drive links with a centralized platform for uploading assets, receiving visual feedback, and tracking approvals.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+For full product requirements, see the [PRD documentation](../prd-creative-review-platform.md).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Tech Stack
 
-## Learning Laravel
+- **Framework:** Laravel 12
+- **PHP Version:** 8.2+
+- **Database:** MySQL 8.4 (via Docker/Sail)
+- **Authentication:** Laravel Sanctum (token-based API auth)
+- **Testing:** PHPUnit 11
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Getting Started
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Prerequisites
 
-## Laravel Sponsors
+- Docker & Docker Compose
+- Composer (for initial setup)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Installation
 
-### Premium Partners
+1. **Clone the repository and navigate to backend:**
+   ```bash
+   cd backend
+   ```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+2. **Install PHP dependencies:**
+   ```bash
+   composer install
+   ```
 
-## Contributing
+3. **Set up environment:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4. **Start Docker containers:**
+   ```bash
+   ./vendor/bin/sail up -d
+   ```
 
-## Code of Conduct
+5. **Run database migrations:**
+   ```bash
+   ./vendor/bin/sail artisan migrate
+   ```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+6. **Seed the database (optional):**
+   ```bash
+   ./vendor/bin/sail artisan db:seed
+   ```
 
-## Security Vulnerabilities
+### Running the Application
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+# Start all services
+./vendor/bin/sail up -d
+
+# View logs
+./vendor/bin/sail logs -f
+
+# Stop all services
+./vendor/bin/sail down
+```
+
+The API will be available at `http://localhost`.
+
+## Running Tests
+
+Tests run in an isolated MySQL `testing` database that Sail creates automatically.
+
+```bash
+# Run all tests
+./vendor/bin/sail test
+
+# Run specific test suite
+./vendor/bin/sail test --testsuite=Feature
+
+# Run with coverage
+./vendor/bin/sail test --coverage
+```
+
+### Test Structure
+
+```
+tests/
+├── Feature/
+│   └── Api/
+│       ├── AuthControllerTest.php
+│       ├── ProjectControllerTest.php
+│       ├── AssetControllerTest.php
+│       ├── CommentControllerTest.php
+│       ├── CreativeRequestControllerTest.php
+│       ├── DashboardControllerTest.php
+│       └── AdminControllerTest.php
+├── Unit/
+├── Traits/
+│   └── ApiTestHelpers.php
+└── TestCase.php
+```
+
+## API Documentation
+
+### Authentication
+
+All API endpoints (except login) require a Bearer token in the Authorization header:
+
+```
+Authorization: Bearer {token}
+```
+
+### Endpoints Overview
+
+#### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | User login |
+| POST | `/api/auth/logout` | User logout |
+| GET | `/api/auth/me` | Get current user |
+
+#### Projects
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/projects` | List all projects |
+| POST | `/api/projects` | Create project |
+| GET | `/api/projects/{id}` | Get project details |
+| PATCH | `/api/projects/{id}` | Update project |
+| DELETE | `/api/projects/{id}` | Delete project |
+| POST | `/api/projects/{id}/members` | Add member |
+| DELETE | `/api/projects/{id}/members/{userId}` | Remove member |
+
+#### Creative Requests
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/projects/{id}/requests` | List project requests |
+| POST | `/api/projects/{id}/requests` | Create request |
+| GET | `/api/requests/{id}` | Get request details |
+| PATCH | `/api/requests/{id}` | Update request |
+| DELETE | `/api/requests/{id}` | Delete request |
+| POST | `/api/requests/{id}/start` | Mark as in progress |
+| POST | `/api/requests/{id}/complete` | Mark as completed |
+
+#### Assets
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/projects/{id}/assets` | List project assets |
+| POST | `/api/projects/{id}/assets` | Upload asset |
+| GET | `/api/assets/{id}` | Get asset details |
+| PATCH | `/api/assets/{id}` | Update asset |
+| DELETE | `/api/assets/{id}` | Delete asset |
+| POST | `/api/assets/{id}/versions` | Upload new version |
+| GET | `/api/assets/{id}/versions` | List versions |
+| POST | `/api/assets/{id}/approve` | Approve asset |
+| POST | `/api/assets/{id}/request-revision` | Request revision |
+
+#### Comments
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/assets/{id}/comments` | List comments |
+| POST | `/api/assets/{id}/comments` | Add comment |
+| PATCH | `/api/comments/{id}` | Update comment |
+| DELETE | `/api/comments/{id}` | Delete comment |
+| POST | `/api/comments/{id}/resolve` | Resolve comment |
+
+#### Dashboard
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/dashboard` | Get dashboard stats |
+| GET | `/api/dashboard/pending-approvals` | List pending approvals |
+| GET | `/api/dashboard/my-requests` | List user's requests |
+
+#### Admin
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/users` | List all users |
+| POST | `/api/admin/users` | Create user |
+| PATCH | `/api/admin/users/{id}` | Update user |
+| GET | `/api/admin/settings` | Get system settings |
+| PATCH | `/api/admin/settings` | Update settings |
+
+## User Roles
+
+| Role | Description |
+|------|-------------|
+| `admin` | Full system access, user management |
+| `pm` | Project Manager - creates projects, approves assets |
+| `creative` | Uploads and manages own assets |
+| `reviewer` | View and comment only (future) |
+
+## Project Structure
+
+```
+app/
+├── Http/
+│   ├── Controllers/
+│   │   └── Api/           # API controllers
+│   ├── Middleware/        # Custom middleware
+│   └── Requests/          # Form requests
+├── Models/                # Eloquent models
+├── Policies/              # Authorization policies
+└── Services/              # Business logic
+
+database/
+├── migrations/            # Database migrations
+├── factories/             # Model factories
+└── seeders/               # Database seeders
+
+routes/
+└── api.php               # API route definitions
+```
+
+## Environment Variables
+
+Key configuration options in `.env`:
+
+```env
+# Application
+APP_NAME=ReviewFlow
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost
+
+# Database (Sail defaults)
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=sail
+DB_PASSWORD=password
+
+# Sail Configuration
+WWWGROUP=1000
+WWWUSER=1000
+APP_PORT=80
+FORWARD_DB_PORT=3306
+```
+
+## Code Quality
+
+```bash
+# Run code formatter
+./vendor/bin/sail pint
+
+# Run static analysis
+./vendor/bin/sail php ./vendor/bin/phpstan analyse
+```
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is proprietary software for internal use.
