@@ -74,6 +74,8 @@ class CreativeRequestController extends Controller
         $creativeRequest = CreativeRequest::create([
             'project_id' => $project->id,
             'created_by' => $request->user()->id,
+            'status' => 'pending',
+            'priority' => $validated['priority'] ?? 'normal',
             ...$validated,
         ]);
 
