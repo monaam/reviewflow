@@ -84,4 +84,23 @@ class AssetPolicy
     {
         return $this->view($user, $asset);
     }
+
+    public function lock(User $user, Asset $asset): bool
+    {
+        // Only PM and Admin can lock/unlock assets
+        if (!$user->canApprove()) {
+            return false;
+        }
+
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        return $asset->project->members()->where('users.id', $user->id)->exists();
+    }
+
+    public function download(User $user, Asset $asset): bool
+    {
+        return $this->view($user, $asset);
+    }
 }

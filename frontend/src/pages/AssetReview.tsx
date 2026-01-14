@@ -15,11 +15,18 @@ import {
   Edit2,
   Trash2,
   Download,
+  Lock,
+  Unlock,
+  Layers,
+  Clock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { assetsApi } from '../api/assets';
 import { Asset, Comment, AssetVersion } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
+import { VersionTimeline, VersionComparison } from '../components/version';
 
 interface Rectangle {
   x: number;
@@ -41,6 +48,10 @@ export function AssetReviewPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showAllVersionsComments, setShowAllVersionsComments] = useState(false);
+  const [isLocking, setIsLocking] = useState(false);
 
   // Annotation state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -182,9 +193,9 @@ export function AssetReviewPage() {
     }
   };
 
-  const handleUploadVersion = async (file: File) => {
+  const handleUploadVersion = async (file: File, versionNotes?: string) => {
     try {
-      await assetsApi.uploadVersion(id!, file);
+      await assetsApi.uploadVersion(id!, file, versionNotes);
       fetchAsset();
       setShowUploadModal(false);
     } catch (error) {
@@ -192,9 +203,41 @@ export function AssetReviewPage() {
     }
   };
 
+  const handleLock = async () => {
+    if (!asset) return;
+    setIsLocking(true);
+    try {
+      if (asset.is_locked) {
+        await assetsApi.unlock(id!);
+      } else {
+        await assetsApi.lock(id!);
+      }
+      fetchAsset();
+    } catch (error) {
+      console.error('Failed to toggle lock:', error);
+    } finally {
+      setIsLocking(false);
+    }
+  };
+
+  const handleDownloadVersion = async (version?: number) => {
+    try {
+      const response = await assetsApi.download(id!, version);
+      const link = document.createElement('a');
+      link.href = response.url;
+      link.download = response.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to download:', error);
+    }
+  };
+
   const canApprove = user?.role === 'admin' || user?.role === 'pm';
-  const canUploadVersion = user?.role === 'admin' || user?.role === 'pm' ||
-    (user?.role === 'creative' && asset?.uploaded_by === user.id);
+  const canLock = user?.role === 'admin' || user?.role === 'pm';
+  const canUploadVersion = (user?.role === 'admin' || user?.role === 'pm' ||
+    (user?.role === 'creative' && asset?.uploaded_by === user.id)) && !asset?.is_locked;
   const canEdit = user?.role === 'admin' || user?.role === 'pm' ||
     (user?.role === 'creative' && asset?.uploaded_by === user.id);
   const canDelete = user?.role === 'admin' || user?.role === 'pm' ||
@@ -212,24 +255,12 @@ export function AssetReviewPage() {
   };
 
   const handleDownload = () => {
-    if (currentVersionData?.file_url) {
-      const link = document.createElement('a');
-      link.href = currentVersionData.file_url;
-      link.download = `${asset?.title || 'asset'}-v${selectedVersion}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    handleDownloadVersion(selectedVersion);
   };
 
   const handleDownloadAll = () => {
     asset?.versions?.forEach((version) => {
-      const link = document.createElement('a');
-      link.href = version.file_url;
-      link.download = `${asset?.title || 'asset'}-v${version.version_number}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      handleDownloadVersion(version.version_number);
     });
   };
 
@@ -275,6 +306,33 @@ export function AssetReviewPage() {
         <div className="flex items-center gap-2 flex-wrap">
           <StatusBadge status={asset.status} type="asset" />
 
+          {asset.is_locked && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
+              <Lock className="w-4 h-4" />
+              Locked
+            </span>
+          )}
+
+          <button
+            onClick={() => setShowTimeline(!showTimeline)}
+            className={`btn-secondary ${showTimeline ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}
+            title="Version history"
+          >
+            <Clock className="w-4 h-4 mr-2" />
+            History
+          </button>
+
+          {asset.versions && asset.versions.length > 1 && (
+            <button
+              onClick={() => setShowCompareModal(true)}
+              className="btn-secondary"
+              title="Compare versions"
+            >
+              <Layers className="w-4 h-4 mr-2" />
+              Compare
+            </button>
+          )}
+
           <button
             onClick={handleDownload}
             className="btn-secondary"
@@ -292,6 +350,27 @@ export function AssetReviewPage() {
             >
               <Download className="w-4 h-4 mr-2" />
               All Versions
+            </button>
+          )}
+
+          {canLock && (
+            <button
+              onClick={handleLock}
+              disabled={isLocking}
+              className={`btn-secondary ${asset.is_locked ? 'text-red-600' : ''}`}
+              title={asset.is_locked ? 'Unlock asset' : 'Lock asset'}
+            >
+              {asset.is_locked ? (
+                <>
+                  <Unlock className="w-4 h-4 mr-2" />
+                  Unlock
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Lock
+                </>
+              )}
             </button>
           )}
 
@@ -509,18 +588,51 @@ export function AssetReviewPage() {
           )}
         </div>
 
+        {/* Timeline Panel (Collapsible) */}
+        {showTimeline && (
+          <div className="w-80 bg-gray-900 border-l border-gray-700 overflow-y-auto">
+            <VersionTimeline
+              assetId={asset.id}
+              onVersionSelect={(v) => setSelectedVersion(v)}
+              currentVersion={selectedVersion}
+            />
+          </div>
+        )}
+
         {/* Comments Panel */}
         <div className="w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <MessageSquare className="w-5 h-5 mr-2" />
-              Comments ({comments.filter((c) => c.asset_version === selectedVersion).length})
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center">
+                <MessageSquare className="w-5 h-5 mr-2" />
+                Comments ({showAllVersionsComments
+                  ? comments.length
+                  : comments.filter((c) => c.asset_version === selectedVersion).length})
+              </h2>
+              <button
+                onClick={() => setShowAllVersionsComments(!showAllVersionsComments)}
+                className={`p-1.5 rounded transition-colors ${
+                  showAllVersionsComments
+                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'
+                }`}
+                title={showAllVersionsComments ? 'Show current version only' : 'Show all versions'}
+              >
+                {showAllVersionsComments ? (
+                  <Eye className="w-4 h-4" />
+                ) : (
+                  <EyeOff className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {showAllVersionsComments && (
+              <p className="text-xs text-gray-500 mt-1">Showing comments from all versions</p>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {comments
-              .filter((c) => c.asset_version === selectedVersion)
+              .filter((c) => showAllVersionsComments || c.asset_version === selectedVersion)
               .map((comment) => (
                 <div
                   key={comment.id}
@@ -559,7 +671,18 @@ export function AssetReviewPage() {
                   <p className="text-sm text-gray-700 dark:text-gray-300">
                     {comment.content}
                   </p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 flex-wrap">
+                    {showAllVersionsComments && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded ${
+                          comment.asset_version === selectedVersion
+                            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
+                            : 'bg-gray-100 dark:bg-gray-700'
+                        }`}
+                      >
+                        v{comment.asset_version}
+                      </span>
+                    )}
                     {comment.video_timestamp !== null && (
                       <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
                         {formatTime(comment.video_timestamp)}
@@ -654,6 +777,16 @@ export function AssetReviewPage() {
           message={`Are you sure you want to delete "${asset.title}"? This will remove all versions and comments. This action cannot be undone.`}
           onClose={() => setShowDeleteModal(false)}
           onConfirm={handleDelete}
+        />
+      )}
+
+      {/* Version Comparison Modal */}
+      {showCompareModal && asset.versions && asset.versions.length > 1 && (
+        <VersionComparison
+          versions={asset.versions}
+          assetType={asset.type}
+          initialRightVersion={selectedVersion}
+          onClose={() => setShowCompareModal(false)}
         />
       )}
     </div>
@@ -752,9 +885,10 @@ function UploadVersionModal({
   onUpload,
 }: {
   onClose: () => void;
-  onUpload: (file: File) => void;
+  onUpload: (file: File, versionNotes?: string) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [versionNotes, setVersionNotes] = useState('');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -762,18 +896,43 @@ function UploadVersionModal({
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
           Upload New Version
         </h2>
-        <input
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="input mb-4"
-          accept="image/*,video/*,application/pdf"
-        />
-        <div className="flex justify-end gap-3">
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="file-upload" className="label">
+              File *
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="input"
+              accept="image/*,video/*,application/pdf"
+            />
+          </div>
+          <div>
+            <label htmlFor="version-notes" className="label">
+              Version Notes (optional)
+            </label>
+            <textarea
+              id="version-notes"
+              value={versionNotes}
+              onChange={(e) => setVersionNotes(e.target.value)}
+              placeholder="Describe what changed in this version..."
+              className="input"
+              rows={3}
+              maxLength={1000}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {versionNotes.length}/1000 characters
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="btn-secondary">
             Cancel
           </button>
           <button
-            onClick={() => file && onUpload(file)}
+            onClick={() => file && onUpload(file, versionNotes || undefined)}
             disabled={!file}
             className="btn-primary"
           >

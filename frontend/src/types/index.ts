@@ -43,14 +43,19 @@ export interface Asset {
   status: AssetStatus;
   current_version: number;
   deadline: string | null;
+  is_locked: boolean;
+  locked_by: string | null;
+  locked_at: string | null;
   created_at: string;
   updated_at: string;
   project?: Project;
   uploader?: User;
+  locker?: User;
   versions?: AssetVersion[];
   latest_version?: AssetVersion;
   comments?: Comment[];
   approval_logs?: ApprovalLog[];
+  version_locks?: VersionLock[];
 }
 
 export interface AssetVersion {
@@ -60,7 +65,9 @@ export interface AssetVersion {
   file_url: string;
   file_path: string;
   file_size: number;
+  file_size_formatted?: string;
   file_meta: Record<string, unknown>;
+  version_notes: string | null;
   uploaded_by: string;
   created_at: string;
   uploader?: User;
@@ -151,4 +158,51 @@ export interface DashboardData {
     data: unknown;
     created_at: string;
   }>;
+}
+
+export interface VersionLock {
+  id: string;
+  asset_id: string;
+  user_id: string;
+  action: 'locked' | 'unlocked';
+  reason: string | null;
+  created_at: string;
+  user?: User;
+}
+
+export interface TimelineEvent {
+  id: string;
+  type: 'version' | 'approval' | 'lock';
+  created_at: string;
+  // Version event fields
+  version_number?: number;
+  file_url?: string;
+  file_size?: number;
+  file_size_formatted?: string;
+  file_meta?: Record<string, unknown>;
+  version_notes?: string | null;
+  uploaded_by?: User;
+  // Approval event fields
+  action?: string;
+  asset_version?: number;
+  comment?: string | null;
+  // Lock event fields
+  reason?: string | null;
+  // Common
+  user?: User;
+}
+
+export interface VersionHistoryResponse {
+  versions: AssetVersion[];
+  timeline: TimelineEvent[];
+  is_locked: boolean;
+  locked_by: User | null;
+  locked_at: string | null;
+}
+
+export interface DownloadResponse {
+  url: string;
+  filename: string;
+  version: number;
+  file_size: number;
 }

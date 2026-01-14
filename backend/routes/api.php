@@ -39,6 +39,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/assets/{asset}/approve', [AssetController::class, 'approve']);
     Route::post('/assets/{asset}/request-revision', [AssetController::class, 'requestRevision']);
     Route::post('/assets/{asset}/link-request', [AssetController::class, 'linkRequest']);
+    Route::post('/assets/{asset}/lock', [AssetController::class, 'lock']);
+    Route::post('/assets/{asset}/unlock', [AssetController::class, 'unlock']);
+    Route::get('/assets/{asset}/download/{version?}', [AssetController::class, 'download']);
+    Route::get('/assets/{asset}/history', [AssetController::class, 'history']);
 
     // Comments
     Route::get('/assets/{asset}/comments', [CommentController::class, 'index']);
