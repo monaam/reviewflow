@@ -126,7 +126,7 @@ export function ProjectsPage() {
             <Link
               key={project.id}
               to={`/projects/${project.id}`}
-              className="card hover:shadow-md transition-shadow"
+              className="block card hover:shadow-md transition-shadow"
             >
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">

@@ -483,7 +483,7 @@ function AssetCard({ asset }: { asset: Asset }) {
   return (
     <Link
       to={`/assets/${asset.id}`}
-      className="card hover:shadow-md transition-shadow"
+      className="block card hover:shadow-md transition-shadow"
     >
       <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
         <Icon className="w-12 h-12 text-gray-400" />
@@ -513,7 +513,7 @@ function RequestCard({ request }: { request: CreativeRequest }) {
   return (
     <Link
       to={`/requests/${request.id}`}
-      className={`card p-4 hover:shadow-md transition-shadow ${
+      className={`block card p-4 hover:shadow-md transition-shadow ${
         isOverdue ? 'border-red-300 dark:border-red-700' : ''
       }`}
     >
