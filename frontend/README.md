@@ -1,73 +1,166 @@
-# React + TypeScript + Vite
+# ReviewFlow Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The React frontend for ReviewFlow, a creative review and approval platform.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This is the web interface for ReviewFlow, providing a modern single-page application for creative teams to manage assets, provide feedback with visual annotations, and track approval workflows.
 
-## React Compiler
+For full product requirements, see the [PRD documentation](../prd-creative-review-platform.md).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- **Framework:** React 18
+- **Language:** TypeScript
+- **Build Tool:** Vite
+- **Styling:** TailwindCSS
+- **HTTP Client:** Axios (planned)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- Node.js 18+
+- npm or yarn
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The application will be available at `http://localhost:5173`.
+
+### Available Scripts
+
+```bash
+# Development server with hot reload
+npm run dev
+
+# Production build
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run linter
+npm run lint
+```
+
+## Project Structure
+
+```
+src/
+├── assets/          # Static assets (images, fonts)
+├── components/      # Reusable UI components
+├── contexts/        # React context providers
+├── hooks/           # Custom React hooks
+├── pages/           # Page components
+├── services/        # API service layer
+├── types/           # TypeScript type definitions
+├── utils/           # Utility functions
+├── App.tsx          # Root component
+└── main.tsx         # Application entry point
+```
+
+## Key Features to Implement
+
+Based on the [PRD](../prd-creative-review-platform.md), the frontend includes:
+
+### Authentication
+- Login/logout with Sanctum tokens
+- Role-based access control
+- Protected routes
+
+### Dashboard
+- Role-specific views (Admin, PM, Creative)
+- Pending tasks overview
+- Recent activity feed
+- Quick upload button
+
+### Project Management
+- Project list with filters
+- Project detail with asset grid
+- Team member management
+- Status indicators
+
+### Asset Review
+- Asset preview (images, videos, PDFs)
+- Rectangle annotation tool
+- Video playback with timestamp markers
+- Version history and comparison
+- Comment panel with resolution tracking
+
+### Creative Requests
+- Request queue for creatives
+- Request detail with brief and specs
+- Request-to-asset linking
+- Status workflow
+
+### Admin Panel
+- User management
+- System settings (Discord webhook)
+- Platform analytics
+
+## Design Principles
+
+From the PRD:
+
+- Clean, minimal interface focused on content
+- Dark mode support
+- Desktop-first, responsive design
+- Keyboard shortcuts for power users
+
+## Connecting to Backend
+
+Configure the API base URL in your environment:
+
+```env
+VITE_API_URL=http://localhost
+```
+
+The backend API documentation is available in the [backend README](../backend/README.md).
+
+## ESLint Configuration
+
+The project uses ESLint with TypeScript support. For stricter type checking:
 
 ```js
 // eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
 export default defineConfig([
-  globalIgnores(['dist']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
+      tseslint.configs.recommendedTypeChecked,
+      // or for stricter rules:
+      // tseslint.configs.strictTypeChecked,
     ],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.node.json', './tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
     },
   },
 ])
 ```
+
+## Building for Production
+
+```bash
+# Create optimized production build
+npm run build
+
+# Preview the build locally
+npm run preview
+```
+
+The build output will be in the `dist/` directory.
+
+## License
+
+Proprietary - Internal use only.
