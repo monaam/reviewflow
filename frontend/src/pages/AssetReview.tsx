@@ -25,10 +25,12 @@ import {
 } from 'lucide-react';
 import { assetsApi } from '../api/assets';
 import { Asset, Comment, AssetVersion, TimelineItem, ApprovalLog } from '../types';
+import { ComputedAction, ActionHandlers } from '../types/actions';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
 import { getMediaUrl } from '../utils/media';
+import { useAssetActions } from '../hooks/useAssetActions';
 
 // Video annotation timing configuration (in seconds)
 const ANNOTATION_SHOW_BEFORE = 1; // How long before the timestamp to start showing
@@ -288,16 +290,27 @@ export function AssetReviewPage() {
     }
   };
 
-  const canApprove = user?.role === 'admin' || user?.role === 'pm';
-  const canLock = user?.role === 'admin' || user?.role === 'pm';
-  const canUploadVersion = (user?.role === 'admin' || user?.role === 'pm' ||
-    (user?.role === 'creative' && asset?.uploaded_by === user.id)) && !asset?.is_locked;
-  const canEdit = user?.role === 'admin' || user?.role === 'pm' ||
-    (user?.role === 'creative' && asset?.uploaded_by === user.id);
-  const canDelete = user?.role === 'admin' || user?.role === 'pm' ||
-    (user?.role === 'creative' && asset?.uploaded_by === user.id);
-
   const currentVersionData = asset?.versions?.find((v) => v.version_number === selectedVersion);
+
+  // Use role-based asset actions hook (handles null asset gracefully)
+  const { primaryActions, dropdownActions, getCommentActions } = useAssetActions({
+    asset,
+    user,
+  });
+
+  // Action handlers map
+  const actionHandlers: ActionHandlers = {
+    'approve': () => setShowApproveModal(true),
+    'request-revision': () => setShowRevisionModal(true),
+    'upload-version': () => setShowUploadModal(true),
+    'compare-versions': () => setShowCompareModal(true),
+    'view-timeline': () => setShowTimeline(!showTimeline),
+    'lock': () => handleLock(),
+    'download': () => handleDownload(),
+    'download-all': () => handleDownloadAll(),
+    'edit': () => setShowEditModal(true),
+    'delete': () => setShowDeleteModal(true),
+  };
 
   const handleDelete = async () => {
     try {
@@ -367,134 +380,75 @@ export function AssetReviewPage() {
             </span>
           )}
 
-          <button
-            onClick={() => setShowTimeline(!showTimeline)}
-            className={`btn-secondary ${showTimeline ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}
-            title="Version history"
-          >
-            <Clock className="w-4 h-4" />
-          </button>
-
-          {asset.versions && asset.versions.length > 1 && (
-            <button
-              onClick={() => setShowCompareModal(true)}
-              className="btn-secondary"
-              title="Compare versions"
-            >
-              <Layers className="w-4 h-4" />
-            </button>
-          )}
+          {/* Primary actions from hook - rendered dynamically based on role */}
+          {primaryActions
+            .filter((action) => !['approve', 'request-revision'].includes(action.id))
+            .map((action) => (
+              <ActionButton
+                key={action.id}
+                action={action}
+                onClick={actionHandlers[action.id]}
+                isActive={action.id === 'view-timeline' && showTimeline}
+                isLoading={action.id === 'lock' && isLocking}
+              />
+            ))}
 
           {/* Actions dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowActionsMenu(!showActionsMenu)}
-              className="btn-secondary"
-              title="More actions"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-            {showActionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowActionsMenu(false)}
-                />
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        handleDownload();
-                        setShowActionsMenu(false);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      Download
-                    </button>
-                    {asset.versions && asset.versions.length > 1 && (
-                      <button
-                        onClick={() => {
-                          handleDownloadAll();
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download All Versions
-                      </button>
-                    )}
-                    {canLock && (
-                      <button
-                        onClick={() => {
-                          handleLock();
-                          setShowActionsMenu(false);
-                        }}
-                        disabled={isLocking}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        {asset.is_locked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                        {asset.is_locked ? 'Unlock' : 'Lock'}
-                      </button>
-                    )}
-                    {canEdit && (
-                      <button
-                        onClick={() => {
-                          setShowEditModal(true);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                        Edit
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        onClick={() => {
-                          setShowDeleteModal(true);
-                          setShowActionsMenu(false);
-                        }}
-                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </button>
-                    )}
+          {dropdownActions.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowActionsMenu(!showActionsMenu)}
+                className="btn-secondary"
+                title="More actions"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+              {showActionsMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowActionsMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                    <div className="py-1">
+                      {dropdownActions.map((action) => (
+                        <DropdownActionButton
+                          key={action.id}
+                          action={action}
+                          onClick={() => {
+                            actionHandlers[action.id]();
+                            setShowActionsMenu(false);
+                          }}
+                          isLoading={action.id === 'lock' && isLocking}
+                        />
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {canUploadVersion && (
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="btn-secondary"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              New Version
-            </button>
+                </>
+              )}
+            </div>
           )}
 
-          {canApprove && asset.status !== 'approved' && (
-            <>
-              <button
-                onClick={() => setShowRevisionModal(true)}
-                className="btn-warning"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Revision
-              </button>
-              <button
-                onClick={() => setShowApproveModal(true)}
-                className="btn-success"
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Approve
-              </button>
-            </>
+          {/* Upload Version - shown separately for creative role prominence */}
+          {primaryActions.find((a) => a.id === 'upload-version') && (
+            <ActionButton
+              action={primaryActions.find((a) => a.id === 'upload-version')!}
+              onClick={actionHandlers['upload-version']}
+              showLabel
+            />
           )}
+
+          {/* Approval actions at the end for emphasis */}
+          {primaryActions
+            .filter((action) => ['request-revision', 'approve'].includes(action.id))
+            .map((action) => (
+              <ActionButton
+                key={action.id}
+                action={action}
+                onClick={actionHandlers[action.id]}
+                showLabel
+              />
+            ))}
         </div>
       </div>
 
@@ -832,38 +786,12 @@ export function AssetReviewPage() {
                           {comment.user?.name}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        {(user?.role === 'admin' || user?.role === 'pm' || comment.user_id === user?.id) && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Delete this comment?')) {
-                                handleDeleteComment(comment.id);
-                              }
-                            }}
-                            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
-                            title="Delete comment"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleResolveComment(comment.id, comment.is_resolved);
-                          }}
-                          className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                            comment.is_resolved ? 'text-green-500' : 'text-gray-400'
-                          }`}
-                          title={comment.is_resolved ? 'Mark as unresolved' : 'Mark as resolved'}
-                        >
-                          {comment.is_resolved ? (
-                            <CheckCircle className="w-5 h-5" />
-                          ) : (
-                            <Circle className="w-5 h-5" />
-                          )}
-                        </button>
-                      </div>
+                      <CommentActions
+                        comment={comment}
+                        getCommentActions={getCommentActions}
+                        onDelete={handleDeleteComment}
+                        onResolve={handleResolveComment}
+                      />
                     </div>
                     <p className="text-sm text-gray-700 dark:text-gray-300">
                       {comment.content}
@@ -999,6 +927,128 @@ export function AssetReviewPage() {
           initialRightVersion={selectedVersion}
           onClose={() => setShowCompareModal(false)}
         />
+      )}
+    </div>
+  );
+}
+
+// Helper component for rendering toolbar action buttons
+function ActionButton({
+  action,
+  onClick,
+  isActive = false,
+  isLoading = false,
+  showLabel = false,
+}: {
+  action: ComputedAction;
+  onClick: () => void;
+  isActive?: boolean;
+  isLoading?: boolean;
+  showLabel?: boolean;
+}) {
+  const Icon = action.icon;
+
+  const variantClasses: Record<string, string> = {
+    primary: 'btn-primary',
+    secondary: 'btn-secondary',
+    success: 'btn-success',
+    warning: 'btn-warning',
+    danger: 'btn-primary bg-red-600 hover:bg-red-700',
+  };
+
+  const baseClass = variantClasses[action.variant] || 'btn-secondary';
+  const activeClass = isActive ? 'bg-primary-100 dark:bg-primary-900/30' : '';
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={action.isDisabled || isLoading}
+      className={`${baseClass} ${activeClass}`}
+      title={action.tooltip || action.label}
+    >
+      <Icon className={`w-4 h-4 ${showLabel ? 'mr-2' : ''}`} />
+      {showLabel && action.label}
+    </button>
+  );
+}
+
+// Helper component for rendering dropdown action buttons
+function DropdownActionButton({
+  action,
+  onClick,
+  isLoading = false,
+}: {
+  action: ComputedAction;
+  onClick: () => void;
+  isLoading?: boolean;
+}) {
+  const Icon = action.icon;
+
+  const textClass =
+    action.variant === 'danger'
+      ? 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
+      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700';
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={action.isDisabled || isLoading}
+      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${textClass}`}
+      title={action.tooltip}
+    >
+      <Icon className="w-4 h-4" />
+      {action.label}
+    </button>
+  );
+}
+
+// Helper component for comment actions
+function CommentActions({
+  comment,
+  getCommentActions,
+  onDelete,
+  onResolve,
+}: {
+  comment: Comment;
+  getCommentActions: (comment: Comment) => { canDelete: boolean; canResolve: boolean };
+  onDelete: (commentId: string) => void;
+  onResolve: (commentId: string, isResolved: boolean) => void;
+}) {
+  const { canDelete, canResolve } = getCommentActions(comment);
+
+  return (
+    <div className="flex items-center gap-1">
+      {canDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm('Delete this comment?')) {
+              onDelete(comment.id);
+            }
+          }}
+          className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
+          title="Delete comment"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+      {canResolve && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onResolve(comment.id, comment.is_resolved);
+          }}
+          className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
+            comment.is_resolved ? 'text-green-500' : 'text-gray-400'
+          }`}
+          title={comment.is_resolved ? 'Mark as unresolved' : 'Mark as resolved'}
+        >
+          {comment.is_resolved ? (
+            <CheckCircle className="w-5 h-5" />
+          ) : (
+            <Circle className="w-5 h-5" />
+          )}
+        </button>
       )}
     </div>
   );
