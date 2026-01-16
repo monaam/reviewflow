@@ -479,14 +479,27 @@ function AssetCard({ asset }: { asset: Asset }) {
   };
 
   const Icon = getIcon();
+  const thumbnailUrl = asset.latest_version?.file_url;
+  const canShowThumbnail = thumbnailUrl && (asset.type === 'image' || asset.type === 'video');
 
   return (
     <Link
       to={`/assets/${asset.id}`}
       className="block card hover:shadow-md transition-shadow"
     >
-      <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        <Icon className="w-12 h-12 text-gray-400" />
+      <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+        {canShowThumbnail ? (
+          <img
+            src={thumbnailUrl}
+            alt={asset.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <Icon className={`w-12 h-12 text-gray-400 ${canShowThumbnail ? 'hidden' : ''}`} />
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">

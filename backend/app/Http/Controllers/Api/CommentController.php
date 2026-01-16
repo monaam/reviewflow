@@ -19,11 +19,16 @@ class CommentController extends Controller
     {
         $this->authorize('view', $asset);
 
+        // If timeline mode is requested, return unified timeline
+        if ($request->boolean('timeline')) {
+            return $this->getTimeline($request, $asset);
+        }
+
         $query = $asset->comments()->with(['user', 'resolver']);
 
         if ($request->has('version')) {
             $query->where('asset_version', $request->version);
-        } else {
+        } elseif (!$request->boolean('all')) {
             $query->where('asset_version', $asset->current_version);
         }
 
@@ -34,6 +39,55 @@ class CommentController extends Controller
         $comments = $query->orderBy('created_at', 'asc')->get();
 
         return response()->json($comments);
+    }
+
+    protected function getTimeline(Request $request, Asset $asset): JsonResponse
+    {
+        $timeline = collect();
+
+        // Get comments
+        $commentsQuery = $asset->comments()->with(['user', 'resolver']);
+        if ($request->has('version')) {
+            $commentsQuery->where('asset_version', $request->version);
+        } elseif (!$request->boolean('all')) {
+            $commentsQuery->where('asset_version', $asset->current_version);
+        }
+        $comments = $commentsQuery->get()->map(fn($c) => [
+            'type' => 'comment',
+            'id' => $c->id,
+            'created_at' => $c->created_at,
+            'data' => $c,
+        ]);
+        $timeline = $timeline->merge($comments);
+
+        // Get versions (only if showing all or no specific version filter)
+        if ($request->boolean('all') || !$request->has('version')) {
+            $versions = $asset->versions()->with('uploader')->get()->map(fn($v) => [
+                'type' => 'version',
+                'id' => 'version-' . $v->id,
+                'created_at' => $v->created_at,
+                'data' => $v,
+            ]);
+            $timeline = $timeline->merge($versions);
+        }
+
+        // Get approval logs
+        $approvalLogsQuery = $asset->approvalLogs()->with('user');
+        if ($request->has('version')) {
+            $approvalLogsQuery->where('asset_version', $request->version);
+        }
+        $approvalLogs = $approvalLogsQuery->get()->map(fn($a) => [
+            'type' => 'approval',
+            'id' => 'approval-' . $a->id,
+            'created_at' => $a->created_at,
+            'data' => $a,
+        ]);
+        $timeline = $timeline->merge($approvalLogs);
+
+        // Sort by created_at
+        $timeline = $timeline->sortBy('created_at')->values();
+
+        return response()->json($timeline);
     }
 
     public function store(Request $request, Asset $asset): JsonResponse

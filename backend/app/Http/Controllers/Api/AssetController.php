@@ -248,7 +248,7 @@ class AssetController extends Controller
         $this->authorize('approve', $asset);
 
         $validated = $request->validate([
-            'comment' => 'required|string',
+            'comment' => 'nullable|string',
         ]);
 
         $asset->update(['status' => 'revision_requested']);
@@ -258,11 +258,11 @@ class AssetController extends Controller
             'asset_version' => $asset->current_version,
             'user_id' => $request->user()->id,
             'action' => 'revision_requested',
-            'comment' => $validated['comment'],
+            'comment' => $validated['comment'] ?? null,
         ]);
 
         // Send Discord notification
-        $this->discord->notifyRevisionRequested($asset, $request->user(), $validated['comment']);
+        $this->discord->notifyRevisionRequested($asset, $request->user(), $validated['comment'] ?? null);
 
         return response()->json($asset->fresh(['approvalLogs.user']));
     }

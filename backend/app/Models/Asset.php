@@ -54,7 +54,7 @@ class Asset extends Model
 
     public function latestVersion()
     {
-        return $this->hasOne(AssetVersion::class)->where('version_number', $this->current_version);
+        return $this->hasOne(AssetVersion::class)->latestOfMany('version_number');
     }
 
     public function comments(): HasMany

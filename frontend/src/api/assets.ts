@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Asset, AssetVersion, Comment, PaginatedResponse, VersionHistoryResponse, DownloadResponse } from '../types';
+import { Asset, AssetVersion, Comment, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem } from '../types';
 
 export interface CreateAssetRequest {
   file: File;
@@ -85,7 +85,13 @@ export const assetsApi = {
 
   // Comments
   getComments: async (assetId: string, version?: number): Promise<Comment[]> => {
-    const params = version ? { version } : {};
+    const params = version ? { version } : { all: true };
+    const response = await apiClient.get(`/assets/${assetId}/comments`, { params });
+    return response.data;
+  },
+
+  getTimeline: async (assetId: string, all?: boolean): Promise<TimelineItem[]> => {
+    const params = { timeline: true, ...(all ? { all: true } : {}) };
     const response = await apiClient.get(`/assets/${assetId}/comments`, { params });
     return response.data;
   },

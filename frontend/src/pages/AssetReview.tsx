@@ -21,9 +21,10 @@ import {
   Clock,
   Eye,
   EyeOff,
+  MoreVertical,
 } from 'lucide-react';
 import { assetsApi } from '../api/assets';
-import { Asset, Comment, AssetVersion } from '../types';
+import { Asset, Comment, AssetVersion, TimelineItem, ApprovalLog } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
@@ -40,7 +41,7 @@ export function AssetReviewPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [asset, setAsset] = useState<Asset | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -49,6 +50,7 @@ export function AssetReviewPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
   const [showAllVersionsComments, setShowAllVersionsComments] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
@@ -76,9 +78,9 @@ export function AssetReviewPage() {
 
   useEffect(() => {
     if (asset) {
-      fetchComments();
+      fetchTimeline();
     }
-  }, [asset, selectedVersion]);
+  }, [asset]);
 
   const fetchAsset = async () => {
     try {
@@ -92,12 +94,12 @@ export function AssetReviewPage() {
     }
   };
 
-  const fetchComments = async () => {
+  const fetchTimeline = async () => {
     try {
-      const data = await assetsApi.getComments(id!, selectedVersion);
-      setComments(data);
+      const data = await assetsApi.getTimeline(id!, true);
+      setTimeline(data);
     } catch (error) {
-      console.error('Failed to fetch comments:', error);
+      console.error('Failed to fetch timeline:', error);
     }
   };
 
@@ -154,7 +156,13 @@ export function AssetReviewPage() {
         rectangle: selectedRect || undefined,
         video_timestamp: asset?.type === 'video' ? currentTime : undefined,
       });
-      setComments([...comments, comment]);
+      const newItem: TimelineItem = {
+        type: 'comment',
+        id: comment.id,
+        created_at: comment.created_at,
+        data: comment,
+      };
+      setTimeline([...timeline, newItem]);
       setNewComment('');
       setSelectedRect(null);
     } catch (error) {
@@ -167,9 +175,25 @@ export function AssetReviewPage() {
       const updated = resolved
         ? await assetsApi.unresolveComment(commentId)
         : await assetsApi.resolveComment(commentId);
-      setComments(comments.map((c) => (c.id === commentId ? updated : c)));
+      setTimeline(timeline.map((item) =>
+        item.type === 'comment' && item.id === commentId
+          ? { ...item, data: updated }
+          : item
+      ));
     } catch (error) {
       console.error('Failed to update comment:', error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await assetsApi.deleteComment(commentId);
+      setTimeline(timeline.filter((item) => !(item.type === 'comment' && item.id === commentId)));
+      if (selectedCommentId === commentId) {
+        setSelectedCommentId(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
     }
   };
 
@@ -177,6 +201,7 @@ export function AssetReviewPage() {
     try {
       await assetsApi.approve(id!, comment);
       fetchAsset();
+      fetchTimeline();
       setShowApproveModal(false);
     } catch (error) {
       console.error('Failed to approve:', error);
@@ -187,6 +212,7 @@ export function AssetReviewPage() {
     try {
       await assetsApi.requestRevision(id!, comment);
       fetchAsset();
+      fetchTimeline();
       setShowRevisionModal(false);
     } catch (error) {
       console.error('Failed to request revision:', error);
@@ -197,6 +223,7 @@ export function AssetReviewPage() {
     try {
       await assetsApi.uploadVersion(id!, file, versionNotes);
       fetchAsset();
+      fetchTimeline();
       setShowUploadModal(false);
     } catch (error) {
       console.error('Failed to upload version:', error);
@@ -303,7 +330,7 @@ export function AssetReviewPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <StatusBadge status={asset.status} type="asset" />
 
           {asset.is_locked && (
@@ -318,8 +345,7 @@ export function AssetReviewPage() {
             className={`btn-secondary ${showTimeline ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}
             title="Version history"
           >
-            <Clock className="w-4 h-4 mr-2" />
-            History
+            <Clock className="w-4 h-4" />
           </button>
 
           {asset.versions && asset.versions.length > 1 && (
@@ -328,79 +354,99 @@ export function AssetReviewPage() {
               className="btn-secondary"
               title="Compare versions"
             >
-              <Layers className="w-4 h-4 mr-2" />
-              Compare
+              <Layers className="w-4 h-4" />
             </button>
           )}
 
-          <button
-            onClick={handleDownload}
-            className="btn-secondary"
-            title="Download current version"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Download
-          </button>
-
-          {asset.versions && asset.versions.length > 1 && (
+          {/* Actions dropdown */}
+          <div className="relative">
             <button
-              onClick={handleDownloadAll}
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
               className="btn-secondary"
-              title="Download all versions"
+              title="More actions"
             >
-              <Download className="w-4 h-4 mr-2" />
-              All Versions
+              <MoreVertical className="w-4 h-4" />
             </button>
-          )}
+            {showActionsMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowActionsMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        handleDownload();
+                        setShowActionsMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
+                    {asset.versions && asset.versions.length > 1 && (
+                      <button
+                        onClick={() => {
+                          handleDownloadAll();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download All Versions
+                      </button>
+                    )}
+                    {canLock && (
+                      <button
+                        onClick={() => {
+                          handleLock();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={isLocking}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        {asset.is_locked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                        {asset.is_locked ? 'Unlock' : 'Lock'}
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        onClick={() => {
+                          setShowEditModal(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Edit
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => {
+                          setShowDeleteModal(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
-          {canLock && (
-            <button
-              onClick={handleLock}
-              disabled={isLocking}
-              className={`btn-secondary ${asset.is_locked ? 'text-red-600' : ''}`}
-              title={asset.is_locked ? 'Unlock asset' : 'Lock asset'}
-            >
-              {asset.is_locked ? (
-                <>
-                  <Unlock className="w-4 h-4 mr-2" />
-                  Unlock
-                </>
-              ) : (
-                <>
-                  <Lock className="w-4 h-4 mr-2" />
-                  Lock
-                </>
-              )}
-            </button>
-          )}
-
-          {canEdit && (
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="btn-secondary"
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              Edit
-            </button>
-          )}
-
-          {canDelete && (
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="btn-secondary text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </button>
-          )}
-
-          {canUploadVersion && asset.status === 'revision_requested' && (
+          {canUploadVersion && (
             <button
               onClick={() => setShowUploadModal(true)}
               className="btn-secondary"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Upload New Version
+              New Version
             </button>
           )}
 
@@ -411,7 +457,7 @@ export function AssetReviewPage() {
                 className="btn-warning"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Request Revision
+                Revision
               </button>
               <button
                 onClick={() => setShowApproveModal(true)}
@@ -493,7 +539,9 @@ export function AssetReviewPage() {
             )}
 
             {/* Comment rectangles */}
-            {comments
+            {timeline
+              .filter((item) => item.type === 'comment')
+              .map((item) => item.data as Comment)
               .filter((c) => c.rectangle && c.asset_version === selectedVersion)
               .map((comment) => (
                 <div
@@ -599,15 +647,13 @@ export function AssetReviewPage() {
           </div>
         )}
 
-        {/* Comments Panel */}
+        {/* Activity Panel */}
         <div className="w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-gray-900 dark:text-white flex items-center">
                 <MessageSquare className="w-5 h-5 mr-2" />
-                Comments ({showAllVersionsComments
-                  ? comments.length
-                  : comments.filter((c) => c.asset_version === selectedVersion).length})
+                Activity
               </h2>
               <button
                 onClick={() => setShowAllVersionsComments(!showAllVersionsComments)}
@@ -626,77 +672,177 @@ export function AssetReviewPage() {
               </button>
             </div>
             {showAllVersionsComments && (
-              <p className="text-xs text-gray-500 mt-1">Showing comments from all versions</p>
+              <p className="text-xs text-gray-500 mt-1">Showing activity from all versions</p>
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {comments
-              .filter((c) => showAllVersionsComments || c.asset_version === selectedVersion)
-              .map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`p-3 rounded-lg border transition-colors cursor-pointer ${
-                    selectedCommentId === comment.id
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                  }`}
-                  onClick={() => setSelectedCommentId(comment.id)}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-xs text-white font-medium">
-                        {comment.user?.name?.charAt(0)}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {timeline
+              .filter((item) => {
+                if (showAllVersionsComments) return true;
+                if (item.type === 'comment') {
+                  return (item.data as Comment).asset_version === selectedVersion;
+                }
+                if (item.type === 'version') {
+                  return (item.data as AssetVersion).version_number === selectedVersion;
+                }
+                if (item.type === 'approval') {
+                  return (item.data as ApprovalLog).asset_version === selectedVersion;
+                }
+                return true;
+              })
+              .map((item) => {
+                if (item.type === 'version') {
+                  const version = item.data as AssetVersion;
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Upload className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          Version {version.version_number} uploaded
+                        </span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {comment.user?.name}
-                      </span>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        by {version.uploader?.name} · {new Date(item.created_at).toLocaleString()}
+                      </p>
+                      {version.version_notes && (
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+                          {version.version_notes}
+                        </p>
+                      )}
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleResolveComment(comment.id, comment.is_resolved);
-                      }}
-                      className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                        comment.is_resolved ? 'text-green-500' : 'text-gray-400'
+                  );
+                }
+
+                if (item.type === 'approval') {
+                  const approval = item.data as ApprovalLog;
+                  const isApproved = approval.action === 'approved';
+                  const isRevision = approval.action === 'revision_requested';
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-lg border ${
+                        isApproved
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : isRevision
+                          ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                          : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                       }`}
                     >
-                      {comment.is_resolved ? (
-                        <CheckCircle className="w-5 h-5" />
-                      ) : (
-                        <Circle className="w-5 h-5" />
+                      <div className="flex items-center gap-2 mb-1">
+                        {isApproved ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <RotateCcw className="w-4 h-4 text-orange-600" />
+                        )}
+                        <span className={`text-sm font-medium ${
+                          isApproved ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300'
+                        }`}>
+                          {isApproved ? 'Approved' : 'Revision Requested'}
+                        </span>
+                        <span className="text-xs bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded">
+                          v{approval.asset_version}
+                        </span>
+                      </div>
+                      <p className={`text-xs ${isApproved ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                        by {approval.user?.name} · {new Date(item.created_at).toLocaleString()}
+                      </p>
+                      {approval.comment && (
+                        <p className={`text-sm mt-2 ${isApproved ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300'}`}>
+                          "{approval.comment}"
+                        </p>
                       )}
-                    </button>
+                    </div>
+                  );
+                }
+
+                // Comment item
+                const comment = item.data as Comment;
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+                      selectedCommentId === comment.id
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedCommentId(comment.id)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-xs text-white font-medium">
+                          {comment.user?.name?.charAt(0)}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {comment.user?.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {(user?.role === 'admin' || user?.role === 'pm' || comment.user_id === user?.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Delete this comment?')) {
+                                handleDeleteComment(comment.id);
+                              }
+                            }}
+                            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
+                            title="Delete comment"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleResolveComment(comment.id, comment.is_resolved);
+                          }}
+                          className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                            comment.is_resolved ? 'text-green-500' : 'text-gray-400'
+                          }`}
+                          title={comment.is_resolved ? 'Mark as unresolved' : 'Mark as resolved'}
+                        >
+                          {comment.is_resolved ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <Circle className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {comment.content}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 flex-wrap">
+                      {showAllVersionsComments && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded ${
+                            comment.asset_version === selectedVersion
+                              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
+                              : 'bg-gray-100 dark:bg-gray-700'
+                          }`}
+                        >
+                          v{comment.asset_version}
+                        </span>
+                      )}
+                      {comment.video_timestamp !== null && (
+                        <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                          {formatTime(comment.video_timestamp)}
+                        </span>
+                      )}
+                      {comment.rectangle && (
+                        <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                          Annotation
+                        </span>
+                      )}
+                      <span>{new Date(comment.created_at).toLocaleString()}</span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    {comment.content}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 flex-wrap">
-                    {showAllVersionsComments && (
-                      <span
-                        className={`px-1.5 py-0.5 rounded ${
-                          comment.asset_version === selectedVersion
-                            ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
-                            : 'bg-gray-100 dark:bg-gray-700'
-                        }`}
-                      >
-                        v{comment.asset_version}
-                      </span>
-                    )}
-                    {comment.video_timestamp !== null && (
-                      <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-                        {formatTime(comment.video_timestamp)}
-                      </span>
-                    )}
-                    {comment.rectangle && (
-                      <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-                        Annotation
-                      </span>
-                    )}
-                    <span>{new Date(comment.created_at).toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
 
           {/* Add Comment */}
@@ -853,15 +999,14 @@ function RevisionModal({
           Request Revision
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Please explain what changes are needed.
+          Add an optional note, or leave blank if you've already added annotations.
         </p>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Describe the required changes..."
+          placeholder="Additional notes (optional)..."
           className="input mb-4"
           rows={4}
-          required
         />
         <div className="flex justify-end gap-3">
           <button onClick={onClose} className="btn-secondary">
@@ -869,7 +1014,6 @@ function RevisionModal({
           </button>
           <button
             onClick={() => onSubmit(comment)}
-            disabled={!comment.trim()}
             className="btn-warning"
           >
             Request Revision

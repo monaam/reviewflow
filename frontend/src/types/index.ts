@@ -206,3 +206,10 @@ export interface DownloadResponse {
   version: number;
   file_size: number;
 }
+
+export interface TimelineItem {
+  type: 'comment' | 'version' | 'approval';
+  id: string;
+  created_at: string;
+  data: Comment | AssetVersion | ApprovalLog;
+}

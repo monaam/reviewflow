@@ -96,18 +96,23 @@ class DiscordNotificationService
         ]);
     }
 
-    public function notifyRevisionRequested(Asset $asset, User $reviewer, string $comment): void
+    public function notifyRevisionRequested(Asset $asset, User $reviewer, ?string $comment): void
     {
+        $fields = [
+            ['name' => 'Asset', 'value' => $asset->title, 'inline' => false],
+            ['name' => 'Project', 'value' => $asset->project->name, 'inline' => true],
+            ['name' => 'Requested By', 'value' => $reviewer->name, 'inline' => true],
+        ];
+
+        if ($comment) {
+            $fields[] = ['name' => 'Feedback', 'value' => substr($comment, 0, 500), 'inline' => false];
+        }
+
         $this->send([
             'embeds' => [[
                 'title' => '🔄 Revision Requested',
                 'color' => 0xe74c3c,
-                'fields' => [
-                    ['name' => 'Asset', 'value' => $asset->title, 'inline' => false],
-                    ['name' => 'Project', 'value' => $asset->project->name, 'inline' => true],
-                    ['name' => 'Requested By', 'value' => $reviewer->name, 'inline' => true],
-                    ['name' => 'Feedback', 'value' => substr($comment, 0, 500), 'inline' => false],
-                ],
+                'fields' => $fields,
                 'timestamp' => now()->toIso8601String(),
             ]],
         ]);
