@@ -69,6 +69,21 @@ export function AssetReviewPage() {
   const [duration, setDuration] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const mediaRef = useRef<HTMLImageElement | HTMLVideoElement | null>(null);
+  const [mediaBounds, setMediaBounds] = useState<DOMRect | null>(null);
+
+  // Update media bounds when media loads or window resizes
+  const updateMediaBounds = useCallback(() => {
+    if (mediaRef.current) {
+      setMediaBounds(mediaRef.current.getBoundingClientRect());
+    }
+  }, []);
+
+  useEffect(() => {
+    updateMediaBounds();
+    window.addEventListener('resize', updateMediaBounds);
+    return () => window.removeEventListener('resize', updateMediaBounds);
+  }, [updateMediaBounds, selectedVersion]);
 
   useEffect(() => {
     if (id) {
@@ -104,10 +119,14 @@ export function AssetReviewPage() {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    if (!mediaBounds) return;
+
+    // Check if click is within the media bounds
+    const x = (e.clientX - mediaBounds.left) / mediaBounds.width;
+    const y = (e.clientY - mediaBounds.top) / mediaBounds.height;
+
+    // Only start drawing if click is within the media
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
 
     setIsDrawing(true);
     setCurrentRect({ x, y, width: 0, height: 0 });
@@ -115,10 +134,11 @@ export function AssetReviewPage() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || !currentRect || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    if (!isDrawing || !currentRect || !mediaBounds) return;
+
+    // Clamp coordinates to media bounds
+    const x = Math.max(0, Math.min(1, (e.clientX - mediaBounds.left) / mediaBounds.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - mediaBounds.top) / mediaBounds.height));
 
     setCurrentRect({
       ...currentRect,
@@ -485,20 +505,25 @@ export function AssetReviewPage() {
           >
             {asset.type === 'image' && currentVersionData && (
               <img
+                ref={(el) => { mediaRef.current = el; }}
                 src={currentVersionData.file_url}
                 alt={asset.title}
                 className="max-w-full max-h-full object-contain"
                 draggable={false}
+                onLoad={updateMediaBounds}
               />
             )}
 
             {asset.type === 'video' && currentVersionData && (
               <video
-                ref={videoRef}
+                ref={(el) => { videoRef.current = el; mediaRef.current = el; }}
                 src={currentVersionData.file_url}
                 className="max-w-full max-h-full object-contain"
                 onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onLoadedMetadata={(e) => {
+                  setDuration(e.currentTarget.duration);
+                  updateMediaBounds();
+                }}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
               />
@@ -512,59 +537,72 @@ export function AssetReviewPage() {
               />
             )}
 
-            {/* Drawing rectangle */}
-            {currentRect && (
+            {/* Annotation overlay - positioned to match the media element */}
+            {mediaBounds && containerRef.current && (
               <div
-                className="absolute border-2 border-primary-500 bg-primary-500/20 pointer-events-none"
+                className="absolute pointer-events-none"
                 style={{
-                  left: `${Math.min(currentRect.x, currentRect.x + currentRect.width) * 100}%`,
-                  top: `${Math.min(currentRect.y, currentRect.y + currentRect.height) * 100}%`,
-                  width: `${Math.abs(currentRect.width) * 100}%`,
-                  height: `${Math.abs(currentRect.height) * 100}%`,
+                  left: mediaBounds.left - containerRef.current.getBoundingClientRect().left,
+                  top: mediaBounds.top - containerRef.current.getBoundingClientRect().top,
+                  width: mediaBounds.width,
+                  height: mediaBounds.height,
                 }}
-              />
-            )}
+              >
+                {/* Drawing rectangle */}
+                {currentRect && (
+                  <div
+                    className="absolute border-2 border-primary-500 bg-primary-500/20"
+                    style={{
+                      left: `${Math.min(currentRect.x, currentRect.x + currentRect.width) * 100}%`,
+                      top: `${Math.min(currentRect.y, currentRect.y + currentRect.height) * 100}%`,
+                      width: `${Math.abs(currentRect.width) * 100}%`,
+                      height: `${Math.abs(currentRect.height) * 100}%`,
+                    }}
+                  />
+                )}
 
-            {/* Selected rectangle */}
-            {selectedRect && (
-              <div
-                className="absolute border-2 border-green-500 bg-green-500/20 pointer-events-none"
-                style={{
-                  left: `${selectedRect.x * 100}%`,
-                  top: `${selectedRect.y * 100}%`,
-                  width: `${selectedRect.width * 100}%`,
-                  height: `${selectedRect.height * 100}%`,
-                }}
-              />
-            )}
+                {/* Selected rectangle */}
+                {selectedRect && (
+                  <div
+                    className="absolute border-2 border-green-500 bg-green-500/20"
+                    style={{
+                      left: `${selectedRect.x * 100}%`,
+                      top: `${selectedRect.y * 100}%`,
+                      width: `${selectedRect.width * 100}%`,
+                      height: `${selectedRect.height * 100}%`,
+                    }}
+                  />
+                )}
 
-            {/* Comment rectangles */}
-            {timeline
-              .filter((item) => item.type === 'comment')
-              .map((item) => item.data as Comment)
-              .filter((c) => c.rectangle && c.asset_version === selectedVersion)
-              .map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`absolute border-2 cursor-pointer transition-colors ${
-                    selectedCommentId === comment.id
-                      ? 'border-primary-500 bg-primary-500/30'
-                      : comment.is_resolved
-                      ? 'border-green-500 bg-green-500/20'
-                      : 'border-yellow-500 bg-yellow-500/20'
-                  }`}
-                  style={{
-                    left: `${comment.rectangle!.x * 100}%`,
-                    top: `${comment.rectangle!.y * 100}%`,
-                    width: `${comment.rectangle!.width * 100}%`,
-                    height: `${comment.rectangle!.height * 100}%`,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedCommentId(comment.id);
-                  }}
-                />
-              ))}
+                {/* Comment rectangles */}
+                {timeline
+                  .filter((item) => item.type === 'comment')
+                  .map((item) => item.data as Comment)
+                  .filter((c) => c.rectangle && c.asset_version === selectedVersion)
+                  .map((comment) => (
+                    <div
+                      key={comment.id}
+                      className={`absolute border-2 cursor-pointer pointer-events-auto transition-colors ${
+                        selectedCommentId === comment.id
+                          ? 'border-primary-500 bg-primary-500/30'
+                          : comment.is_resolved
+                          ? 'border-green-500 bg-green-500/20'
+                          : 'border-yellow-500 bg-yellow-500/20'
+                      }`}
+                      style={{
+                        left: `${comment.rectangle!.x * 100}%`,
+                        top: `${comment.rectangle!.y * 100}%`,
+                        width: `${comment.rectangle!.width * 100}%`,
+                        height: `${comment.rectangle!.height * 100}%`,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCommentId(comment.id);
+                      }}
+                    />
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Video Controls */}
