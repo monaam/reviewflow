@@ -17,6 +17,11 @@ class CreativeRequestPolicy
             return true;
         }
 
+        // Creatives can view unassigned requests (so they can pick them up)
+        if ($request->assigned_to === null && $user->isCreative()) {
+            return true;
+        }
+
         return $request->project->members()->where('users.id', $user->id)->exists();
     }
 
@@ -40,7 +45,13 @@ class CreativeRequestPolicy
 
     public function start(User $user, CreativeRequest $request): bool
     {
-        return $request->assigned_to === $user->id && $request->status === 'pending';
+        if ($request->status !== 'pending') {
+            return false;
+        }
+
+        // Assigned to this user OR unassigned (creative can pick it up)
+        return $request->assigned_to === $user->id ||
+               ($request->assigned_to === null && $user->isCreative());
     }
 
     public function complete(User $user, CreativeRequest $request): bool

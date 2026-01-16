@@ -15,11 +15,24 @@ import {
   Edit2,
   Trash2,
   Download,
+  Lock,
+  Unlock,
+  Layers,
+  Clock,
+  Eye,
+  EyeOff,
+  MoreVertical,
 } from 'lucide-react';
 import { assetsApi } from '../api/assets';
-import { Asset, Comment, AssetVersion } from '../types';
+import { Asset, Comment, AssetVersion, TimelineItem, ApprovalLog } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
+import { VersionTimeline, VersionComparison } from '../components/version';
+import { getMediaUrl } from '../utils/media';
+
+// Video annotation timing configuration (in seconds)
+const ANNOTATION_SHOW_BEFORE = 1; // How long before the timestamp to start showing
+const ANNOTATION_SHOW_AFTER = 1;  // How long after the timestamp to keep showing
 
 interface Rectangle {
   x: number;
@@ -33,7 +46,7 @@ export function AssetReviewPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [asset, setAsset] = useState<Asset | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [showApproveModal, setShowApproveModal] = useState(false);
@@ -41,6 +54,11 @@ export function AssetReviewPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCompareModal, setShowCompareModal] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showAllVersionsComments, setShowAllVersionsComments] = useState(false);
+  const [isLocking, setIsLocking] = useState(false);
 
   // Annotation state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -54,8 +72,25 @@ export function AssetReviewPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const isScrubbingRef = useRef(false);
+  const scrubTimeRef = useRef(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const mediaRef = useRef<HTMLImageElement | HTMLVideoElement | null>(null);
+  const [mediaBounds, setMediaBounds] = useState<DOMRect | null>(null);
+
+  // Update media bounds when media loads or window resizes
+  const updateMediaBounds = useCallback(() => {
+    if (mediaRef.current) {
+      setMediaBounds(mediaRef.current.getBoundingClientRect());
+    }
+  }, []);
+
+  useEffect(() => {
+    updateMediaBounds();
+    window.addEventListener('resize', updateMediaBounds);
+    return () => window.removeEventListener('resize', updateMediaBounds);
+  }, [updateMediaBounds, selectedVersion]);
 
   useEffect(() => {
     if (id) {
@@ -65,9 +100,9 @@ export function AssetReviewPage() {
 
   useEffect(() => {
     if (asset) {
-      fetchComments();
+      fetchTimeline();
     }
-  }, [asset, selectedVersion]);
+  }, [asset]);
 
   const fetchAsset = async () => {
     try {
@@ -81,20 +116,24 @@ export function AssetReviewPage() {
     }
   };
 
-  const fetchComments = async () => {
+  const fetchTimeline = async () => {
     try {
-      const data = await assetsApi.getComments(id!, selectedVersion);
-      setComments(data);
+      const data = await assetsApi.getTimeline(id!, true);
+      setTimeline(data);
     } catch (error) {
-      console.error('Failed to fetch comments:', error);
+      console.error('Failed to fetch timeline:', error);
     }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    if (!mediaBounds) return;
+
+    // Check if click is within the media bounds
+    const x = (e.clientX - mediaBounds.left) / mediaBounds.width;
+    const y = (e.clientY - mediaBounds.top) / mediaBounds.height;
+
+    // Only start drawing if click is within the media
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
 
     setIsDrawing(true);
     setCurrentRect({ x, y, width: 0, height: 0 });
@@ -102,10 +141,11 @@ export function AssetReviewPage() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDrawing || !currentRect || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
+    if (!isDrawing || !currentRect || !mediaBounds) return;
+
+    // Clamp coordinates to media bounds
+    const x = Math.max(0, Math.min(1, (e.clientX - mediaBounds.left) / mediaBounds.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - mediaBounds.top) / mediaBounds.height));
 
     setCurrentRect({
       ...currentRect,
@@ -143,7 +183,13 @@ export function AssetReviewPage() {
         rectangle: selectedRect || undefined,
         video_timestamp: asset?.type === 'video' ? currentTime : undefined,
       });
-      setComments([...comments, comment]);
+      const newItem: TimelineItem = {
+        type: 'comment',
+        id: comment.id,
+        created_at: comment.created_at,
+        data: comment,
+      };
+      setTimeline([...timeline, newItem]);
       setNewComment('');
       setSelectedRect(null);
     } catch (error) {
@@ -156,9 +202,25 @@ export function AssetReviewPage() {
       const updated = resolved
         ? await assetsApi.unresolveComment(commentId)
         : await assetsApi.resolveComment(commentId);
-      setComments(comments.map((c) => (c.id === commentId ? updated : c)));
+      setTimeline(timeline.map((item) =>
+        item.type === 'comment' && item.id === commentId
+          ? { ...item, data: updated }
+          : item
+      ));
     } catch (error) {
       console.error('Failed to update comment:', error);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await assetsApi.deleteComment(commentId);
+      setTimeline(timeline.filter((item) => !(item.type === 'comment' && item.id === commentId)));
+      if (selectedCommentId === commentId) {
+        setSelectedCommentId(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete comment:', error);
     }
   };
 
@@ -166,6 +228,7 @@ export function AssetReviewPage() {
     try {
       await assetsApi.approve(id!, comment);
       fetchAsset();
+      fetchTimeline();
       setShowApproveModal(false);
     } catch (error) {
       console.error('Failed to approve:', error);
@@ -176,25 +239,59 @@ export function AssetReviewPage() {
     try {
       await assetsApi.requestRevision(id!, comment);
       fetchAsset();
+      fetchTimeline();
       setShowRevisionModal(false);
     } catch (error) {
       console.error('Failed to request revision:', error);
     }
   };
 
-  const handleUploadVersion = async (file: File) => {
+  const handleUploadVersion = async (file: File, versionNotes?: string) => {
     try {
-      await assetsApi.uploadVersion(id!, file);
+      await assetsApi.uploadVersion(id!, file, versionNotes);
       fetchAsset();
+      fetchTimeline();
       setShowUploadModal(false);
     } catch (error) {
       console.error('Failed to upload version:', error);
     }
   };
 
+  const handleLock = async () => {
+    if (!asset) return;
+    setIsLocking(true);
+    try {
+      if (asset.is_locked) {
+        await assetsApi.unlock(id!);
+      } else {
+        await assetsApi.lock(id!);
+      }
+      fetchAsset();
+    } catch (error) {
+      console.error('Failed to toggle lock:', error);
+    } finally {
+      setIsLocking(false);
+    }
+  };
+
+  const handleDownloadVersion = async (version?: number) => {
+    try {
+      const response = await assetsApi.download(id!, version);
+      const link = document.createElement('a');
+      link.href = response.url;
+      link.download = response.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to download:', error);
+    }
+  };
+
   const canApprove = user?.role === 'admin' || user?.role === 'pm';
-  const canUploadVersion = user?.role === 'admin' || user?.role === 'pm' ||
-    (user?.role === 'creative' && asset?.uploaded_by === user.id);
+  const canLock = user?.role === 'admin' || user?.role === 'pm';
+  const canUploadVersion = (user?.role === 'admin' || user?.role === 'pm' ||
+    (user?.role === 'creative' && asset?.uploaded_by === user.id)) && !asset?.is_locked;
   const canEdit = user?.role === 'admin' || user?.role === 'pm' ||
     (user?.role === 'creative' && asset?.uploaded_by === user.id);
   const canDelete = user?.role === 'admin' || user?.role === 'pm' ||
@@ -212,24 +309,12 @@ export function AssetReviewPage() {
   };
 
   const handleDownload = () => {
-    if (currentVersionData?.file_url) {
-      const link = document.createElement('a');
-      link.href = currentVersionData.file_url;
-      link.download = `${asset?.title || 'asset'}-v${selectedVersion}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    handleDownloadVersion(selectedVersion);
   };
 
   const handleDownloadAll = () => {
     asset?.versions?.forEach((version) => {
-      const link = document.createElement('a');
-      link.href = version.file_url;
-      link.download = `${asset?.title || 'asset'}-v${version.version_number}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      handleDownloadVersion(version.version_number);
     });
   };
 
@@ -272,56 +357,123 @@ export function AssetReviewPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <StatusBadge status={asset.status} type="asset" />
 
+          {asset.is_locked && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
+              <Lock className="w-4 h-4" />
+              Locked
+            </span>
+          )}
+
           <button
-            onClick={handleDownload}
-            className="btn-secondary"
-            title="Download current version"
+            onClick={() => setShowTimeline(!showTimeline)}
+            className={`btn-secondary ${showTimeline ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}
+            title="Version history"
           >
-            <Download className="w-4 h-4 mr-2" />
-            Download
+            <Clock className="w-4 h-4" />
           </button>
 
           {asset.versions && asset.versions.length > 1 && (
             <button
-              onClick={handleDownloadAll}
+              onClick={() => setShowCompareModal(true)}
               className="btn-secondary"
-              title="Download all versions"
+              title="Compare versions"
             >
-              <Download className="w-4 h-4 mr-2" />
-              All Versions
+              <Layers className="w-4 h-4" />
             </button>
           )}
 
-          {canEdit && (
+          {/* Actions dropdown */}
+          <div className="relative">
             <button
-              onClick={() => setShowEditModal(true)}
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
               className="btn-secondary"
+              title="More actions"
             >
-              <Edit2 className="w-4 h-4 mr-2" />
-              Edit
+              <MoreVertical className="w-4 h-4" />
             </button>
-          )}
+            {showActionsMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowActionsMenu(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        handleDownload();
+                        setShowActionsMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download
+                    </button>
+                    {asset.versions && asset.versions.length > 1 && (
+                      <button
+                        onClick={() => {
+                          handleDownloadAll();
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download All Versions
+                      </button>
+                    )}
+                    {canLock && (
+                      <button
+                        onClick={() => {
+                          handleLock();
+                          setShowActionsMenu(false);
+                        }}
+                        disabled={isLocking}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        {asset.is_locked ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                        {asset.is_locked ? 'Unlock' : 'Lock'}
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button
+                        onClick={() => {
+                          setShowEditModal(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Edit
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button
+                        onClick={() => {
+                          setShowDeleteModal(true);
+                          setShowActionsMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
-          {canDelete && (
-            <button
-              onClick={() => setShowDeleteModal(true)}
-              className="btn-secondary text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </button>
-          )}
-
-          {canUploadVersion && asset.status === 'revision_requested' && (
+          {canUploadVersion && (
             <button
               onClick={() => setShowUploadModal(true)}
               className="btn-secondary"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Upload New Version
+              New Version
             </button>
           )}
 
@@ -332,7 +484,7 @@ export function AssetReviewPage() {
                 className="btn-warning"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Request Revision
+                Revision
               </button>
               <button
                 onClick={() => setShowApproveModal(true)}
@@ -360,20 +512,29 @@ export function AssetReviewPage() {
           >
             {asset.type === 'image' && currentVersionData && (
               <img
+                ref={(el) => { mediaRef.current = el; }}
                 src={currentVersionData.file_url}
                 alt={asset.title}
                 className="max-w-full max-h-full object-contain"
                 draggable={false}
+                onLoad={updateMediaBounds}
               />
             )}
 
             {asset.type === 'video' && currentVersionData && (
               <video
-                ref={videoRef}
-                src={currentVersionData.file_url}
+                ref={(el) => { videoRef.current = el; mediaRef.current = el; }}
+                src={getMediaUrl(currentVersionData.file_url, 'video')}
                 className="max-w-full max-h-full object-contain"
-                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onTimeUpdate={(e) => {
+                  if (!isScrubbingRef.current) {
+                    setCurrentTime(e.currentTarget.currentTime);
+                  }
+                }}
+                onLoadedMetadata={(e) => {
+                  setDuration(e.currentTarget.duration);
+                  updateMediaBounds();
+                }}
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
               />
@@ -387,92 +548,101 @@ export function AssetReviewPage() {
               />
             )}
 
-            {/* Drawing rectangle */}
-            {currentRect && (
+            {/* Annotation overlay - positioned to match the media element */}
+            {mediaBounds && containerRef.current && (
               <div
-                className="absolute border-2 border-primary-500 bg-primary-500/20 pointer-events-none"
+                className="absolute pointer-events-none"
                 style={{
-                  left: `${Math.min(currentRect.x, currentRect.x + currentRect.width) * 100}%`,
-                  top: `${Math.min(currentRect.y, currentRect.y + currentRect.height) * 100}%`,
-                  width: `${Math.abs(currentRect.width) * 100}%`,
-                  height: `${Math.abs(currentRect.height) * 100}%`,
+                  left: mediaBounds.left - containerRef.current.getBoundingClientRect().left,
+                  top: mediaBounds.top - containerRef.current.getBoundingClientRect().top,
+                  width: mediaBounds.width,
+                  height: mediaBounds.height,
                 }}
-              />
-            )}
+              >
+                {/* Drawing rectangle */}
+                {currentRect && (
+                  <div
+                    className="absolute border-2 border-primary-500 bg-primary-500/20"
+                    style={{
+                      left: `${Math.min(currentRect.x, currentRect.x + currentRect.width) * 100}%`,
+                      top: `${Math.min(currentRect.y, currentRect.y + currentRect.height) * 100}%`,
+                      width: `${Math.abs(currentRect.width) * 100}%`,
+                      height: `${Math.abs(currentRect.height) * 100}%`,
+                    }}
+                  />
+                )}
 
-            {/* Selected rectangle */}
-            {selectedRect && (
-              <div
-                className="absolute border-2 border-green-500 bg-green-500/20 pointer-events-none"
-                style={{
-                  left: `${selectedRect.x * 100}%`,
-                  top: `${selectedRect.y * 100}%`,
-                  width: `${selectedRect.width * 100}%`,
-                  height: `${selectedRect.height * 100}%`,
-                }}
-              />
-            )}
+                {/* Selected rectangle */}
+                {selectedRect && (
+                  <div
+                    className="absolute border-2 border-green-500 bg-green-500/20"
+                    style={{
+                      left: `${selectedRect.x * 100}%`,
+                      top: `${selectedRect.y * 100}%`,
+                      width: `${selectedRect.width * 100}%`,
+                      height: `${selectedRect.height * 100}%`,
+                    }}
+                  />
+                )}
 
-            {/* Comment rectangles */}
-            {comments
-              .filter((c) => c.rectangle && c.asset_version === selectedVersion)
-              .map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`absolute border-2 cursor-pointer transition-colors ${
-                    selectedCommentId === comment.id
-                      ? 'border-primary-500 bg-primary-500/30'
-                      : comment.is_resolved
-                      ? 'border-green-500 bg-green-500/20'
-                      : 'border-yellow-500 bg-yellow-500/20'
-                  }`}
-                  style={{
-                    left: `${comment.rectangle!.x * 100}%`,
-                    top: `${comment.rectangle!.y * 100}%`,
-                    width: `${comment.rectangle!.width * 100}%`,
-                    height: `${comment.rectangle!.height * 100}%`,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedCommentId(comment.id);
-                  }}
-                />
-              ))}
+                {/* Comment rectangles */}
+                {timeline
+                  .filter((item) => item.type === 'comment')
+                  .map((item) => item.data as Comment)
+                  .filter((c) => c.rectangle && c.asset_version === selectedVersion)
+                  .filter((c) => {
+                    // For videos, only show annotations within the configured time window
+                    if (asset.type === 'video' && c.video_timestamp !== null) {
+                      const timeDiff = currentTime - c.video_timestamp;
+                      return timeDiff >= -ANNOTATION_SHOW_BEFORE && timeDiff <= ANNOTATION_SHOW_AFTER;
+                    }
+                    // For non-video assets or comments without timestamp, always show
+                    return true;
+                  })
+                  .map((comment) => (
+                    <div
+                      key={comment.id}
+                      className={`absolute border-2 cursor-pointer pointer-events-auto transition-all duration-300 ${
+                        selectedCommentId === comment.id
+                          ? 'border-primary-500 bg-primary-500/30'
+                          : comment.is_resolved
+                          ? 'border-green-500 bg-green-500/20'
+                          : 'border-yellow-500 bg-yellow-500/20'
+                      }`}
+                      style={{
+                        left: `${comment.rectangle!.x * 100}%`,
+                        top: `${comment.rectangle!.y * 100}%`,
+                        width: `${comment.rectangle!.width * 100}%`,
+                        height: `${comment.rectangle!.height * 100}%`,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCommentId(comment.id);
+                        // For video annotations, pause and seek to start of annotation visibility
+                        if (asset.type === 'video' && comment.video_timestamp !== null && videoRef.current) {
+                          const seekTime = Math.max(0, comment.video_timestamp - ANNOTATION_SHOW_BEFORE);
+                          videoRef.current.pause();
+                          videoRef.current.currentTime = seekTime;
+                          setCurrentTime(seekTime);
+                        }
+                      }}
+                    />
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Video Controls */}
           {asset.type === 'video' && (
-            <div className="p-4 bg-gray-800 flex items-center gap-4">
-              <button
-                onClick={() => {
-                  if (videoRef.current) {
-                    isPlaying ? videoRef.current.pause() : videoRef.current.play();
-                  }
-                }}
-                className="p-2 hover:bg-gray-700 rounded"
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5 text-white" />
-                ) : (
-                  <Play className="w-5 h-5 text-white" />
-                )}
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={duration}
-                value={currentTime}
-                onChange={(e) => {
-                  if (videoRef.current) {
-                    videoRef.current.currentTime = parseFloat(e.target.value);
-                  }
-                }}
-                className="flex-1"
-              />
-              <span className="text-white text-sm">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
-            </div>
+            <VideoControls
+              videoRef={videoRef}
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              duration={duration}
+              setCurrentTime={setCurrentTime}
+              isScrubbingRef={isScrubbingRef}
+              scrubTimeRef={scrubTimeRef}
+            />
           )}
 
           {/* Version Selector */}
@@ -509,71 +679,235 @@ export function AssetReviewPage() {
           )}
         </div>
 
-        {/* Comments Panel */}
+        {/* Timeline Panel (Collapsible) */}
+        {showTimeline && (
+          <div className="w-80 bg-gray-900 border-l border-gray-700 overflow-y-auto">
+            <VersionTimeline
+              assetId={asset.id}
+              onVersionSelect={(v) => setSelectedVersion(v)}
+              currentVersion={selectedVersion}
+            />
+          </div>
+        )}
+
+        {/* Activity Panel */}
         <div className="w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center">
-              <MessageSquare className="w-5 h-5 mr-2" />
-              Comments ({comments.filter((c) => c.asset_version === selectedVersion).length})
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center">
+                <MessageSquare className="w-5 h-5 mr-2" />
+                Activity
+              </h2>
+              <button
+                onClick={() => setShowAllVersionsComments(!showAllVersionsComments)}
+                className={`p-1.5 rounded transition-colors ${
+                  showAllVersionsComments
+                    ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500'
+                }`}
+                title={showAllVersionsComments ? 'Show current version only' : 'Show all versions'}
+              >
+                {showAllVersionsComments ? (
+                  <Eye className="w-4 h-4" />
+                ) : (
+                  <EyeOff className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+            {showAllVersionsComments && (
+              <p className="text-xs text-gray-500 mt-1">Showing activity from all versions</p>
+            )}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {comments
-              .filter((c) => c.asset_version === selectedVersion)
-              .map((comment) => (
-                <div
-                  key={comment.id}
-                  className={`p-3 rounded-lg border transition-colors cursor-pointer ${
-                    selectedCommentId === comment.id
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                  }`}
-                  onClick={() => setSelectedCommentId(comment.id)}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-xs text-white font-medium">
-                        {comment.user?.name?.charAt(0)}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {timeline
+              .filter((item) => {
+                if (showAllVersionsComments) return true;
+                if (item.type === 'comment') {
+                  return (item.data as Comment).asset_version === selectedVersion;
+                }
+                if (item.type === 'version') {
+                  return (item.data as AssetVersion).version_number === selectedVersion;
+                }
+                if (item.type === 'approval') {
+                  return (item.data as ApprovalLog).asset_version === selectedVersion;
+                }
+                return true;
+              })
+              .map((item) => {
+                if (item.type === 'version') {
+                  const version = item.data as AssetVersion;
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Upload className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                          Version {version.version_number} uploaded
+                        </span>
                       </div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {comment.user?.name}
-                      </span>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                        by {version.uploader?.name} · {new Date(item.created_at).toLocaleString()}
+                      </p>
+                      {version.version_notes && (
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+                          {version.version_notes}
+                        </p>
+                      )}
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleResolveComment(comment.id, comment.is_resolved);
-                      }}
-                      className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                        comment.is_resolved ? 'text-green-500' : 'text-gray-400'
+                  );
+                }
+
+                if (item.type === 'approval') {
+                  const approval = item.data as ApprovalLog;
+                  const isApproved = approval.action === 'approved';
+                  const isRevision = approval.action === 'revision_requested';
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-lg border ${
+                        isApproved
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : isRevision
+                          ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                          : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                       }`}
                     >
-                      {comment.is_resolved ? (
-                        <CheckCircle className="w-5 h-5" />
-                      ) : (
-                        <Circle className="w-5 h-5" />
+                      <div className="flex items-center gap-2 mb-1">
+                        {isApproved ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <RotateCcw className="w-4 h-4 text-orange-600" />
+                        )}
+                        <span className={`text-sm font-medium ${
+                          isApproved ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300'
+                        }`}>
+                          {isApproved ? 'Approved' : 'Revision Requested'}
+                        </span>
+                        <span className="text-xs bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded">
+                          v{approval.asset_version}
+                        </span>
+                      </div>
+                      <p className={`text-xs ${isApproved ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                        by {approval.user?.name} · {new Date(item.created_at).toLocaleString()}
+                      </p>
+                      {approval.comment && (
+                        <p className={`text-sm mt-2 ${isApproved ? 'text-green-700 dark:text-green-300' : 'text-orange-700 dark:text-orange-300'}`}>
+                          "{approval.comment}"
+                        </p>
                       )}
-                    </button>
+                    </div>
+                  );
+                }
+
+                // Comment item
+                const comment = item.data as Comment;
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-3 rounded-lg border transition-colors cursor-pointer ${
+                      selectedCommentId === comment.id
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
+                    }`}
+                    onClick={() => {
+                      setSelectedCommentId(comment.id);
+                      // Seek to start of annotation visibility for video comments
+                      if (asset.type === 'video' && comment.video_timestamp !== null && videoRef.current) {
+                        const seekTime = Math.max(0, comment.video_timestamp - ANNOTATION_SHOW_BEFORE);
+                        videoRef.current.pause();
+                        videoRef.current.currentTime = seekTime;
+                        setCurrentTime(seekTime);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-xs text-white font-medium">
+                          {comment.user?.name?.charAt(0)}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                          {comment.user?.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {(user?.role === 'admin' || user?.role === 'pm' || comment.user_id === user?.id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Delete this comment?')) {
+                                handleDeleteComment(comment.id);
+                              }
+                            }}
+                            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
+                            title="Delete comment"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleResolveComment(comment.id, comment.is_resolved);
+                          }}
+                          className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                            comment.is_resolved ? 'text-green-500' : 'text-gray-400'
+                          }`}
+                          title={comment.is_resolved ? 'Mark as unresolved' : 'Mark as resolved'}
+                        >
+                          {comment.is_resolved ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <Circle className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {comment.content}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 flex-wrap">
+                      {showAllVersionsComments && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded ${
+                            comment.asset_version === selectedVersion
+                              ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
+                              : 'bg-gray-100 dark:bg-gray-700'
+                          }`}
+                        >
+                          v{comment.asset_version}
+                        </span>
+                      )}
+                      {comment.video_timestamp !== null && (
+                        <span
+                          className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-1.5 py-0.5 rounded cursor-pointer hover:bg-primary-200 dark:hover:bg-primary-900/50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (videoRef.current) {
+                              const seekTime = Math.max(0, comment.video_timestamp! - ANNOTATION_SHOW_BEFORE);
+                              videoRef.current.pause();
+                              videoRef.current.currentTime = seekTime;
+                              setCurrentTime(seekTime);
+                              setSelectedCommentId(comment.id);
+                            }
+                          }}
+                          title="Click to jump to this timestamp"
+                        >
+                          {formatTime(comment.video_timestamp)}
+                        </span>
+                      )}
+                      {comment.rectangle && (
+                        <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                          Annotation
+                        </span>
+                      )}
+                      <span>{new Date(comment.created_at).toLocaleString()}</span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    {comment.content}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
-                    {comment.video_timestamp !== null && (
-                      <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-                        {formatTime(comment.video_timestamp)}
-                      </span>
-                    )}
-                    {comment.rectangle && (
-                      <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-                        Annotation
-                      </span>
-                    )}
-                    <span>{new Date(comment.created_at).toLocaleString()}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
 
           {/* Add Comment */}
@@ -656,6 +990,16 @@ export function AssetReviewPage() {
           onConfirm={handleDelete}
         />
       )}
+
+      {/* Version Comparison Modal */}
+      {showCompareModal && asset.versions && asset.versions.length > 1 && (
+        <VersionComparison
+          versions={asset.versions}
+          assetType={asset.type}
+          initialRightVersion={selectedVersion}
+          onClose={() => setShowCompareModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -664,6 +1008,120 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function VideoControls({
+  videoRef,
+  isPlaying,
+  currentTime,
+  duration,
+  setCurrentTime,
+  isScrubbingRef,
+  scrubTimeRef,
+}: {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  setCurrentTime: (time: number) => void;
+  isScrubbingRef: React.MutableRefObject<boolean>;
+  scrubTimeRef: React.MutableRefObject<number>;
+}) {
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  const calculateTimeFromEvent = useCallback((clientX: number) => {
+    if (!progressBarRef.current || !duration) return 0;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return percent * duration;
+  }, [duration]);
+
+  const handleScrubStart = useCallback((clientX: number) => {
+    isScrubbingRef.current = true;
+    const time = calculateTimeFromEvent(clientX);
+    scrubTimeRef.current = time;
+    setCurrentTime(time);
+  }, [calculateTimeFromEvent, isScrubbingRef, scrubTimeRef, setCurrentTime]);
+
+  const handleScrubMove = useCallback((clientX: number) => {
+    if (!isScrubbingRef.current) return;
+    const time = calculateTimeFromEvent(clientX);
+    scrubTimeRef.current = time;
+    setCurrentTime(time);
+  }, [calculateTimeFromEvent, isScrubbingRef, scrubTimeRef, setCurrentTime]);
+
+  const handleScrubEnd = useCallback(() => {
+    if (!isScrubbingRef.current) return;
+    isScrubbingRef.current = false;
+    if (videoRef.current) {
+      videoRef.current.currentTime = scrubTimeRef.current;
+      videoRef.current.pause();
+    }
+  }, [isScrubbingRef, scrubTimeRef, videoRef]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => handleScrubMove(e.clientX);
+    const handleMouseUp = () => handleScrubEnd();
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) handleScrubMove(e.touches[0].clientX);
+    };
+    const handleTouchEnd = () => handleScrubEnd();
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleScrubMove, handleScrubEnd]);
+
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="p-4 bg-gray-800 flex items-center gap-4 relative z-20">
+      <button
+        onClick={() => {
+          if (videoRef.current) {
+            isPlaying ? videoRef.current.pause() : videoRef.current.play();
+          }
+        }}
+        className="p-2 hover:bg-gray-700 rounded"
+      >
+        {isPlaying ? (
+          <Pause className="w-5 h-5 text-white" />
+        ) : (
+          <Play className="w-5 h-5 text-white" />
+        )}
+      </button>
+      <div
+        ref={progressBarRef}
+        className="flex-1 relative h-6 flex items-center cursor-pointer group"
+        onMouseDown={(e) => handleScrubStart(e.clientX)}
+        onTouchStart={(e) => {
+          if (e.touches.length > 0) handleScrubStart(e.touches[0].clientX);
+        }}
+      >
+        <div className="absolute inset-x-0 h-1 bg-gray-600 rounded-full group-hover:h-2 transition-all">
+          <div
+            className="h-full bg-primary-500 rounded-full"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div
+          className="absolute w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ left: `calc(${progress}% - 6px)` }}
+        />
+      </div>
+      <span className="text-white text-sm whitespace-nowrap">
+        {formatTime(currentTime)} / {formatTime(duration)}
+      </span>
+    </div>
+  );
 }
 
 function ApproveModal({
@@ -720,15 +1178,14 @@ function RevisionModal({
           Request Revision
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Please explain what changes are needed.
+          Add an optional note, or leave blank if you've already added annotations.
         </p>
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Describe the required changes..."
+          placeholder="Additional notes (optional)..."
           className="input mb-4"
           rows={4}
-          required
         />
         <div className="flex justify-end gap-3">
           <button onClick={onClose} className="btn-secondary">
@@ -736,7 +1193,6 @@ function RevisionModal({
           </button>
           <button
             onClick={() => onSubmit(comment)}
-            disabled={!comment.trim()}
             className="btn-warning"
           >
             Request Revision
@@ -752,9 +1208,10 @@ function UploadVersionModal({
   onUpload,
 }: {
   onClose: () => void;
-  onUpload: (file: File) => void;
+  onUpload: (file: File, versionNotes?: string) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
+  const [versionNotes, setVersionNotes] = useState('');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -762,18 +1219,43 @@ function UploadVersionModal({
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
           Upload New Version
         </h2>
-        <input
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="input mb-4"
-          accept="image/*,video/*,application/pdf"
-        />
-        <div className="flex justify-end gap-3">
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="file-upload" className="label">
+              File *
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="input"
+              accept="image/*,video/*,application/pdf"
+            />
+          </div>
+          <div>
+            <label htmlFor="version-notes" className="label">
+              Version Notes (optional)
+            </label>
+            <textarea
+              id="version-notes"
+              value={versionNotes}
+              onChange={(e) => setVersionNotes(e.target.value)}
+              placeholder="Describe what changed in this version..."
+              className="input"
+              rows={3}
+              maxLength={1000}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {versionNotes.length}/1000 characters
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="btn-secondary">
             Cancel
           </button>
           <button
-            onClick={() => file && onUpload(file)}
+            onClick={() => file && onUpload(file, versionNotes || undefined)}
             disabled={!file}
             className="btn-primary"
           >

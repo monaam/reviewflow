@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Asset, AssetVersion, Comment, PaginatedResponse } from '../types';
+import { Asset, AssetVersion, Comment, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem } from '../types';
 
 export interface CreateAssetRequest {
   file: File;
@@ -52,9 +52,10 @@ export const assetsApi = {
     await apiClient.delete(`/assets/${id}`);
   },
 
-  uploadVersion: async (id: string, file: File): Promise<Asset> => {
+  uploadVersion: async (id: string, file: File, versionNotes?: string): Promise<Asset> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (versionNotes) formData.append('version_notes', versionNotes);
 
     const response = await apiClient.post(`/assets/${id}/versions`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -84,7 +85,13 @@ export const assetsApi = {
 
   // Comments
   getComments: async (assetId: string, version?: number): Promise<Comment[]> => {
-    const params = version ? { version } : {};
+    const params = version ? { version } : { all: true };
+    const response = await apiClient.get(`/assets/${assetId}/comments`, { params });
+    return response.data;
+  },
+
+  getTimeline: async (assetId: string, all?: boolean): Promise<TimelineItem[]> => {
+    const params = { timeline: true, ...(all ? { all: true } : {}) };
     const response = await apiClient.get(`/assets/${assetId}/comments`, { params });
     return response.data;
   },
@@ -110,6 +117,28 @@ export const assetsApi = {
 
   unresolveComment: async (commentId: string): Promise<Comment> => {
     const response = await apiClient.post(`/comments/${commentId}/unresolve`);
+    return response.data;
+  },
+
+  // Version Control
+  lock: async (id: string, reason?: string): Promise<Asset> => {
+    const response = await apiClient.post(`/assets/${id}/lock`, { reason });
+    return response.data;
+  },
+
+  unlock: async (id: string, reason?: string): Promise<Asset> => {
+    const response = await apiClient.post(`/assets/${id}/unlock`, { reason });
+    return response.data;
+  },
+
+  download: async (id: string, version?: number): Promise<DownloadResponse> => {
+    const url = version ? `/assets/${id}/download/${version}` : `/assets/${id}/download`;
+    const response = await apiClient.get(url);
+    return response.data;
+  },
+
+  getHistory: async (id: string): Promise<VersionHistoryResponse> => {
+    const response = await apiClient.get(`/assets/${id}/history`);
     return response.data;
   },
 };

@@ -46,8 +46,11 @@ class CreativeRequestController extends Controller
     public function myQueue(Request $request): JsonResponse
     {
         $query = CreativeRequest::with(['creator', 'project', 'assets'])
-            ->where('assigned_to', $request->user()->id)
-            ->where('status', '!=', 'completed');
+            ->where(function ($q) use ($request) {
+                $q->where('assigned_to', $request->user()->id)
+                  ->orWhereNull('assigned_to');
+            })
+            ->whereNotIn('status', ['completed', 'cancelled']);
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -65,7 +68,7 @@ class CreativeRequestController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'assigned_to' => 'required|uuid|exists:users,id',
+            'assigned_to' => 'nullable|uuid|exists:users,id',
             'deadline' => 'required|date|after:now',
             'priority' => 'sometimes|in:low,normal,high,urgent',
             'specs' => 'nullable|array',
@@ -137,6 +140,22 @@ class CreativeRequestController extends Controller
     public function start(Request $request, CreativeRequest $creativeRequest): JsonResponse
     {
         $this->authorize('start', $creativeRequest);
+
+        $user = $request->user();
+
+        // Auto-assign if unassigned
+        if ($creativeRequest->assigned_to === null) {
+            $creativeRequest->update(['assigned_to' => $user->id]);
+        }
+
+        // Add user as project member if not already
+        $project = $creativeRequest->project;
+        if (!$project->members()->where('users.id', $user->id)->exists()) {
+            $project->members()->attach($user->id, [
+                'id' => \Illuminate\Support\Str::uuid(),
+                'role_in_project' => 'member',
+            ]);
+        }
 
         $creativeRequest->start();
 

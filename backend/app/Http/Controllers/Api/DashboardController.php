@@ -97,7 +97,10 @@ class DashboardController extends Controller
                     ->needsRevision()
                     ->count(),
             ],
-            'my_queue' => CreativeRequest::where('assigned_to', $user->id)
+            'my_queue' => CreativeRequest::where(function ($q) use ($user) {
+                    $q->where('assigned_to', $user->id)
+                      ->orWhereNull('assigned_to');
+                })
                 ->whereNotIn('status', ['completed', 'cancelled'])
                 ->with(['creator', 'project'])
                 ->orderBy('deadline')
@@ -111,6 +114,13 @@ class DashboardController extends Controller
                 ->get(),
             'recent_uploads' => $user->uploadedAssets()
                 ->with(['project', 'latestVersion'])
+                ->latest()
+                ->limit(5)
+                ->get(),
+            'my_projects' => Project::forUser($user)
+                ->with(['creator'])
+                ->withCount(['assets', 'creativeRequests'])
+                ->active()
                 ->latest()
                 ->limit(5)
                 ->get(),

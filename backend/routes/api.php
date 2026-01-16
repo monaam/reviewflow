@@ -7,10 +7,15 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\CreativeRequestController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\StreamController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+// Video streaming with range request support
+Route::get('/stream/{path}', [StreamController::class, 'stream'])->where('path', '.*');
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -21,6 +26,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    // Users (for PM to list creatives)
+    Route::get('/users', [UserController::class, 'index']);
 
     // Projects
     Route::apiResource('projects', ProjectController::class);
@@ -39,6 +47,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/assets/{asset}/approve', [AssetController::class, 'approve']);
     Route::post('/assets/{asset}/request-revision', [AssetController::class, 'requestRevision']);
     Route::post('/assets/{asset}/link-request', [AssetController::class, 'linkRequest']);
+    Route::post('/assets/{asset}/lock', [AssetController::class, 'lock']);
+    Route::post('/assets/{asset}/unlock', [AssetController::class, 'unlock']);
+    Route::get('/assets/{asset}/download/{version?}', [AssetController::class, 'download']);
+    Route::get('/assets/{asset}/history', [AssetController::class, 'history']);
 
     // Comments
     Route::get('/assets/{asset}/comments', [CommentController::class, 'index']);

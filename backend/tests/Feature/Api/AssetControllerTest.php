@@ -622,4 +622,98 @@ class AssetControllerTest extends TestCase
         $response->assertUnprocessable()
             ->assertJsonValidationErrors(['request_id']);
     }
+
+    // AUTO-ASSIGNMENT TESTS
+
+    public function test_uploading_asset_auto_assigns_uploader_to_unassigned_request(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => null,
+        ]);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/projects/{$project->id}/assets", [
+            'file' => $this->createTestFile('image'),
+            'title' => 'Auto-assign Test',
+            'request_id' => $request->id,
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('creative_requests', [
+            'id' => $request->id,
+            'assigned_to' => $this->creative->id,
+        ]);
+    }
+
+    public function test_uploading_asset_does_not_change_existing_assignee(): void
+    {
+        $otherCreative = User::factory()->creative()->create();
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $otherCreative]);
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $otherCreative->id,
+        ]);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/projects/{$project->id}/assets", [
+            'file' => $this->createTestFile('image'),
+            'title' => 'Should Not Reassign',
+            'request_id' => $request->id,
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('creative_requests', [
+            'id' => $request->id,
+            'assigned_to' => $otherCreative->id,
+        ]);
+    }
+
+    public function test_linking_asset_auto_assigns_uploader_to_unassigned_request(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => null,
+        ]);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/link-request", [
+            'request_id' => $request->id,
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('creative_requests', [
+            'id' => $request->id,
+            'assigned_to' => $this->creative->id,
+        ]);
+    }
+
+    public function test_linking_asset_does_not_change_existing_assignee(): void
+    {
+        $otherCreative = User::factory()->creative()->create();
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $otherCreative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $otherCreative->id,
+        ]);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/link-request", [
+            'request_id' => $request->id,
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('creative_requests', [
+            'id' => $request->id,
+            'assigned_to' => $otherCreative->id,
+        ]);
+    }
 }

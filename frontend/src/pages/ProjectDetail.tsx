@@ -25,7 +25,7 @@ import { requestsApi } from '../api/requests';
 import { Project, Asset, CreativeRequest, User } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
-import { adminApi } from '../api/admin';
+import { usersApi } from '../api/users';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -479,14 +479,27 @@ function AssetCard({ asset }: { asset: Asset }) {
   };
 
   const Icon = getIcon();
+  const thumbnailUrl = asset.latest_version?.file_url;
+  const canShowThumbnail = thumbnailUrl && (asset.type === 'image' || asset.type === 'video');
 
   return (
     <Link
       to={`/assets/${asset.id}`}
       className="block card hover:shadow-md transition-shadow"
     >
-      <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        <Icon className="w-12 h-12 text-gray-400" />
+      <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+        {canShowThumbnail ? (
+          <img
+            src={thumbnailUrl}
+            alt={asset.title}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <Icon className={`w-12 h-12 text-gray-400 ${canShowThumbnail ? 'hidden' : ''}`} />
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
@@ -518,7 +531,7 @@ function RequestCard({ request }: { request: CreativeRequest }) {
       }`}
     >
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="font-medium text-gray-900 dark:text-white">
             {request.title}
           </h3>
@@ -526,13 +539,13 @@ function RequestCard({ request }: { request: CreativeRequest }) {
             {request.description}
           </p>
           <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
-            <span>Assigned to: {request.assignee?.name}</span>
+            <span>Assigned to: {request.assignee?.name ?? 'Unassigned'}</span>
             <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
               Due: {new Date(request.deadline).toLocaleDateString()}
             </span>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-2 ml-4">
           <StatusBadge status={request.priority} type="priority" />
           <StatusBadge status={request.status} type="request" />
         </div>
@@ -718,7 +731,7 @@ function CreateRequestModal({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await adminApi.getUsers({ role: 'creative', active: true });
+        const response = await usersApi.list({ role: 'creative' });
         setUsers(response.data);
       } catch (error) {
         console.error('Failed to fetch users:', error);
@@ -736,7 +749,7 @@ function CreateRequestModal({
       const request = await requestsApi.create(projectId, {
         title,
         description,
-        assigned_to: assignedTo,
+        ...(assignedTo && { assigned_to: assignedTo }),
         deadline,
         priority,
       });
@@ -794,16 +807,15 @@ function CreateRequestModal({
 
             <div>
               <label htmlFor="assignedTo" className="label">
-                Assign to *
+                Assign to
               </label>
               <select
                 id="assignedTo"
                 value={assignedTo}
                 onChange={(e) => setAssignedTo(e.target.value)}
                 className="input"
-                required
               >
-                <option value="">Select a creative</option>
+                <option value="">Select a creative (optional)</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name}

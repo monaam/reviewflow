@@ -22,6 +22,9 @@ class Asset extends Model
         'status',
         'current_version',
         'deadline',
+        'is_locked',
+        'locked_by',
+        'locked_at',
     ];
 
     protected function casts(): array
@@ -29,6 +32,8 @@ class Asset extends Model
         return [
             'deadline' => 'datetime',
             'current_version' => 'integer',
+            'is_locked' => 'boolean',
+            'locked_at' => 'datetime',
         ];
     }
 
@@ -49,7 +54,7 @@ class Asset extends Model
 
     public function latestVersion()
     {
-        return $this->hasOne(AssetVersion::class)->where('version_number', $this->current_version);
+        return $this->hasOne(AssetVersion::class)->latestOfMany('version_number');
     }
 
     public function comments(): HasMany
@@ -94,5 +99,47 @@ class Asset extends Model
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');
+    }
+
+    public function locker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'locked_by');
+    }
+
+    public function versionLocks(): HasMany
+    {
+        return $this->hasMany(VersionLock::class);
+    }
+
+    public function lock(User $user, ?string $reason = null): void
+    {
+        $this->update([
+            'is_locked' => true,
+            'locked_by' => $user->id,
+            'locked_at' => now(),
+        ]);
+
+        VersionLock::create([
+            'asset_id' => $this->id,
+            'user_id' => $user->id,
+            'action' => 'locked',
+            'reason' => $reason,
+        ]);
+    }
+
+    public function unlock(User $user, ?string $reason = null): void
+    {
+        $this->update([
+            'is_locked' => false,
+            'locked_by' => null,
+            'locked_at' => null,
+        ]);
+
+        VersionLock::create([
+            'asset_id' => $this->id,
+            'user_id' => $user->id,
+            'action' => 'unlocked',
+            'reason' => $reason,
+        ]);
     }
 }
