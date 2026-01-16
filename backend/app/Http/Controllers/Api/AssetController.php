@@ -9,6 +9,7 @@ use App\Models\AssetVersion;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\VersionLock;
+use App\Services\AssetTypes\AssetTypeRegistry;
 use App\Services\DiscordNotificationService;
 use App\Services\FileUploadService;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,8 @@ class AssetController extends Controller
 {
     public function __construct(
         protected FileUploadService $uploadService,
-        protected DiscordNotificationService $discord
+        protected DiscordNotificationService $discord,
+        protected AssetTypeRegistry $assetTypeRegistry
     ) {}
 
     public function index(Request $request, Project $project): JsonResponse
@@ -58,7 +60,13 @@ class AssetController extends Controller
         ]);
 
         $file = $request->file('file');
-        $type = $this->determineAssetType($file);
+        $type = $this->assetTypeRegistry->determineType($file);
+
+        // Validate file using registry
+        $validationErrors = $this->assetTypeRegistry->validate($file);
+        if (!empty($validationErrors)) {
+            return response()->json(['errors' => ['file' => $validationErrors]], 422);
+        }
 
         // Upload file
         $uploadResult = $this->uploadService->upload($file, "assets/{$project->id}");
@@ -74,14 +82,14 @@ class AssetController extends Controller
             'current_version' => 1,
         ]);
 
-        // Create first version
+        // Create first version with metadata from registry
         AssetVersion::create([
             'asset_id' => $asset->id,
             'version_number' => 1,
             'file_url' => $uploadResult['url'],
             'file_path' => $uploadResult['path'],
             'file_size' => $file->getSize(),
-            'file_meta' => $this->getFileMeta($file, $type),
+            'file_meta' => $this->assetTypeRegistry->extractMetadata($file),
             'uploaded_by' => $request->user()->id,
         ]);
 
@@ -176,14 +184,14 @@ class AssetController extends Controller
         // Upload file
         $uploadResult = $this->uploadService->upload($file, "assets/{$asset->project_id}");
 
-        // Create new version
+        // Create new version with metadata from registry
         AssetVersion::create([
             'asset_id' => $asset->id,
             'version_number' => $newVersion,
             'file_url' => $uploadResult['url'],
             'file_path' => $uploadResult['path'],
             'file_size' => $file->getSize(),
-            'file_meta' => $this->getFileMeta($file, $asset->type),
+            'file_meta' => $this->assetTypeRegistry->extractMetadata($file),
             'version_notes' => $validated['version_notes'] ?? null,
             'uploaded_by' => $request->user()->id,
         ]);
@@ -298,45 +306,6 @@ class AssetController extends Controller
         }
 
         return response()->json($asset->fresh('creativeRequests'));
-    }
-
-    protected function determineAssetType($file): string
-    {
-        $mime = $file->getMimeType();
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        if (str_starts_with($mime, 'image/')) {
-            return 'image';
-        }
-
-        if (str_starts_with($mime, 'video/')) {
-            return 'video';
-        }
-
-        if ($mime === 'application/pdf' || $extension === 'pdf') {
-            return 'pdf';
-        }
-
-        return 'design';
-    }
-
-    protected function getFileMeta($file, string $type): array
-    {
-        $meta = [
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
-            'extension' => $file->getClientOriginalExtension(),
-        ];
-
-        if ($type === 'image') {
-            $imageInfo = @getimagesize($file->getRealPath());
-            if ($imageInfo) {
-                $meta['width'] = $imageInfo[0];
-                $meta['height'] = $imageInfo[1];
-            }
-        }
-
-        return $meta;
     }
 
     public function lock(Request $request, Asset $asset): JsonResponse

@@ -1,7 +1,9 @@
 export type UserRole = 'admin' | 'pm' | 'creative' | 'reviewer';
 export type ProjectStatus = 'active' | 'on_hold' | 'completed' | 'archived';
 export type AssetStatus = 'pending_review' | 'in_review' | 'approved' | 'revision_requested';
-export type AssetType = 'image' | 'video' | 'pdf' | 'design';
+// AssetType is a string to allow extensibility via the registry
+// Common types are 'image' | 'video' | 'pdf' | 'design' but new types can be added
+export type AssetType = string;
 export type RequestStatus = 'pending' | 'in_progress' | 'asset_submitted' | 'completed' | 'cancelled';
 export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 

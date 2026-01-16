@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, ArrowLeftRight, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { AssetVersion, AssetType } from '../../types';
-import { getMediaUrl } from '../../utils/media';
+import {
+  getAssetTypeHandler,
+  getMediaUrlForType,
+  supportsTemporalAnnotations,
+} from '../../config/assetTypeRegistry';
 
 // Sync tolerance in seconds - videos will sync if they drift more than this
 const SYNC_TOLERANCE = 0.1;
@@ -79,7 +83,7 @@ export default function VersionComparison({
 
   // Synced video playback with robust event handling
   useEffect(() => {
-    if (assetType !== 'video' || !syncPlayback) return;
+    if (!supportsTemporalAnnotations(assetType) || !syncPlayback) return;
 
     const leftVideo = leftVideoRef.current;
     const rightVideo = rightVideoRef.current;
@@ -192,7 +196,7 @@ export default function VersionComparison({
   }, [assetType, syncPlayback, leftVersion, rightVersion, pauseBoth]);
 
   const togglePlayback = useCallback(() => {
-    if (assetType !== 'video') return;
+    if (!supportsTemporalAnnotations(assetType)) return;
 
     if (isPlaying) {
       pauseBoth();
@@ -230,49 +234,66 @@ export default function VersionComparison({
       );
     }
 
-    switch (assetType) {
-      case 'image':
-        return (
-          <div className="flex items-center justify-center h-full bg-gray-900 rounded overflow-hidden">
-            <img
-              src={version.file_url}
-              alt={`Version ${version.version_number}`}
-              className="max-w-full max-h-full object-contain"
-            />
-          </div>
-        );
+    const handler = getAssetTypeHandler(assetType);
 
-      case 'video':
-        return (
-          <div className="flex items-center justify-center h-full bg-gray-900 rounded overflow-hidden">
-            <video
-              ref={videoRef}
-              src={getMediaUrl(version.file_url, 'video')}
-              className="max-w-full max-h-full"
-              controls={!syncPlayback}
-              muted
-            />
-          </div>
-        );
-
-      case 'pdf':
-        return (
-          <div className="h-full bg-gray-900 rounded overflow-hidden">
-            <iframe
-              src={version.file_url}
-              className="w-full h-full"
-              title={`Version ${version.version_number}`}
-            />
-          </div>
-        );
-
-      default:
-        return (
-          <div className="flex items-center justify-center h-full bg-gray-900 rounded">
-            <p className="text-gray-500">Preview not available for this file type</p>
-          </div>
-        );
+    // Use handler-specific rendering for known types, fallback for unknown
+    if (!handler) {
+      return (
+        <div className="flex items-center justify-center h-full bg-gray-900 rounded">
+          <p className="text-gray-500">Preview not available for this file type</p>
+        </div>
+      );
     }
+
+    const mediaUrl = getMediaUrlForType(version.file_url, assetType);
+
+    // Video needs special handling for comparison mode sync
+    if (supportsTemporalAnnotations(assetType)) {
+      return (
+        <div className="flex items-center justify-center h-full bg-gray-900 rounded overflow-hidden">
+          <video
+            ref={videoRef}
+            src={mediaUrl}
+            className="max-w-full max-h-full"
+            controls={!syncPlayback}
+            muted
+          />
+        </div>
+      );
+    }
+
+    // For image types
+    if (assetType === 'image') {
+      return (
+        <div className="flex items-center justify-center h-full bg-gray-900 rounded overflow-hidden">
+          <img
+            src={mediaUrl}
+            alt={`Version ${version.version_number}`}
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+      );
+    }
+
+    // For PDF types
+    if (assetType === 'pdf') {
+      return (
+        <div className="h-full bg-gray-900 rounded overflow-hidden">
+          <iframe
+            src={mediaUrl}
+            className="w-full h-full"
+            title={`Version ${version.version_number}`}
+          />
+        </div>
+      );
+    }
+
+    // Fallback for other types (design, etc.)
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-900 rounded">
+        <p className="text-gray-500">Preview not available for this file type</p>
+      </div>
+    );
   };
 
   const renderVersionMeta = (version: AssetVersion | undefined) => {
@@ -299,7 +320,7 @@ export default function VersionComparison({
         <h2 className="text-xl font-semibold text-white">Version Comparison</h2>
 
         <div className="flex items-center gap-4">
-          {assetType === 'video' && (
+          {supportsTemporalAnnotations(assetType) && (
             <>
               <label className="flex items-center gap-2 text-sm text-gray-300">
                 <input

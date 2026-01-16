@@ -7,8 +7,6 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Play,
-  Pause,
   Upload,
   CheckCircle,
   Circle,
@@ -29,12 +27,14 @@ import { ComputedAction, ActionHandlers } from '../types/actions';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
-import { getMediaUrl } from '../utils/media';
 import { useAssetActions } from '../hooks/useAssetActions';
-
-// Video annotation timing configuration (in seconds)
-const ANNOTATION_SHOW_BEFORE = 1; // How long before the timestamp to start showing
-const ANNOTATION_SHOW_AFTER = 1;  // How long after the timestamp to keep showing
+import {
+  getAssetTypeHandler,
+  supportsSpatialAnnotations,
+  supportsTemporalAnnotations,
+  getMediaUrlForType,
+} from '../config/assetTypeRegistry';
+import { AnnotationOverlay, ANNOTATION_SHOW_BEFORE, VideoControls } from '../components/assetRenderers';
 
 interface Rectangle {
   x: number;
@@ -70,7 +70,6 @@ export function AssetReviewPage() {
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
 
   // Video state
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -183,7 +182,7 @@ export function AssetReviewPage() {
       const comment = await assetsApi.createComment(id!, {
         content: newComment,
         rectangle: selectedRect || undefined,
-        video_timestamp: asset?.type === 'video' ? currentTime : undefined,
+        video_timestamp: asset && supportsTemporalAnnotations(asset.type) ? currentTime : undefined,
       });
       const newItem: TimelineItem = {
         type: 'comment',
@@ -464,140 +463,83 @@ export function AssetReviewPage() {
             onMouseUp={handleMouseUp}
             onMouseLeave={() => setIsDrawing(false)}
           >
-            {asset.type === 'image' && currentVersionData && (
-              <img
-                ref={(el) => { mediaRef.current = el; }}
-                src={currentVersionData.file_url}
-                alt={asset.title}
-                className="max-w-full max-h-full object-contain"
-                draggable={false}
-                onLoad={updateMediaBounds}
-              />
-            )}
+            {/* Dynamic renderer from registry */}
+            {currentVersionData && (() => {
+              const handler = getAssetTypeHandler(asset.type);
+              if (!handler) return null;
 
-            {asset.type === 'video' && currentVersionData && (
-              <video
-                ref={(el) => { videoRef.current = el; mediaRef.current = el; }}
-                src={getMediaUrl(currentVersionData.file_url, 'video')}
-                className="max-w-full max-h-full object-contain"
-                onTimeUpdate={(e) => {
-                  if (!isScrubbingRef.current) {
-                    setCurrentTime(e.currentTarget.currentTime);
+              const Renderer = handler.Renderer;
+              const mediaUrl = getMediaUrlForType(currentVersionData.file_url, asset.type);
+
+              return (
+                <Renderer
+                  fileUrl={mediaUrl}
+                  title={asset.title}
+                  mediaRef={mediaRef}
+                  onLoad={updateMediaBounds}
+                  currentTime={currentTime}
+                  onTimeUpdate={setCurrentTime}
+                  onDurationChange={setDuration}
+                  onPlayChange={setIsPlaying}
+                />
+              );
+            })()}
+
+            {/* Annotation overlay - only show for types that support spatial annotations */}
+            {supportsSpatialAnnotations(asset.type) && (
+              <AnnotationOverlay
+                mediaBounds={mediaBounds}
+                containerRef={containerRef}
+                currentRect={currentRect}
+                selectedRect={selectedRect}
+                selectedCommentId={selectedCommentId}
+                comments={timeline
+                  .filter((item) => item.type === 'comment')
+                  .map((item) => {
+                    const comment = item.data as Comment;
+                    return {
+                      id: comment.id,
+                      rectangle: comment.rectangle,
+                      video_timestamp: comment.video_timestamp,
+                      is_resolved: comment.is_resolved,
+                      asset_version: comment.asset_version,
+                    };
+                  })}
+                selectedVersion={selectedVersion}
+                assetType={asset.type}
+                currentTime={currentTime}
+                onCommentClick={(commentId, videoTimestamp) => {
+                  setSelectedCommentId(commentId);
+                  // For video annotations, pause and seek to start of annotation visibility
+                  const video = mediaRef.current as HTMLVideoElement | null;
+                  if (supportsTemporalAnnotations(asset.type) && videoTimestamp !== null && video) {
+                    const seekTime = Math.max(0, videoTimestamp - ANNOTATION_SHOW_BEFORE);
+                    video.pause();
+                    video.currentTime = seekTime;
+                    setCurrentTime(seekTime);
                   }
                 }}
-                onLoadedMetadata={(e) => {
-                  setDuration(e.currentTarget.duration);
-                  updateMediaBounds();
-                }}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
               />
-            )}
-
-            {asset.type === 'pdf' && currentVersionData && (
-              <iframe
-                src={currentVersionData.file_url}
-                className="w-full h-full"
-                title={asset.title}
-              />
-            )}
-
-            {/* Annotation overlay - positioned to match the media element */}
-            {mediaBounds && containerRef.current && (
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  left: mediaBounds.left - containerRef.current.getBoundingClientRect().left,
-                  top: mediaBounds.top - containerRef.current.getBoundingClientRect().top,
-                  width: mediaBounds.width,
-                  height: mediaBounds.height,
-                }}
-              >
-                {/* Drawing rectangle */}
-                {currentRect && (
-                  <div
-                    className="absolute border-2 border-primary-500 bg-primary-500/20"
-                    style={{
-                      left: `${Math.min(currentRect.x, currentRect.x + currentRect.width) * 100}%`,
-                      top: `${Math.min(currentRect.y, currentRect.y + currentRect.height) * 100}%`,
-                      width: `${Math.abs(currentRect.width) * 100}%`,
-                      height: `${Math.abs(currentRect.height) * 100}%`,
-                    }}
-                  />
-                )}
-
-                {/* Selected rectangle */}
-                {selectedRect && (
-                  <div
-                    className="absolute border-2 border-green-500 bg-green-500/20"
-                    style={{
-                      left: `${selectedRect.x * 100}%`,
-                      top: `${selectedRect.y * 100}%`,
-                      width: `${selectedRect.width * 100}%`,
-                      height: `${selectedRect.height * 100}%`,
-                    }}
-                  />
-                )}
-
-                {/* Comment rectangles */}
-                {timeline
-                  .filter((item) => item.type === 'comment')
-                  .map((item) => item.data as Comment)
-                  .filter((c) => c.rectangle && c.asset_version === selectedVersion)
-                  .filter((c) => {
-                    // For videos, only show annotations within the configured time window
-                    if (asset.type === 'video' && c.video_timestamp !== null) {
-                      const timeDiff = currentTime - c.video_timestamp;
-                      return timeDiff >= -ANNOTATION_SHOW_BEFORE && timeDiff <= ANNOTATION_SHOW_AFTER;
-                    }
-                    // For non-video assets or comments without timestamp, always show
-                    return true;
-                  })
-                  .map((comment) => (
-                    <div
-                      key={comment.id}
-                      className={`absolute border-2 cursor-pointer pointer-events-auto transition-all duration-300 ${
-                        selectedCommentId === comment.id
-                          ? 'border-primary-500 bg-primary-500/30'
-                          : comment.is_resolved
-                          ? 'border-green-500 bg-green-500/20'
-                          : 'border-yellow-500 bg-yellow-500/20'
-                      }`}
-                      style={{
-                        left: `${comment.rectangle!.x * 100}%`,
-                        top: `${comment.rectangle!.y * 100}%`,
-                        width: `${comment.rectangle!.width * 100}%`,
-                        height: `${comment.rectangle!.height * 100}%`,
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedCommentId(comment.id);
-                        // For video annotations, pause and seek to start of annotation visibility
-                        if (asset.type === 'video' && comment.video_timestamp !== null && videoRef.current) {
-                          const seekTime = Math.max(0, comment.video_timestamp - ANNOTATION_SHOW_BEFORE);
-                          videoRef.current.pause();
-                          videoRef.current.currentTime = seekTime;
-                          setCurrentTime(seekTime);
-                        }
-                      }}
-                    />
-                  ))}
-              </div>
             )}
           </div>
 
-          {/* Video Controls */}
-          {asset.type === 'video' && (
-            <VideoControls
-              videoRef={videoRef}
-              isPlaying={isPlaying}
-              currentTime={currentTime}
-              duration={duration}
-              setCurrentTime={setCurrentTime}
-              isScrubbingRef={isScrubbingRef}
-              scrubTimeRef={scrubTimeRef}
-            />
-          )}
+          {/* Controls from registry (e.g., video controls) */}
+          {(() => {
+            const handler = getAssetTypeHandler(asset.type);
+            if (!handler?.Controls) return null;
+            const Controls = handler.Controls;
+            return (
+              <Controls
+                videoRef={mediaRef as React.RefObject<HTMLVideoElement | null>}
+                isPlaying={isPlaying}
+                currentTime={currentTime}
+                duration={duration}
+                setCurrentTime={setCurrentTime}
+                isScrubbingRef={isScrubbingRef}
+                scrubTimeRef={scrubTimeRef}
+              />
+            );
+          })()}
 
           {/* Version Selector */}
           {asset.versions && asset.versions.length > 1 && (
@@ -768,11 +710,12 @@ export function AssetReviewPage() {
                     }`}
                     onClick={() => {
                       setSelectedCommentId(comment.id);
-                      // Seek to start of annotation visibility for video comments
-                      if (asset.type === 'video' && comment.video_timestamp !== null && videoRef.current) {
+                      // Seek to start of annotation visibility for temporal assets (like video)
+                      const video = mediaRef.current as HTMLVideoElement | null;
+                      if (supportsTemporalAnnotations(asset.type) && comment.video_timestamp !== null && video) {
                         const seekTime = Math.max(0, comment.video_timestamp - ANNOTATION_SHOW_BEFORE);
-                        videoRef.current.pause();
-                        videoRef.current.currentTime = seekTime;
+                        video.pause();
+                        video.currentTime = seekTime;
                         setCurrentTime(seekTime);
                       }
                     }}
@@ -813,10 +756,11 @@ export function AssetReviewPage() {
                           className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-1.5 py-0.5 rounded cursor-pointer hover:bg-primary-200 dark:hover:bg-primary-900/50"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (videoRef.current) {
+                            const video = mediaRef.current as HTMLVideoElement | null;
+                            if (video) {
                               const seekTime = Math.max(0, comment.video_timestamp! - ANNOTATION_SHOW_BEFORE);
-                              videoRef.current.pause();
-                              videoRef.current.currentTime = seekTime;
+                              video.pause();
+                              video.currentTime = seekTime;
                               setCurrentTime(seekTime);
                               setSelectedCommentId(comment.id);
                             }
@@ -1058,120 +1002,6 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-function VideoControls({
-  videoRef,
-  isPlaying,
-  currentTime,
-  duration,
-  setCurrentTime,
-  isScrubbingRef,
-  scrubTimeRef,
-}: {
-  videoRef: React.RefObject<HTMLVideoElement | null>;
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  setCurrentTime: (time: number) => void;
-  isScrubbingRef: React.MutableRefObject<boolean>;
-  scrubTimeRef: React.MutableRefObject<number>;
-}) {
-  const progressBarRef = useRef<HTMLDivElement>(null);
-
-  const calculateTimeFromEvent = useCallback((clientX: number) => {
-    if (!progressBarRef.current || !duration) return 0;
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    return percent * duration;
-  }, [duration]);
-
-  const handleScrubStart = useCallback((clientX: number) => {
-    isScrubbingRef.current = true;
-    const time = calculateTimeFromEvent(clientX);
-    scrubTimeRef.current = time;
-    setCurrentTime(time);
-  }, [calculateTimeFromEvent, isScrubbingRef, scrubTimeRef, setCurrentTime]);
-
-  const handleScrubMove = useCallback((clientX: number) => {
-    if (!isScrubbingRef.current) return;
-    const time = calculateTimeFromEvent(clientX);
-    scrubTimeRef.current = time;
-    setCurrentTime(time);
-  }, [calculateTimeFromEvent, isScrubbingRef, scrubTimeRef, setCurrentTime]);
-
-  const handleScrubEnd = useCallback(() => {
-    if (!isScrubbingRef.current) return;
-    isScrubbingRef.current = false;
-    if (videoRef.current) {
-      videoRef.current.currentTime = scrubTimeRef.current;
-      videoRef.current.pause();
-    }
-  }, [isScrubbingRef, scrubTimeRef, videoRef]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => handleScrubMove(e.clientX);
-    const handleMouseUp = () => handleScrubEnd();
-    const handleTouchMove = (e: TouchEvent) => {
-      if (e.touches.length > 0) handleScrubMove(e.touches[0].clientX);
-    };
-    const handleTouchEnd = () => handleScrubEnd();
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('touchmove', handleTouchMove);
-    document.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [handleScrubMove, handleScrubEnd]);
-
-  const progress = duration ? (currentTime / duration) * 100 : 0;
-
-  return (
-    <div className="p-4 bg-gray-800 flex items-center gap-4 relative z-20">
-      <button
-        onClick={() => {
-          if (videoRef.current) {
-            isPlaying ? videoRef.current.pause() : videoRef.current.play();
-          }
-        }}
-        className="p-2 hover:bg-gray-700 rounded"
-      >
-        {isPlaying ? (
-          <Pause className="w-5 h-5 text-white" />
-        ) : (
-          <Play className="w-5 h-5 text-white" />
-        )}
-      </button>
-      <div
-        ref={progressBarRef}
-        className="flex-1 relative h-6 flex items-center cursor-pointer group"
-        onMouseDown={(e) => handleScrubStart(e.clientX)}
-        onTouchStart={(e) => {
-          if (e.touches.length > 0) handleScrubStart(e.touches[0].clientX);
-        }}
-      >
-        <div className="absolute inset-x-0 h-1 bg-gray-600 rounded-full group-hover:h-2 transition-all">
-          <div
-            className="h-full bg-primary-500 rounded-full"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div
-          className="absolute w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ left: `calc(${progress}% - 6px)` }}
-        />
-      </div>
-      <span className="text-white text-sm whitespace-nowrap">
-        {formatTime(currentTime)} / {formatTime(duration)}
-      </span>
-    </div>
-  );
 }
 
 function ApproveModal({

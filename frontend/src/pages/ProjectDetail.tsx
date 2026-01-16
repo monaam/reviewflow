@@ -5,8 +5,6 @@ import {
   ArrowLeft,
   Upload,
   FileImage,
-  Film,
-  FileText,
   Plus,
   Users,
   Calendar,
@@ -26,6 +24,7 @@ import { Project, Asset, CreativeRequest, User } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { usersApi } from '../api/users';
+import { getAssetTypeIcon, supportsThumbnail } from '../config/assetTypeRegistry';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -467,20 +466,9 @@ export function ProjectDetailPage() {
 }
 
 function AssetCard({ asset }: { asset: Asset }) {
-  const getIcon = () => {
-    switch (asset.type) {
-      case 'video':
-        return Film;
-      case 'pdf':
-        return FileText;
-      default:
-        return FileImage;
-    }
-  };
-
-  const Icon = getIcon();
+  const Icon = getAssetTypeIcon(asset.type);
   const thumbnailUrl = asset.latest_version?.file_url;
-  const canShowThumbnail = thumbnailUrl && (asset.type === 'image' || asset.type === 'video');
+  const canShowThumbnail = thumbnailUrl && supportsThumbnail(asset.type);
 
   return (
     <Link
