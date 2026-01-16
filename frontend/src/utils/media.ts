@@ -1,4 +1,23 @@
 /**
+ * Converts an absolute storage URL to a relative path.
+ * This allows the Vite proxy to handle the request during development.
+ *
+ * Absolute URL: http://localhost:8000/storage/assets/uuid/file.pdf
+ * Relative URL: /storage/assets/uuid/file.pdf
+ */
+export function toRelativeStorageUrl(url: string): string {
+  if (!url) return url;
+
+  // Extract the path starting from /storage/
+  const storageIndex = url.indexOf('/storage/');
+  if (storageIndex !== -1) {
+    return url.substring(storageIndex);
+  }
+
+  return url;
+}
+
+/**
  * Converts a storage URL to a streaming URL for video files.
  * This enables HTTP range requests for seeking in HTML5 video elements.
  *

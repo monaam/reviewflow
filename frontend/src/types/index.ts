@@ -88,6 +88,7 @@ export interface Comment {
     height: number;
   } | null;
   video_timestamp: number | null;
+  page_number: number | null;
   is_resolved: boolean;
   resolved_by: string | null;
   resolved_at: string | null;
