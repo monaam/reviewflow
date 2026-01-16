@@ -93,7 +93,7 @@ export const assetActions: ActionDefinition[] = [
     disabledTooltip: 'Asset is locked. Unlock to upload a new version.',
   },
 
-  // Compare versions - primary for reviewer
+  // Compare versions - primary for reviewer, in dropdown for others
   {
     id: 'compare-versions',
     label: 'Compare',
@@ -102,10 +102,10 @@ export const assetActions: ActionDefinition[] = [
     primaryForRoles: ['reviewer'],
     conditions: [conditions.hasMultipleVersions],
     variant: 'secondary',
-    showInDropdown: false,
+    // showInDropdown defaults to !isPrimary, so it will be in dropdown for non-reviewers
   },
 
-  // View timeline - primary for creative and reviewer
+  // View timeline - primary for creative and reviewer, in dropdown for others
   {
     id: 'view-timeline',
     label: 'Timeline',
@@ -113,7 +113,7 @@ export const assetActions: ActionDefinition[] = [
     roles: 'all',
     primaryForRoles: ['creative', 'reviewer'],
     variant: 'secondary',
-    showInDropdown: false,
+    // showInDropdown defaults to !isPrimary, so it will be in dropdown for admin/pm
   },
 
   // Dropdown actions

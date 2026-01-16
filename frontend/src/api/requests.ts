@@ -4,7 +4,7 @@ import { CreativeRequest, PaginatedResponse, Priority } from '../types';
 export interface CreateRequestData {
   title: string;
   description: string;
-  assigned_to: string;
+  assigned_to?: string;
   deadline: string;
   priority?: Priority;
   specs?: Record<string, unknown>;

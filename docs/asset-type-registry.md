@@ -526,3 +526,338 @@ Limits are defined in each handler's `$maxFileSize` property.
 4. **Set appropriate file size limits** - Consider server and user constraints
 5. **Document annotation capabilities** - Users need to know what's supported
 6. **Test with various files** - Edge cases in MIME detection are common
+
+## Frontend Component Architecture
+
+The AssetReview page follows a modular architecture for maintainability:
+
+### Directory Structure
+
+```
+frontend/src/
+├── pages/
+│   └── AssetReview.tsx              # Orchestration (~500 lines)
+├── components/
+│   ├── assetReview/
+│   │   ├── AssetPreview.tsx         # Renderer + controls
+│   │   ├── ActivityPanel.tsx        # Comments + timeline
+│   │   ├── VersionSelector.tsx      # Version navigation
+│   │   ├── HeaderActions.tsx        # Toolbar actions
+│   │   └── index.ts
+│   ├── modals/
+│   │   ├── Modal.tsx                # Base modal wrapper
+│   │   ├── ApproveModal.tsx
+│   │   ├── RevisionModal.tsx
+│   │   ├── UploadVersionModal.tsx
+│   │   ├── EditAssetModal.tsx
+│   │   ├── DeleteConfirmModal.tsx
+│   │   └── index.ts
+│   └── assetRenderers/              # Type-specific renderers
+├── hooks/
+│   ├── useAssetReviewState.ts       # Reducer-based state management
+│   ├── useTemporalSeek.ts           # Video/audio timestamp navigation
+│   ├── useAssetActions.ts           # Role-based action permissions
+│   └── index.ts
+└── utils/
+    └── time.ts                      # Time formatting utilities
+```
+
+### State Management
+
+The `useAssetReviewState` hook consolidates UI state into a single reducer:
+
+```typescript
+import { useAssetReviewState, ModalType } from '../hooks';
+
+const {
+  state,           // Current state object
+  openModal,       // (modal: ModalType) => void
+  closeModal,      // () => void
+  toggleTimeline,  // () => void
+  startDrawing,    // (rect: Rectangle) => void
+  finishDrawing,   // (rect: Rectangle | null) => void
+  setCurrentTime,  // (time: number) => void
+  // ... more actions
+} = useAssetReviewState();
+
+// Access state
+state.activeModal    // 'approve' | 'revision' | 'upload' | 'edit' | 'delete' | 'compare' | null
+state.isDrawing      // boolean
+state.currentTime    // number
+state.selectedRect   // Rectangle | null
+```
+
+### Temporal Seeking
+
+The `useTemporalSeek` hook centralizes video/audio timestamp navigation:
+
+```typescript
+import { useTemporalSeek } from '../hooks';
+
+const { seekToTimestamp, canSeek } = useTemporalSeek({
+  mediaRef,
+  assetType: asset.type,
+  onTimeChange: setCurrentTime,
+});
+
+// Seek to annotation's timestamp (accounts for visibility window)
+seekToTimestamp(comment.video_timestamp);
+```
+
+## Testing Handlers
+
+### Backend Handler Tests
+
+```php
+// tests/Unit/Services/AssetTypes/ImageHandlerTest.php
+use App\Services\AssetTypes\ImageHandler;
+use Illuminate\Http\UploadedFile;
+
+class ImageHandlerTest extends TestCase
+{
+    private ImageHandler $handler;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->handler = new ImageHandler();
+    }
+
+    public function test_supports_jpeg_file(): void
+    {
+        $file = UploadedFile::fake()->create('test.jpg', 100, 'image/jpeg');
+        $this->assertTrue($this->handler->supports($file));
+    }
+
+    public function test_rejects_video_file(): void
+    {
+        $file = UploadedFile::fake()->create('test.mp4', 100, 'video/mp4');
+        $this->assertFalse($this->handler->supports($file));
+    }
+
+    public function test_extracts_image_dimensions(): void
+    {
+        $file = UploadedFile::fake()->image('test.jpg', 800, 600);
+        $metadata = $this->handler->extractMetadata($file);
+
+        $this->assertEquals(800, $metadata['width']);
+        $this->assertEquals(600, $metadata['height']);
+    }
+
+    public function test_validates_file_size(): void
+    {
+        // 60MB file should fail (max is 50MB)
+        $file = UploadedFile::fake()->create('large.jpg', 60 * 1024, 'image/jpeg');
+        $errors = $this->handler->validate($file);
+
+        $this->assertContains('File size exceeds maximum', $errors);
+    }
+}
+```
+
+### Registry Tests
+
+```php
+// tests/Unit/Services/AssetTypes/AssetTypeRegistryTest.php
+use App\Services\AssetTypes\AssetTypeRegistry;
+
+class AssetTypeRegistryTest extends TestCase
+{
+    public function test_determines_image_type(): void
+    {
+        $registry = app(AssetTypeRegistry::class);
+        $file = UploadedFile::fake()->image('test.png');
+
+        $type = $registry->determineType($file);
+
+        $this->assertEquals('image', $type);
+    }
+
+    public function test_determines_video_type(): void
+    {
+        $registry = app(AssetTypeRegistry::class);
+        $file = UploadedFile::fake()->create('test.mp4', 100, 'video/mp4');
+
+        $type = $registry->determineType($file);
+
+        $this->assertEquals('video', $type);
+    }
+
+    public function test_falls_back_to_design_for_unknown_types(): void
+    {
+        $registry = app(AssetTypeRegistry::class);
+        $file = UploadedFile::fake()->create('test.xyz', 100, 'application/octet-stream');
+
+        $type = $registry->determineType($file);
+
+        $this->assertEquals('design', $type);
+    }
+}
+```
+
+### Frontend Component Tests
+
+```typescript
+// __tests__/config/assetTypeRegistry.test.ts
+import {
+  getAssetTypeHandler,
+  supportsSpatialAnnotations,
+  supportsTemporalAnnotations,
+} from '../../src/config/assetTypeRegistry';
+
+describe('assetTypeRegistry', () => {
+  test('returns image handler for image type', () => {
+    const handler = getAssetTypeHandler('image');
+    expect(handler?.type).toBe('image');
+    expect(handler?.displayName).toBe('Image');
+  });
+
+  test('returns undefined for unknown type', () => {
+    const handler = getAssetTypeHandler('unknown');
+    expect(handler).toBeUndefined();
+  });
+
+  test('image supports spatial annotations', () => {
+    expect(supportsSpatialAnnotations('image')).toBe(true);
+  });
+
+  test('image does not support temporal annotations', () => {
+    expect(supportsTemporalAnnotations('image')).toBe(false);
+  });
+
+  test('video supports both annotation types', () => {
+    expect(supportsSpatialAnnotations('video')).toBe(true);
+    expect(supportsTemporalAnnotations('video')).toBe(true);
+  });
+
+  test('pdf does not support annotations', () => {
+    expect(supportsSpatialAnnotations('pdf')).toBe(false);
+    expect(supportsTemporalAnnotations('pdf')).toBe(false);
+  });
+});
+```
+
+### Integration Tests
+
+```typescript
+// __tests__/components/assetReview/AssetPreview.test.tsx
+import { render, screen } from '@testing-library/react';
+import { AssetPreview } from '../../src/components/assetReview';
+
+describe('AssetPreview', () => {
+  const mockAsset = {
+    id: '1',
+    type: 'image',
+    title: 'Test Image',
+    // ... other required fields
+  };
+
+  test('renders image renderer for image type', () => {
+    render(<AssetPreview asset={mockAsset} ... />);
+    expect(screen.getByRole('img')).toBeInTheDocument();
+  });
+
+  test('renders annotation overlay for spatial-enabled types', () => {
+    render(<AssetPreview asset={mockAsset} ... />);
+    // Annotation overlay should be present
+  });
+
+  test('does not render annotation overlay for PDF', () => {
+    const pdfAsset = { ...mockAsset, type: 'pdf' };
+    render(<AssetPreview asset={pdfAsset} ... />);
+    // Annotation overlay should not be present
+  });
+});
+```
+
+## Error Handling
+
+### Type Detection Fallback
+
+When type detection fails, the registry falls back to `design`:
+
+```php
+public function determineType(UploadedFile $file): string
+{
+    foreach ($this->handlers as $handler) {
+        if ($handler->supports($file)) {
+            return $handler->getType();
+        }
+    }
+    return 'design'; // Fallback
+}
+```
+
+### Frontend Graceful Degradation
+
+```typescript
+const handler = getAssetTypeHandler(asset.type);
+if (!handler) {
+  // Show fallback UI or error message
+  return <UnsupportedTypeMessage type={asset.type} />;
+}
+
+const Renderer = handler.Renderer;
+return <Renderer fileUrl={mediaUrl} ... />;
+```
+
+### Validation Error Messages
+
+Handlers return arrays of validation errors:
+
+```php
+public function validate(UploadedFile $file): array
+{
+    $errors = [];
+
+    if ($file->getSize() > $this->maxFileSize) {
+        $errors[] = sprintf(
+            'File size (%s MB) exceeds maximum allowed (%s MB)',
+            round($file->getSize() / 1024 / 1024, 2),
+            round($this->maxFileSize / 1024 / 1024, 2)
+        );
+    }
+
+    if (!in_array($file->getMimeType(), $this->getAllowedMimeTypes())) {
+        $errors[] = 'File type not supported for ' . $this->getDisplayName();
+    }
+
+    return $errors;
+}
+```
+
+## Migration Guide
+
+### From Hardcoded Type Checks
+
+**Before:**
+```typescript
+{asset.type === 'image' && <img src={url} />}
+{asset.type === 'video' && <video src={url} />}
+{asset.type === 'pdf' && <iframe src={url} />}
+```
+
+**After:**
+```typescript
+const handler = getAssetTypeHandler(asset.type);
+const Renderer = handler?.Renderer;
+{Renderer && <Renderer fileUrl={url} ... />}
+```
+
+### From Switch Statements
+
+**Before:**
+```typescript
+switch (asset.type) {
+  case 'image': return <FileImage />;
+  case 'video': return <Film />;
+  default: return <FileQuestion />;
+}
+```
+
+**After:**
+```typescript
+import { getAssetTypeIcon } from '../config/assetTypeRegistry';
+const Icon = getAssetTypeIcon(asset.type);
+return <Icon />;
+```
