@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, ArrowLeftRight, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { AssetVersion, AssetType } from '../../types';
 import { getMediaUrl } from '../../utils/media';
+
+// Sync tolerance in seconds - videos will sync if they drift more than this
+const SYNC_TOLERANCE = 0.1;
 
 interface VersionComparisonProps {
   versions: AssetVersion[];
@@ -36,13 +39,45 @@ export default function VersionComparison({
   const leftAsset = versions.find(v => v.version_number === leftVersion);
   const rightAsset = versions.find(v => v.version_number === rightVersion);
 
+  // Track if we're currently syncing to prevent infinite loops
+  const isSyncingRef = useRef(false);
+
   const swapVersions = () => {
     const temp = leftVersion;
     setLeftVersion(rightVersion);
     setRightVersion(temp);
   };
 
-  // Synced video playback
+  // Pause both videos
+  const pauseBoth = useCallback(() => {
+    leftVideoRef.current?.pause();
+    rightVideoRef.current?.pause();
+    setIsPlaying(false);
+  }, []);
+
+  // Play both videos in sync
+  const playBoth = useCallback(async () => {
+    const leftVideo = leftVideoRef.current;
+    const rightVideo = rightVideoRef.current;
+    if (!leftVideo || !rightVideo) return;
+
+    // Sync times before playing
+    const targetTime = leftVideo.currentTime;
+    if (Math.abs(rightVideo.currentTime - targetTime) > SYNC_TOLERANCE) {
+      rightVideo.currentTime = targetTime;
+    }
+
+    // Wait for both to be ready
+    try {
+      await Promise.all([leftVideo.play(), rightVideo.play()]);
+      setIsPlaying(true);
+    } catch {
+      // If one fails to play, pause both
+      pauseBoth();
+    }
+  }, [pauseBoth]);
+
+  // Synced video playback with robust event handling
   useEffect(() => {
     if (assetType !== 'video' || !syncPlayback) return;
 
@@ -51,41 +86,120 @@ export default function VersionComparison({
 
     if (!leftVideo || !rightVideo) return;
 
-    const handleTimeUpdate = (source: HTMLVideoElement, target: HTMLVideoElement) => {
-      if (Math.abs(source.currentTime - target.currentTime) > 0.5) {
-        target.currentTime = source.currentTime;
+    // When one video is waiting (buffering), pause the other
+    const handleWaiting = (other: HTMLVideoElement) => () => {
+      if (!other.paused && !isSyncingRef.current) {
+        other.pause();
       }
     };
 
-    const handleLeftTimeUpdate = () => handleTimeUpdate(leftVideo, rightVideo);
-    const handleRightTimeUpdate = () => handleTimeUpdate(rightVideo, leftVideo);
+    // When one video starts playing, sync and play the other
+    const handlePlay = (source: HTMLVideoElement, other: HTMLVideoElement) => () => {
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
 
-    leftVideo.addEventListener('timeupdate', handleLeftTimeUpdate);
-    rightVideo.addEventListener('timeupdate', handleRightTimeUpdate);
+      // Sync time
+      if (Math.abs(other.currentTime - source.currentTime) > SYNC_TOLERANCE) {
+        other.currentTime = source.currentTime;
+      }
+
+      // Play the other if paused
+      if (other.paused) {
+        other.play().catch(() => {
+          // If other can't play, pause source too
+          source.pause();
+        });
+      }
+
+      setIsPlaying(true);
+      isSyncingRef.current = false;
+    };
+
+    // When one video pauses, pause the other
+    const handlePause = (other: HTMLVideoElement) => () => {
+      if (!isSyncingRef.current && !other.paused) {
+        isSyncingRef.current = true;
+        other.pause();
+        setIsPlaying(false);
+        isSyncingRef.current = false;
+      }
+    };
+
+    // When one video seeks, sync the other
+    const handleSeeked = (source: HTMLVideoElement, other: HTMLVideoElement) => () => {
+      if (isSyncingRef.current) return;
+      if (Math.abs(other.currentTime - source.currentTime) > SYNC_TOLERANCE) {
+        isSyncingRef.current = true;
+        other.currentTime = source.currentTime;
+        isSyncingRef.current = false;
+      }
+    };
+
+    // Periodic sync check during playback
+    const handleTimeUpdate = (source: HTMLVideoElement, other: HTMLVideoElement) => () => {
+      if (isSyncingRef.current || source.paused) return;
+      if (Math.abs(source.currentTime - other.currentTime) > SYNC_TOLERANCE) {
+        isSyncingRef.current = true;
+        other.currentTime = source.currentTime;
+        isSyncingRef.current = false;
+      }
+    };
+
+    // When one video ends, pause both
+    const handleEnded = () => {
+      pauseBoth();
+    };
+
+    // Add all event listeners
+    const leftWaiting = handleWaiting(rightVideo);
+    const rightWaiting = handleWaiting(leftVideo);
+    const leftPlay = handlePlay(leftVideo, rightVideo);
+    const rightPlay = handlePlay(rightVideo, leftVideo);
+    const leftPause = handlePause(rightVideo);
+    const rightPause = handlePause(leftVideo);
+    const leftSeeked = handleSeeked(leftVideo, rightVideo);
+    const rightSeeked = handleSeeked(rightVideo, leftVideo);
+    const leftTimeUpdate = handleTimeUpdate(leftVideo, rightVideo);
+    const rightTimeUpdate = handleTimeUpdate(rightVideo, leftVideo);
+
+    leftVideo.addEventListener('waiting', leftWaiting);
+    rightVideo.addEventListener('waiting', rightWaiting);
+    leftVideo.addEventListener('play', leftPlay);
+    rightVideo.addEventListener('play', rightPlay);
+    leftVideo.addEventListener('pause', leftPause);
+    rightVideo.addEventListener('pause', rightPause);
+    leftVideo.addEventListener('seeked', leftSeeked);
+    rightVideo.addEventListener('seeked', rightSeeked);
+    leftVideo.addEventListener('timeupdate', leftTimeUpdate);
+    rightVideo.addEventListener('timeupdate', rightTimeUpdate);
+    leftVideo.addEventListener('ended', handleEnded);
+    rightVideo.addEventListener('ended', handleEnded);
 
     return () => {
-      leftVideo.removeEventListener('timeupdate', handleLeftTimeUpdate);
-      rightVideo.removeEventListener('timeupdate', handleRightTimeUpdate);
+      leftVideo.removeEventListener('waiting', leftWaiting);
+      rightVideo.removeEventListener('waiting', rightWaiting);
+      leftVideo.removeEventListener('play', leftPlay);
+      rightVideo.removeEventListener('play', rightPlay);
+      leftVideo.removeEventListener('pause', leftPause);
+      rightVideo.removeEventListener('pause', rightPause);
+      leftVideo.removeEventListener('seeked', leftSeeked);
+      rightVideo.removeEventListener('seeked', rightSeeked);
+      leftVideo.removeEventListener('timeupdate', leftTimeUpdate);
+      rightVideo.removeEventListener('timeupdate', rightTimeUpdate);
+      leftVideo.removeEventListener('ended', handleEnded);
+      rightVideo.removeEventListener('ended', handleEnded);
     };
-  }, [assetType, syncPlayback, leftVersion, rightVersion]);
+  }, [assetType, syncPlayback, leftVersion, rightVersion, pauseBoth]);
 
-  const togglePlayback = () => {
+  const togglePlayback = useCallback(() => {
     if (assetType !== 'video') return;
 
-    const leftVideo = leftVideoRef.current;
-    const rightVideo = rightVideoRef.current;
-
     if (isPlaying) {
-      leftVideo?.pause();
-      rightVideo?.pause();
+      pauseBoth();
     } else {
-      leftVideo?.play();
-      if (syncPlayback) {
-        rightVideo?.play();
-      }
+      playBoth();
     }
-    setIsPlaying(!isPlaying);
-  };
+  }, [assetType, isPlaying, pauseBoth, playBoth]);
 
   const renderVersionSelector = (
     currentVersion: number,
