@@ -87,12 +87,15 @@ export function LoginPage() {
 
           <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <p className="text-sm text-gray-600 dark:text-gray-300 font-medium mb-2">
-              Demo accounts:
+              Demo accounts (password: password)
             </p>
             <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <li>Admin: admin@reviewflow.test / password</li>
-              <li>PM: pm@reviewflow.test / password</li>
-              <li>Creative: designer@reviewflow.test / password</li>
+              <li>Admin: rym@le2.agency</li>
+              <li>PM: dounia@le2.agency / neila@le2.agency</li>
+              <li>Designer: ihab@le2.agency / ayoub@le2.agency / loubna@le2.agency</li>
+              <li>Reviewer (Fatoura): amir@fatoura.app</li>
+              <li>Reviewer (TRYBE): nadir@thetrybe.agency</li>
+              <li>Reviewer (IdeaCrafters): baki@ideacrafters.com</li>
             </ul>
           </div>
         </div>
