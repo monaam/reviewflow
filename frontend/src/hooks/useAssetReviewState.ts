@@ -45,6 +45,12 @@ export interface AssetReviewState {
   currentTime: number;
   duration: number;
 
+  // PDF state
+  currentPage: number;
+  totalPages: number;
+  zoomLevel: number;
+  pdfFitMode: 'width' | 'height' | 'none';
+
   // Loading states
   isLocking: boolean;
 }
@@ -68,6 +74,10 @@ type AssetReviewAction =
   | { type: 'SET_IS_PLAYING'; isPlaying: boolean }
   | { type: 'SET_CURRENT_TIME'; time: number }
   | { type: 'SET_DURATION'; duration: number }
+  | { type: 'SET_CURRENT_PAGE'; page: number }
+  | { type: 'SET_TOTAL_PAGES'; totalPages: number }
+  | { type: 'SET_ZOOM_LEVEL'; zoomLevel: number }
+  | { type: 'SET_PDF_FIT_MODE'; fitMode: 'width' | 'height' | 'none' }
   | { type: 'SET_IS_LOCKING'; isLocking: boolean }
   | { type: 'RESET_ANNOTATION' };
 
@@ -83,6 +93,10 @@ const initialState: AssetReviewState = {
   isPlaying: false,
   currentTime: 0,
   duration: 0,
+  currentPage: 1,
+  totalPages: 1,
+  zoomLevel: 1,
+  pdfFitMode: 'width',
   isLocking: false,
 };
 
@@ -142,6 +156,18 @@ function reducer(state: AssetReviewState, action: AssetReviewAction): AssetRevie
 
     case 'SET_DURATION':
       return { ...state, duration: action.duration };
+
+    case 'SET_CURRENT_PAGE':
+      return { ...state, currentPage: action.page };
+
+    case 'SET_TOTAL_PAGES':
+      return { ...state, totalPages: action.totalPages };
+
+    case 'SET_ZOOM_LEVEL':
+      return { ...state, zoomLevel: action.zoomLevel, pdfFitMode: 'none' };
+
+    case 'SET_PDF_FIT_MODE':
+      return { ...state, pdfFitMode: action.fitMode };
 
     case 'SET_IS_LOCKING':
       return { ...state, isLocking: action.isLocking };
@@ -238,6 +264,23 @@ export function useAssetReviewState() {
     dispatch({ type: 'SET_IS_LOCKING', isLocking });
   }, []);
 
+  // PDF actions
+  const setCurrentPage = useCallback((page: number) => {
+    dispatch({ type: 'SET_CURRENT_PAGE', page });
+  }, []);
+
+  const setTotalPages = useCallback((totalPages: number) => {
+    dispatch({ type: 'SET_TOTAL_PAGES', totalPages });
+  }, []);
+
+  const setZoomLevel = useCallback((zoomLevel: number) => {
+    dispatch({ type: 'SET_ZOOM_LEVEL', zoomLevel });
+  }, []);
+
+  const setPdfFitMode = useCallback((fitMode: 'width' | 'height' | 'none') => {
+    dispatch({ type: 'SET_PDF_FIT_MODE', fitMode });
+  }, []);
+
   return {
     state,
     // Modal
@@ -260,6 +303,11 @@ export function useAssetReviewState() {
     setIsPlaying,
     setCurrentTime,
     setDuration,
+    // PDF
+    setCurrentPage,
+    setTotalPages,
+    setZoomLevel,
+    setPdfFitMode,
     // Loading
     setIsLocking,
   };

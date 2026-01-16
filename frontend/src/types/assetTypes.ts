@@ -30,6 +30,24 @@ export interface VideoControlsProps {
 }
 
 /**
+ * PDF fit modes for zoom behavior.
+ */
+export type PdfFitMode = 'width' | 'height' | 'none';
+
+/**
+ * Props for PDF control components.
+ */
+export interface PdfControlsProps {
+  currentPage: number;
+  totalPages: number;
+  zoomLevel: number;
+  fitMode: PdfFitMode;
+  onPageChange: (page: number) => void;
+  onZoomChange: (zoom: number) => void;
+  onFitModeChange: (mode: PdfFitMode) => void;
+}
+
+/**
  * Annotation capability configuration.
  */
 export interface AnnotationCapabilities {
@@ -88,11 +106,15 @@ export interface AnnotationOverlayProps {
     id: string;
     rectangle: Rectangle | null;
     video_timestamp: number | null;
+    page_number: number | null;
     is_resolved: boolean;
     asset_version: number;
   }>;
   selectedVersion: number;
   assetType: string;
   currentTime: number;
-  onCommentClick: (commentId: string, videoTimestamp: number | null) => void;
+  currentPage: number;
+  onCommentClick: (commentId: string, videoTimestamp: number | null, pageNumber: number | null) => void;
+  /** When true, fills parent container instead of using mediaBounds (used for PDF) */
+  fillContainer?: boolean;
 }

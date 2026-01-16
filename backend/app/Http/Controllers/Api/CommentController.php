@@ -102,6 +102,7 @@ class CommentController extends Controller
             'rectangle.width' => 'required_with:rectangle|numeric|min:0|max:1',
             'rectangle.height' => 'required_with:rectangle|numeric|min:0|max:1',
             'video_timestamp' => 'nullable|numeric|min:0',
+            'page_number' => 'nullable|integer|min:1',
         ]);
 
         $comment = Comment::create([
@@ -111,6 +112,7 @@ class CommentController extends Controller
             'content' => $validated['content'],
             'rectangle' => $validated['rectangle'] ?? null,
             'video_timestamp' => $validated['video_timestamp'] ?? null,
+            'page_number' => $validated['page_number'] ?? null,
         ]);
 
         // Send Discord notification

@@ -56,6 +56,10 @@ export function AssetReviewPage() {
     setIsPlaying,
     setCurrentTime,
     setDuration,
+    setCurrentPage,
+    setTotalPages,
+    setZoomLevel,
+    setPdfFitMode,
     setIsLocking,
   } = useAssetReviewState();
 
@@ -170,6 +174,7 @@ export function AssetReviewPage() {
         content: newComment,
         rectangle: state.selectedRect || undefined,
         video_timestamp: supportsTemporalAnnotations(asset.type) ? state.currentTime : undefined,
+        page_number: asset.type === 'pdf' ? state.currentPage : undefined,
       });
       const newItem: TimelineItem = {
         type: 'comment',
@@ -189,6 +194,10 @@ export function AssetReviewPage() {
     setSelectedCommentId(comment.id);
     if (supportsTemporalAnnotations(asset?.type || '') && comment.video_timestamp !== null) {
       seekToTimestamp(comment.video_timestamp);
+    }
+    // Navigate to page for PDF comments
+    if (asset?.type === 'pdf' && comment.page_number !== null) {
+      setCurrentPage(comment.page_number);
     }
   };
 
@@ -394,6 +403,10 @@ export function AssetReviewPage() {
           currentTime={state.currentTime}
           isPlaying={state.isPlaying}
           duration={state.duration}
+          currentPage={state.currentPage}
+          totalPages={state.totalPages}
+          zoomLevel={state.zoomLevel}
+          pdfFitMode={state.pdfFitMode}
           onMediaLoad={updateMediaBounds}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
@@ -402,10 +415,17 @@ export function AssetReviewPage() {
           onTimeUpdate={setCurrentTime}
           onDurationChange={setDuration}
           onPlayChange={setIsPlaying}
-          onCommentClick={(commentId, videoTimestamp) => {
+          onPageChange={setCurrentPage}
+          onTotalPagesChange={setTotalPages}
+          onZoomChange={setZoomLevel}
+          onFitModeChange={setPdfFitMode}
+          onCommentClick={(commentId, videoTimestamp, pageNumber) => {
             setSelectedCommentId(commentId);
             if (videoTimestamp !== null) {
               seekToTimestamp(videoTimestamp);
+            }
+            if (pageNumber !== null) {
+              setCurrentPage(pageNumber);
             }
           }}
           comments={comments}

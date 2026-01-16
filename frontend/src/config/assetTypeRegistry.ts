@@ -6,8 +6,9 @@ import {
   PdfRenderer,
   DesignRenderer,
   VideoControls,
+  PdfControls,
 } from '../components/assetRenderers';
-import { getVideoStreamUrl } from '../utils/media';
+import { getVideoStreamUrl, toRelativeStorageUrl } from '../utils/media';
 
 /**
  * Registry of all asset type handlers.
@@ -51,10 +52,12 @@ export const assetTypeRegistry: Record<string, AssetTypeHandler> = {
     mimePatterns: ['application/pdf'],
     extensions: ['pdf'],
     annotations: {
-      supportsSpatialAnnotations: false,
+      supportsSpatialAnnotations: true,
       supportsTemporalAnnotations: false,
     },
     Renderer: PdfRenderer,
+    Controls: PdfControls as unknown as AssetTypeHandler['Controls'],
+    getMediaUrl: toRelativeStorageUrl,
     supportsThumbnail: false,
   },
 

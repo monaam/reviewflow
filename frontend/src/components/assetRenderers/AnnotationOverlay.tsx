@@ -48,15 +48,19 @@ export const AnnotationOverlay: FC<AnnotationOverlayProps> = ({
   selectedVersion,
   assetType,
   currentTime,
+  currentPage,
   onCommentClick,
+  /** When true, fills parent container instead of using mediaBounds (for PDF) */
+  fillContainer = false,
 }) => {
-  if (!mediaBounds || !containerRef.current) {
+  // For fill mode (PDF), we don't need mediaBounds
+  if (!fillContainer && (!mediaBounds || !containerRef.current)) {
     return null;
   }
 
-  const containerRect = containerRef.current.getBoundingClientRect();
+  const containerRect = !fillContainer ? containerRef.current!.getBoundingClientRect() : null;
 
-  // Filter comments to show based on version and timing
+  // Filter comments to show based on version, timing, and page
   const visibleComments = comments
     .filter((c) => c.rectangle && c.asset_version === selectedVersion)
     .filter((c) => {
@@ -65,19 +69,28 @@ export const AnnotationOverlay: FC<AnnotationOverlayProps> = ({
         const timeDiff = currentTime - c.video_timestamp;
         return timeDiff >= -ANNOTATION_SHOW_BEFORE && timeDiff <= ANNOTATION_SHOW_AFTER;
       }
-      // For non-video assets or comments without timestamp, always show
+      // For PDFs, only show annotations for the current page
+      if (assetType === 'pdf' && c.page_number !== null) {
+        return c.page_number === currentPage;
+      }
+      // For non-video/non-pdf assets or comments without timestamp/page, always show
       return true;
     });
 
+  // Calculate overlay style based on mode
+  const overlayStyle = fillContainer
+    ? {} // Uses inset-0 class for full coverage
+    : {
+        left: mediaBounds!.left - containerRect!.left,
+        top: mediaBounds!.top - containerRect!.top,
+        width: mediaBounds!.width,
+        height: mediaBounds!.height,
+      };
+
   return (
     <div
-      className="absolute pointer-events-none"
-      style={{
-        left: mediaBounds.left - containerRect.left,
-        top: mediaBounds.top - containerRect.top,
-        width: mediaBounds.width,
-        height: mediaBounds.height,
-      }}
+      className={`absolute pointer-events-none ${fillContainer ? 'inset-0' : ''}`}
+      style={overlayStyle}
     >
       {/* Drawing rectangle (in progress) */}
       {currentRect && (
@@ -114,7 +127,7 @@ export const AnnotationOverlay: FC<AnnotationOverlayProps> = ({
           isResolved={comment.is_resolved}
           onClick={(e) => {
             e.stopPropagation();
-            onCommentClick(comment.id, comment.video_timestamp);
+            onCommentClick(comment.id, comment.video_timestamp, comment.page_number);
           }}
         />
       ))}

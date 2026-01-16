@@ -18,6 +18,7 @@ class Comment extends Model
         'content',
         'rectangle',
         'video_timestamp',
+        'page_number',
         'is_resolved',
         'resolved_by',
         'resolved_at',
@@ -29,6 +30,7 @@ class Comment extends Model
             'asset_version' => 'integer',
             'rectangle' => 'array',
             'video_timestamp' => 'float',
+            'page_number' => 'integer',
             'is_resolved' => 'boolean',
             'resolved_at' => 'datetime',
         ];
@@ -57,6 +59,11 @@ class Comment extends Model
     public function hasTimestamp(): bool
     {
         return $this->video_timestamp !== null;
+    }
+
+    public function hasPageNumber(): bool
+    {
+        return $this->page_number !== null;
     }
 
     public function getFormattedTimestampAttribute(): ?string

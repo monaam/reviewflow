@@ -5,9 +5,10 @@ import {
   supportsSpatialAnnotations,
   getMediaUrlForType,
 } from '../../config/assetTypeRegistry';
-import { AnnotationOverlay } from '../assetRenderers';
+import { AnnotationOverlay, PdfControls } from '../assetRenderers';
 import { Rectangle } from '../../hooks/useAssetReviewState';
 import { VersionSelector } from './VersionSelector';
+import { AssetRendererProps } from '../../types/assetTypes';
 
 interface AssetPreviewProps {
   asset: Asset;
@@ -28,6 +29,12 @@ interface AssetPreviewProps {
   isPlaying: boolean;
   duration: number;
 
+  // PDF state
+  currentPage: number;
+  totalPages: number;
+  zoomLevel: number;
+  pdfFitMode: 'width' | 'height' | 'none';
+
   // Callbacks
   onMediaLoad: () => void;
   onMouseDown: (e: React.MouseEvent) => void;
@@ -37,7 +44,11 @@ interface AssetPreviewProps {
   onTimeUpdate: (time: number) => void;
   onDurationChange: (duration: number) => void;
   onPlayChange: (isPlaying: boolean) => void;
-  onCommentClick: (commentId: string, videoTimestamp: number | null) => void;
+  onPageChange: (page: number) => void;
+  onTotalPagesChange: (totalPages: number) => void;
+  onZoomChange: (zoom: number) => void;
+  onFitModeChange: (mode: 'width' | 'height' | 'none') => void;
+  onCommentClick: (commentId: string, videoTimestamp: number | null, pageNumber: number | null) => void;
 
   // Comments for annotation display
   comments: Comment[];
@@ -68,6 +79,10 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
   currentTime,
   isPlaying,
   duration,
+  currentPage,
+  totalPages,
+  zoomLevel,
+  pdfFitMode,
   onMediaLoad,
   onMouseDown,
   onMouseMove,
@@ -76,6 +91,10 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
   onTimeUpdate,
   onDurationChange,
   onPlayChange,
+  onPageChange,
+  onTotalPagesChange,
+  onZoomChange,
+  onFitModeChange,
   onCommentClick,
   comments,
   isScrubbingRef,
@@ -89,6 +108,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
     id: comment.id,
     rectangle: comment.rectangle,
     video_timestamp: comment.video_timestamp,
+    page_number: comment.page_number,
     is_resolved: comment.is_resolved,
     asset_version: comment.asset_version,
   }));
@@ -108,22 +128,73 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
           const Renderer = handler.Renderer;
           const mediaUrl = getMediaUrlForType(currentVersionData.file_url, asset.type);
 
-          return (
-            <Renderer
-              fileUrl={mediaUrl}
-              title={asset.title}
-              mediaRef={mediaRef}
-              onLoad={onMediaLoad}
-              currentTime={currentTime}
-              onTimeUpdate={onTimeUpdate}
-              onDurationChange={onDurationChange}
-              onPlayChange={onPlayChange}
-            />
-          );
+          // Base props for all renderers
+          const baseProps: AssetRendererProps = {
+            fileUrl: mediaUrl,
+            title: asset.title,
+            mediaRef: mediaRef,
+            onLoad: onMediaLoad,
+          };
+
+          // Add video-specific props
+          if (asset.type === 'video') {
+            return (
+              <Renderer
+                {...baseProps}
+                currentTime={currentTime}
+                onTimeUpdate={onTimeUpdate}
+                onDurationChange={onDurationChange}
+                onPlayChange={onPlayChange}
+              />
+            );
+          }
+
+          // Add PDF-specific props (cast needed for extended props)
+          if (asset.type === 'pdf') {
+            const PdfRendererComponent = Renderer as FC<AssetRendererProps & {
+              currentPage?: number;
+              zoomLevel?: number;
+              fitMode?: 'width' | 'height' | 'none';
+              onPageChange?: (page: number) => void;
+              onTotalPagesChange?: (totalPages: number) => void;
+              overlay?: React.ReactNode;
+            }>;
+            // PDF annotation overlay is rendered inside PdfRenderer so it scrolls with the page
+            const pdfOverlay = (
+              <AnnotationOverlay
+                mediaBounds={null}
+                containerRef={containerRef}
+                currentRect={currentRect}
+                selectedRect={selectedRect}
+                selectedCommentId={selectedCommentId}
+                comments={annotationComments}
+                selectedVersion={selectedVersion}
+                assetType={asset.type}
+                currentTime={currentTime}
+                currentPage={currentPage}
+                onCommentClick={onCommentClick}
+                fillContainer={true}
+              />
+            );
+            return (
+              <PdfRendererComponent
+                {...baseProps}
+                currentPage={currentPage}
+                zoomLevel={zoomLevel}
+                fitMode={pdfFitMode}
+                onPageChange={onPageChange}
+                onTotalPagesChange={onTotalPagesChange}
+                overlay={pdfOverlay}
+              />
+            );
+          }
+
+          // Default rendering for other types
+          return <Renderer {...baseProps} />;
         })()}
 
-        {/* Annotation overlay - only show for types that support spatial annotations */}
-        {supportsSpatialAnnotations(asset.type) && (
+        {/* Annotation overlay - only show for types that support spatial annotations (except PDF which renders its own) */}
+        {supportsSpatialAnnotations(asset.type) && asset.type !== 'pdf' && (
           <AnnotationOverlay
             mediaBounds={mediaBounds}
             containerRef={containerRef}
@@ -134,13 +205,14 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
             selectedVersion={selectedVersion}
             assetType={asset.type}
             currentTime={currentTime}
+            currentPage={currentPage}
             onCommentClick={onCommentClick}
           />
         )}
       </div>
 
-      {/* Controls from registry (e.g., video controls) */}
-      {handler?.Controls && (
+      {/* Controls from registry (e.g., video controls, PDF controls) */}
+      {handler?.Controls && asset.type === 'video' && (
         <handler.Controls
           videoRef={mediaRef as React.RefObject<HTMLVideoElement | null>}
           isPlaying={isPlaying}
@@ -149,6 +221,17 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
           setCurrentTime={onTimeUpdate}
           isScrubbingRef={isScrubbingRef}
           scrubTimeRef={scrubTimeRef}
+        />
+      )}
+      {asset.type === 'pdf' && (
+        <PdfControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          zoomLevel={zoomLevel}
+          fitMode={pdfFitMode}
+          onPageChange={onPageChange}
+          onZoomChange={onZoomChange}
+          onFitModeChange={onFitModeChange}
         />
       )}
 

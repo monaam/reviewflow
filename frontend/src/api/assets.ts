@@ -17,6 +17,7 @@ export interface CreateCommentRequest {
     height: number;
   };
   video_timestamp?: number;
+  page_number?: number;
 }
 
 export const assetsApi = {

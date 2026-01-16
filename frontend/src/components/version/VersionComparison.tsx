@@ -6,6 +6,8 @@ import {
   getMediaUrlForType,
   supportsTemporalAnnotations,
 } from '../../config/assetTypeRegistry';
+import { PdfRenderer } from '../assetRenderers';
+import { PdfControls } from '../assetRenderers';
 
 // Sync tolerance in seconds - videos will sync if they drift more than this
 const SYNC_TOLERANCE = 0.1;
@@ -37,8 +39,47 @@ export default function VersionComparison({
   const [syncPlayback, setSyncPlayback] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
 
+  // PDF state for comparison
+  const [leftPdfPage, setLeftPdfPage] = useState(1);
+  const [rightPdfPage, setRightPdfPage] = useState(1);
+  const [leftPdfTotalPages, setLeftPdfTotalPages] = useState(1);
+  const [rightPdfTotalPages, setRightPdfTotalPages] = useState(1);
+  const [leftPdfZoom, setLeftPdfZoom] = useState(1);
+  const [rightPdfZoom, setRightPdfZoom] = useState(1);
+  const [leftPdfFitMode, setLeftPdfFitMode] = useState<'width' | 'height' | 'none'>('width');
+  const [rightPdfFitMode, setRightPdfFitMode] = useState<'width' | 'height' | 'none'>('width');
+  const [syncPdfPages, setSyncPdfPages] = useState(true);
+
   const leftVideoRef = useRef<HTMLVideoElement>(null);
   const rightVideoRef = useRef<HTMLVideoElement>(null);
+  const leftPdfRef = useRef<HTMLElement>(null);
+  const rightPdfRef = useRef<HTMLElement>(null);
+
+  // Sync PDF pages when enabled
+  const handleLeftPdfPageChange = useCallback((page: number) => {
+    setLeftPdfPage(page);
+    if (syncPdfPages) {
+      setRightPdfPage(Math.min(page, rightPdfTotalPages));
+    }
+  }, [syncPdfPages, rightPdfTotalPages]);
+
+  const handleRightPdfPageChange = useCallback((page: number) => {
+    setRightPdfPage(page);
+    if (syncPdfPages) {
+      setLeftPdfPage(Math.min(page, leftPdfTotalPages));
+    }
+  }, [syncPdfPages, leftPdfTotalPages]);
+
+  // Zoom handlers - setting zoom switches fit mode to 'none'
+  const handleLeftPdfZoomChange = useCallback((zoom: number) => {
+    setLeftPdfZoom(zoom);
+    setLeftPdfFitMode('none');
+  }, []);
+
+  const handleRightPdfZoomChange = useCallback((zoom: number) => {
+    setRightPdfZoom(zoom);
+    setRightPdfFitMode('none');
+  }, []);
 
   const leftAsset = versions.find(v => v.version_number === leftVersion);
   const rightAsset = versions.find(v => v.version_number === rightVersion);
@@ -225,7 +266,11 @@ export default function VersionComparison({
     </select>
   );
 
-  const renderContent = (version: AssetVersion | undefined, videoRef?: React.RefObject<HTMLVideoElement | null>) => {
+  const renderContent = (
+    version: AssetVersion | undefined,
+    videoRef?: React.RefObject<HTMLVideoElement | null>,
+    side?: 'left' | 'right'
+  ) => {
     if (!version) {
       return (
         <div className="flex items-center justify-center h-full bg-gray-900 rounded">
@@ -275,14 +320,40 @@ export default function VersionComparison({
       );
     }
 
-    // For PDF types
+    // For PDF types - use PdfRenderer
     if (assetType === 'pdf') {
+      const isLeft = side === 'left';
+      const currentPage = isLeft ? leftPdfPage : rightPdfPage;
+      const totalPages = isLeft ? leftPdfTotalPages : rightPdfTotalPages;
+      const zoomLevel = isLeft ? leftPdfZoom : rightPdfZoom;
+      const fitMode = isLeft ? leftPdfFitMode : rightPdfFitMode;
+      const onPageChange = isLeft ? handleLeftPdfPageChange : handleRightPdfPageChange;
+      const onTotalPagesChange = isLeft ? setLeftPdfTotalPages : setRightPdfTotalPages;
+      const onZoomChange = isLeft ? handleLeftPdfZoomChange : handleRightPdfZoomChange;
+      const onFitModeChange = isLeft ? setLeftPdfFitMode : setRightPdfFitMode;
+      const pdfRef = isLeft ? leftPdfRef : rightPdfRef;
+
       return (
-        <div className="h-full bg-gray-900 rounded overflow-hidden">
-          <iframe
-            src={mediaUrl}
-            className="w-full h-full"
-            title={`Version ${version.version_number}`}
+        <div className="h-full bg-gray-900 rounded overflow-hidden flex flex-col">
+          <div className="flex-1 min-h-0">
+            <PdfRenderer
+              fileUrl={mediaUrl}
+              title={`Version ${version.version_number}`}
+              mediaRef={pdfRef}
+              currentPage={currentPage}
+              zoomLevel={zoomLevel}
+              fitMode={fitMode}
+              onTotalPagesChange={onTotalPagesChange}
+            />
+          </div>
+          <PdfControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            zoomLevel={zoomLevel}
+            fitMode={fitMode}
+            onPageChange={onPageChange}
+            onZoomChange={onZoomChange}
+            onFitModeChange={onFitModeChange}
           />
         </div>
       );
@@ -344,6 +415,18 @@ export default function VersionComparison({
             </>
           )}
 
+          {assetType === 'pdf' && (
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={syncPdfPages}
+                onChange={(e) => setSyncPdfPages(e.target.checked)}
+                className="rounded bg-gray-700 border-gray-600"
+              />
+              Sync pages
+            </label>
+          )}
+
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-700 rounded transition-colors"
@@ -365,7 +448,7 @@ export default function VersionComparison({
           </div>
 
           <div className="flex-1 min-h-0">
-            {renderContent(leftAsset, leftVideoRef)}
+            {renderContent(leftAsset, leftVideoRef, 'left')}
           </div>
 
           {renderVersionMeta(leftAsset)}
@@ -392,7 +475,7 @@ export default function VersionComparison({
           </div>
 
           <div className="flex-1 min-h-0">
-            {renderContent(rightAsset, rightVideoRef)}
+            {renderContent(rightAsset, rightVideoRef, 'right')}
           </div>
 
           {renderVersionMeta(rightAsset)}

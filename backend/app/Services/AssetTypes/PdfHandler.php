@@ -3,6 +3,7 @@
 namespace App\Services\AssetTypes;
 
 use Illuminate\Http\UploadedFile;
+use Smalot\PdfParser\Parser;
 
 class PdfHandler extends BaseAssetTypeHandler
 {
@@ -47,8 +48,15 @@ class PdfHandler extends BaseAssetTypeHandler
     {
         $meta = parent::extractMetadata($file);
 
-        // Note: PDF metadata extraction (page count, etc.) would require
-        // a PDF parsing library. This can be extended later.
+        try {
+            $parser = new Parser();
+            $pdf = $parser->parseFile($file->getRealPath());
+            $pages = $pdf->getPages();
+            $meta['page_count'] = count($pages);
+        } catch (\Exception $e) {
+            // If parsing fails, default to unknown page count
+            $meta['page_count'] = null;
+        }
 
         return $meta;
     }
@@ -58,8 +66,15 @@ class PdfHandler extends BaseAssetTypeHandler
      */
     public function supportsSpatialAnnotations(): bool
     {
-        // PDFs could support annotations per-page in the future
-        return false;
+        return true;
+    }
+
+    /**
+     * Check if this asset type supports page-based annotations.
+     */
+    public function supportsPageAnnotations(): bool
+    {
+        return true;
     }
 
     /**
