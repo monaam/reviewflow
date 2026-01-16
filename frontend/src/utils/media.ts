@@ -16,10 +16,14 @@ export function getVideoStreamUrl(storageUrl: string): string {
  * Returns the appropriate URL for media based on type.
  * Videos use streaming URL for range request support.
  * Other types use the regular storage URL.
+ *
+ * @deprecated Use getMediaUrlForType from '../config/assetTypeRegistry' instead
+ * for registry-based URL transformation.
  */
-export function getMediaUrl(url: string, type: 'image' | 'video' | 'pdf' | 'design'): string {
+export function getMediaUrl(url: string, type: string): string {
   if (!url) return url;
 
+  // Video types need streaming URL
   if (type === 'video') {
     return getVideoStreamUrl(url);
   }

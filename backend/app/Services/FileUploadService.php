@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\AssetTypes\AssetTypeRegistry;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -10,8 +11,9 @@ class FileUploadService
 {
     protected string $disk;
 
-    public function __construct()
-    {
+    public function __construct(
+        protected ?AssetTypeRegistry $assetTypeRegistry = null
+    ) {
         $this->disk = config('filesystems.default', 'local');
     }
 
@@ -73,6 +75,12 @@ class FileUploadService
 
     public function getAllowedMimeTypes(): array
     {
+        // Use registry if available, otherwise return default list
+        if ($this->assetTypeRegistry) {
+            return $this->assetTypeRegistry->getAllAllowedMimeTypes();
+        }
+
+        // Fallback list for when registry is not available
         return [
             // Images
             'image/jpeg',
@@ -91,6 +99,12 @@ class FileUploadService
 
     public function getMaxFileSize(string $type): int
     {
+        // Use registry if available
+        if ($this->assetTypeRegistry) {
+            return $this->assetTypeRegistry->getMaxFileSize($type);
+        }
+
+        // Fallback for when registry is not available
         return match ($type) {
             'image' => 50 * 1024 * 1024, // 50 MB
             'video' => 500 * 1024 * 1024, // 500 MB
