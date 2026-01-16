@@ -28,6 +28,11 @@ import { Asset, Comment, AssetVersion, TimelineItem, ApprovalLog } from '../type
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
+import { getMediaUrl } from '../utils/media';
+
+// Video annotation timing configuration (in seconds)
+const ANNOTATION_SHOW_BEFORE = 1; // How long before the timestamp to start showing
+const ANNOTATION_SHOW_AFTER = 1;  // How long after the timestamp to keep showing
 
 interface Rectangle {
   x: number;
@@ -67,6 +72,8 @@ export function AssetReviewPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const isScrubbingRef = useRef(false);
+  const scrubTimeRef = useRef(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLImageElement | HTMLVideoElement | null>(null);
@@ -517,9 +524,13 @@ export function AssetReviewPage() {
             {asset.type === 'video' && currentVersionData && (
               <video
                 ref={(el) => { videoRef.current = el; mediaRef.current = el; }}
-                src={currentVersionData.file_url}
+                src={getMediaUrl(currentVersionData.file_url, 'video')}
                 className="max-w-full max-h-full object-contain"
-                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                onTimeUpdate={(e) => {
+                  if (!isScrubbingRef.current) {
+                    setCurrentTime(e.currentTarget.currentTime);
+                  }
+                }}
                 onLoadedMetadata={(e) => {
                   setDuration(e.currentTarget.duration);
                   updateMediaBounds();
@@ -579,10 +590,19 @@ export function AssetReviewPage() {
                   .filter((item) => item.type === 'comment')
                   .map((item) => item.data as Comment)
                   .filter((c) => c.rectangle && c.asset_version === selectedVersion)
+                  .filter((c) => {
+                    // For videos, only show annotations within the configured time window
+                    if (asset.type === 'video' && c.video_timestamp !== null) {
+                      const timeDiff = currentTime - c.video_timestamp;
+                      return timeDiff >= -ANNOTATION_SHOW_BEFORE && timeDiff <= ANNOTATION_SHOW_AFTER;
+                    }
+                    // For non-video assets or comments without timestamp, always show
+                    return true;
+                  })
                   .map((comment) => (
                     <div
                       key={comment.id}
-                      className={`absolute border-2 cursor-pointer pointer-events-auto transition-colors ${
+                      className={`absolute border-2 cursor-pointer pointer-events-auto transition-all duration-300 ${
                         selectedCommentId === comment.id
                           ? 'border-primary-500 bg-primary-500/30'
                           : comment.is_resolved
@@ -598,6 +618,13 @@ export function AssetReviewPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedCommentId(comment.id);
+                        // For video annotations, pause and seek to start of annotation visibility
+                        if (asset.type === 'video' && comment.video_timestamp !== null && videoRef.current) {
+                          const seekTime = Math.max(0, comment.video_timestamp - ANNOTATION_SHOW_BEFORE);
+                          videoRef.current.pause();
+                          videoRef.current.currentTime = seekTime;
+                          setCurrentTime(seekTime);
+                        }
                       }}
                     />
                   ))}
@@ -607,37 +634,15 @@ export function AssetReviewPage() {
 
           {/* Video Controls */}
           {asset.type === 'video' && (
-            <div className="p-4 bg-gray-800 flex items-center gap-4">
-              <button
-                onClick={() => {
-                  if (videoRef.current) {
-                    isPlaying ? videoRef.current.pause() : videoRef.current.play();
-                  }
-                }}
-                className="p-2 hover:bg-gray-700 rounded"
-              >
-                {isPlaying ? (
-                  <Pause className="w-5 h-5 text-white" />
-                ) : (
-                  <Play className="w-5 h-5 text-white" />
-                )}
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={duration}
-                value={currentTime}
-                onChange={(e) => {
-                  if (videoRef.current) {
-                    videoRef.current.currentTime = parseFloat(e.target.value);
-                  }
-                }}
-                className="flex-1"
-              />
-              <span className="text-white text-sm">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
-            </div>
+            <VideoControls
+              videoRef={videoRef}
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              duration={duration}
+              setCurrentTime={setCurrentTime}
+              isScrubbingRef={isScrubbingRef}
+              scrubTimeRef={scrubTimeRef}
+            />
           )}
 
           {/* Version Selector */}
@@ -807,7 +812,16 @@ export function AssetReviewPage() {
                         ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                     }`}
-                    onClick={() => setSelectedCommentId(comment.id)}
+                    onClick={() => {
+                      setSelectedCommentId(comment.id);
+                      // Seek to start of annotation visibility for video comments
+                      if (asset.type === 'video' && comment.video_timestamp !== null && videoRef.current) {
+                        const seekTime = Math.max(0, comment.video_timestamp - ANNOTATION_SHOW_BEFORE);
+                        videoRef.current.pause();
+                        videoRef.current.currentTime = seekTime;
+                        setCurrentTime(seekTime);
+                      }
+                    }}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -867,7 +881,20 @@ export function AssetReviewPage() {
                         </span>
                       )}
                       {comment.video_timestamp !== null && (
-                        <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
+                        <span
+                          className="bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 px-1.5 py-0.5 rounded cursor-pointer hover:bg-primary-200 dark:hover:bg-primary-900/50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (videoRef.current) {
+                              const seekTime = Math.max(0, comment.video_timestamp! - ANNOTATION_SHOW_BEFORE);
+                              videoRef.current.pause();
+                              videoRef.current.currentTime = seekTime;
+                              setCurrentTime(seekTime);
+                              setSelectedCommentId(comment.id);
+                            }
+                          }}
+                          title="Click to jump to this timestamp"
+                        >
                           {formatTime(comment.video_timestamp)}
                         </span>
                       )}
@@ -981,6 +1008,120 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function VideoControls({
+  videoRef,
+  isPlaying,
+  currentTime,
+  duration,
+  setCurrentTime,
+  isScrubbingRef,
+  scrubTimeRef,
+}: {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  setCurrentTime: (time: number) => void;
+  isScrubbingRef: React.MutableRefObject<boolean>;
+  scrubTimeRef: React.MutableRefObject<number>;
+}) {
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  const calculateTimeFromEvent = useCallback((clientX: number) => {
+    if (!progressBarRef.current || !duration) return 0;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return percent * duration;
+  }, [duration]);
+
+  const handleScrubStart = useCallback((clientX: number) => {
+    isScrubbingRef.current = true;
+    const time = calculateTimeFromEvent(clientX);
+    scrubTimeRef.current = time;
+    setCurrentTime(time);
+  }, [calculateTimeFromEvent, isScrubbingRef, scrubTimeRef, setCurrentTime]);
+
+  const handleScrubMove = useCallback((clientX: number) => {
+    if (!isScrubbingRef.current) return;
+    const time = calculateTimeFromEvent(clientX);
+    scrubTimeRef.current = time;
+    setCurrentTime(time);
+  }, [calculateTimeFromEvent, isScrubbingRef, scrubTimeRef, setCurrentTime]);
+
+  const handleScrubEnd = useCallback(() => {
+    if (!isScrubbingRef.current) return;
+    isScrubbingRef.current = false;
+    if (videoRef.current) {
+      videoRef.current.currentTime = scrubTimeRef.current;
+      videoRef.current.pause();
+    }
+  }, [isScrubbingRef, scrubTimeRef, videoRef]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => handleScrubMove(e.clientX);
+    const handleMouseUp = () => handleScrubEnd();
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) handleScrubMove(e.touches[0].clientX);
+    };
+    const handleTouchEnd = () => handleScrubEnd();
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [handleScrubMove, handleScrubEnd]);
+
+  const progress = duration ? (currentTime / duration) * 100 : 0;
+
+  return (
+    <div className="p-4 bg-gray-800 flex items-center gap-4 relative z-20">
+      <button
+        onClick={() => {
+          if (videoRef.current) {
+            isPlaying ? videoRef.current.pause() : videoRef.current.play();
+          }
+        }}
+        className="p-2 hover:bg-gray-700 rounded"
+      >
+        {isPlaying ? (
+          <Pause className="w-5 h-5 text-white" />
+        ) : (
+          <Play className="w-5 h-5 text-white" />
+        )}
+      </button>
+      <div
+        ref={progressBarRef}
+        className="flex-1 relative h-6 flex items-center cursor-pointer group"
+        onMouseDown={(e) => handleScrubStart(e.clientX)}
+        onTouchStart={(e) => {
+          if (e.touches.length > 0) handleScrubStart(e.touches[0].clientX);
+        }}
+      >
+        <div className="absolute inset-x-0 h-1 bg-gray-600 rounded-full group-hover:h-2 transition-all">
+          <div
+            className="h-full bg-primary-500 rounded-full"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div
+          className="absolute w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ left: `calc(${progress}% - 6px)` }}
+        />
+      </div>
+      <span className="text-white text-sm whitespace-nowrap">
+        {formatTime(currentTime)} / {formatTime(duration)}
+      </span>
+    </div>
+  );
 }
 
 function ApproveModal({

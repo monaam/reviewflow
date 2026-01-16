@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, ArrowLeftRight, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react';
 import { AssetVersion, AssetType } from '../../types';
+import { getMediaUrl } from '../../utils/media';
 
 interface VersionComparisonProps {
   versions: AssetVersion[];
@@ -132,7 +133,7 @@ export default function VersionComparison({
           <div className="flex items-center justify-center h-full bg-gray-900 rounded overflow-hidden">
             <video
               ref={videoRef}
-              src={version.file_url}
+              src={getMediaUrl(version.file_url, 'video')}
               className="max-w-full max-h-full"
               controls={!syncPlayback}
               muted

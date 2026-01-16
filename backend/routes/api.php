@@ -7,11 +7,15 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\CreativeRequestController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\StreamController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+
+// Video streaming with range request support
+Route::get('/stream/{path}', [StreamController::class, 'stream'])->where('path', '.*');
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
