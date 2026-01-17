@@ -32,6 +32,8 @@ export interface Project {
   creator?: User;
   members?: User[];
   assets_count?: number;
+  approved_assets_count?: number;
+  pending_assets_count?: number;
   creative_requests_count?: number;
 }
 
@@ -151,11 +153,16 @@ export interface DashboardData {
   role: UserRole;
   stats: Record<string, number>;
   pending_approvals?: Asset[];
+  pending_review?: Asset[];
   my_projects?: Project[];
   my_queue?: CreativeRequest[];
   revision_needed?: Asset[];
   recent_uploads?: Asset[];
   overdue_requests?: CreativeRequest[];
+  asset_status_distribution?: Array<{
+    label: string;
+    value: number;
+  }>;
   recent_activity?: Array<{
     type: string;
     data: unknown;

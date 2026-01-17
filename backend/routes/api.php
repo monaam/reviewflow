@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/projects/{project}/members', [ProjectController::class, 'members']);
 
     // Assets
+    Route::get('/assets', [AssetController::class, 'listAll']);
     Route::get('/projects/{project}/assets', [AssetController::class, 'index']);
     Route::post('/projects/{project}/assets', [AssetController::class, 'store']);
     Route::get('/assets/{asset}', [AssetController::class, 'show']);
@@ -61,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/comments/{comment}/unresolve', [CommentController::class, 'unresolve']);
 
     // Creative Requests
+    Route::get('/requests', [CreativeRequestController::class, 'listAll']);
     Route::get('/requests/my-queue', [CreativeRequestController::class, 'myQueue']);
     Route::get('/projects/{project}/requests', [CreativeRequestController::class, 'index']);
     Route::post('/projects/{project}/requests', [CreativeRequestController::class, 'store']);

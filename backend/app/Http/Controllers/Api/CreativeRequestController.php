@@ -18,6 +18,57 @@ class CreativeRequestController extends Controller
         protected DiscordNotificationService $discord
     ) {}
 
+    public function listAll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Get projects the user has access to
+        $projectIds = $user->isAdmin()
+            ? Project::pluck('id')
+            : $user->projects()->pluck('projects.id');
+
+        $query = CreativeRequest::whereIn('project_id', $projectIds)
+            ->with(['creator', 'assignee', 'project', 'assets']);
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('priority')) {
+            $query->where('priority', $request->priority);
+        }
+
+        if ($request->has('assigned_to')) {
+            if ($request->assigned_to === 'me') {
+                $query->where('assigned_to', $user->id);
+            } else {
+                $query->where('assigned_to', $request->assigned_to);
+            }
+        }
+
+        if ($request->has('filter')) {
+            if ($request->filter === 'overdue') {
+                $query->where('deadline', '<', now())
+                      ->where('status', '!=', 'completed');
+            }
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('project', function ($pq) use ($search) {
+                      $pq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $requests = $query->orderBy('deadline', 'asc')->paginate(20);
+
+        return response()->json($requests);
+    }
+
     public function index(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);

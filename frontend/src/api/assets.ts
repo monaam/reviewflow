@@ -21,6 +21,11 @@ export interface CreateCommentRequest {
 }
 
 export const assetsApi = {
+  listAll: async (params?: { status?: string; type?: string; uploaded_by?: string; search?: string; page?: number }): Promise<PaginatedResponse<Asset>> => {
+    const response = await apiClient.get('/assets', { params });
+    return response.data;
+  },
+
   list: async (projectId: string, params?: { status?: string; type?: string; page?: number }): Promise<PaginatedResponse<Asset>> => {
     const response = await apiClient.get(`/projects/${projectId}/assets`, { params });
     return response.data;
