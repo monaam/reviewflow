@@ -1,9 +1,12 @@
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/api$/, '') || '';
+
 /**
- * Converts an absolute storage URL to a relative path.
- * This allows the Vite proxy to handle the request during development.
+ * Converts a storage URL to the correct format for the current environment.
+ * In development, uses relative paths for Vite proxy.
+ * In production, uses the full API URL.
  *
- * Absolute URL: http://localhost:8000/storage/assets/uuid/file.pdf
- * Relative URL: /storage/assets/uuid/file.pdf
+ * Dev: /storage/assets/uuid/file.pdf (proxied to localhost:8000)
+ * Prod: https://api.example.com/storage/assets/uuid/file.pdf
  */
 export function toRelativeStorageUrl(url: string): string {
   if (!url) return url;
@@ -11,7 +14,10 @@ export function toRelativeStorageUrl(url: string): string {
   // Extract the path starting from /storage/
   const storageIndex = url.indexOf('/storage/');
   if (storageIndex !== -1) {
-    return url.substring(storageIndex);
+    const storagePath = url.substring(storageIndex);
+    // In production (when API_BASE_URL is set), use full URL
+    // In development, use relative path for Vite proxy
+    return API_BASE_URL ? `${API_BASE_URL}${storagePath}` : storagePath;
   }
 
   return url;
@@ -21,14 +27,20 @@ export function toRelativeStorageUrl(url: string): string {
  * Converts a storage URL to a streaming URL for video files.
  * This enables HTTP range requests for seeking in HTML5 video elements.
  *
- * Storage URL: http://localhost:8000/storage/assets/uuid/video.mp4
- * Stream URL:  http://localhost:8000/api/stream/assets/uuid/video.mp4
+ * Dev: /api/stream/assets/uuid/video.mp4 (proxied)
+ * Prod: https://api.example.com/api/stream/assets/uuid/video.mp4
  */
 export function getVideoStreamUrl(storageUrl: string): string {
   if (!storageUrl) return storageUrl;
 
-  // Replace /storage/ with /api/stream/
-  return storageUrl.replace('/storage/', '/api/stream/');
+  // Extract the path and replace /storage/ with /api/stream/
+  const storageIndex = storageUrl.indexOf('/storage/');
+  if (storageIndex !== -1) {
+    const streamPath = storageUrl.substring(storageIndex).replace('/storage/', '/api/stream/');
+    return API_BASE_URL ? `${API_BASE_URL}${streamPath}` : streamPath;
+  }
+
+  return storageUrl;
 }
 
 /**
