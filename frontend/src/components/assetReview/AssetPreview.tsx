@@ -140,6 +140,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
           if (asset.type === 'video') {
             return (
               <Renderer
+                key={mediaUrl}
                 {...baseProps}
                 currentTime={currentTime}
                 onTimeUpdate={onTimeUpdate}
@@ -178,6 +179,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
             );
             return (
               <PdfRendererComponent
+                key={mediaUrl}
                 {...baseProps}
                 currentPage={currentPage}
                 zoomLevel={zoomLevel}
@@ -189,8 +191,8 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
             );
           }
 
-          // Default rendering for other types
-          return <Renderer {...baseProps} />;
+          // Default rendering for other types (images, design files, etc.)
+          return <Renderer key={mediaUrl} {...baseProps} />;
         })()}
 
         {/* Annotation overlay - only show for types that support spatial annotations (except PDF which renders its own) */}

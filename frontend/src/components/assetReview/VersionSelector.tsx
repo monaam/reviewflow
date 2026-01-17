@@ -34,19 +34,24 @@ export const VersionSelector: FC<VersionSelectorProps> = ({
         <ChevronLeft className="w-5 h-5 text-white" />
       </button>
 
-      {versions.map((v) => (
-        <button
-          key={v.version_number}
-          onClick={() => onVersionSelect(v.version_number)}
-          className={`px-3 py-1 rounded text-sm ${
-            selectedVersion === v.version_number
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          }`}
-        >
-          v{v.version_number}
-        </button>
-      ))}
+      {[...versions]
+        .sort((a, b) => a.version_number - b.version_number)
+        .map((v) => {
+          const isSelected = selectedVersion === v.version_number;
+          return (
+            <button
+              key={v.version_number}
+              onClick={() => onVersionSelect(v.version_number)}
+              className={`px-3 py-1 rounded text-sm font-medium ${
+                isSelected
+                  ? 'bg-blue-600 text-white ring-2 ring-blue-400'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-gray-200'
+              }`}
+            >
+              v{v.version_number}
+            </button>
+          );
+        })}
 
       <button
         onClick={() => onVersionSelect(Math.min(currentVersion, selectedVersion + 1))}
