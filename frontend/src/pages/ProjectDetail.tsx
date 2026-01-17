@@ -110,15 +110,15 @@ export function ProjectDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-gray-100"></div>
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="p-6 text-center">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+      <div className="p-8 text-center">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white">
           Project not found
         </h2>
       </div>
@@ -126,34 +126,34 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-8">
         <Link
           to="/projects"
-          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Projects
+          Projects
         </Link>
 
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
               {project.name}
             </h1>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
               {project.client_name && (
                 <span>{project.client_name}</span>
               )}
               {project.deadline && (
-                <span className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-1" />
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
                   Due {new Date(project.deadline).toLocaleDateString()}
                 </span>
               )}
-              <span className="flex items-center">
-                <Users className="w-4 h-4 mr-1" />
+              <span className="flex items-center gap-1">
+                <Users className="w-4 h-4" />
                 {project.members?.length || 0} members
               </span>
             </div>
@@ -172,7 +172,7 @@ export function ProjectDetailPage() {
             {canDeleteProject && (
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="btn-secondary text-red-600 hover:bg-red-50"
+                className="btn-secondary"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
@@ -200,41 +200,41 @@ export function ProjectDetailPage() {
         </div>
 
         {project.description && (
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
+          <p className="mt-4 text-gray-500 dark:text-gray-400">
             {project.description}
           </p>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-        <nav className="flex gap-4">
+      <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
+        <nav className="flex gap-6">
           <button
             onClick={() => setActiveTab('assets')}
-            className={`pb-4 px-1 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'assets'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-white'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
             Assets ({assets.length})
           </button>
           <button
             onClick={() => setActiveTab('requests')}
-            className={`pb-4 px-1 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'requests'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-white'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
             Requests ({requests.length})
           </button>
           <button
             onClick={() => setActiveTab('members')}
-            className={`pb-4 px-1 text-sm font-medium border-b-2 transition-colors ${
+            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'members'
-                ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-white'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
             Members ({project.members?.length || 0})
@@ -245,8 +245,8 @@ export function ProjectDetailPage() {
       {/* Search Bar */}
       {(activeTab === 'assets' || activeTab === 'requests') && (
         <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder={`Search ${activeTab}...`}
@@ -259,7 +259,7 @@ export function ProjectDetailPage() {
                 onClick={() => setSearchQuery('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -270,15 +270,15 @@ export function ProjectDetailPage() {
       {activeTab === 'assets' && (
         <>
           {/* Asset Filters */}
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-1 mb-6">
             {['all', 'pending_review', 'in_review', 'approved', 'revision_requested'].map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   filter === status
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
                 {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
@@ -288,12 +288,12 @@ export function ProjectDetailPage() {
 
           {/* Assets Grid */}
           {filteredAssets.length === 0 ? (
-            <div className="text-center py-12 card">
-              <FileImage className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <div className="text-center py-16">
+              <FileImage className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 No assets yet
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
                 Upload your first asset to get started.
               </p>
               {canUpload && (
@@ -319,12 +319,12 @@ export function ProjectDetailPage() {
       {activeTab === 'requests' && (
         <>
           {filteredRequests.length === 0 ? (
-            <div className="text-center py-12 card">
-              <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <div className="text-center py-16">
+              <ClipboardList className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 {searchQuery ? 'No matching requests' : 'No requests yet'}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
                 {searchQuery
                   ? 'Try adjusting your search terms.'
                   : 'Create a request to assign work to your creative team.'}
@@ -340,7 +340,7 @@ export function ProjectDetailPage() {
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredRequests.map((request) => (
                 <RequestCard key={request.id} request={request} />
               ))}
@@ -350,8 +350,8 @@ export function ProjectDetailPage() {
       )}
 
       {activeTab === 'members' && (
-        <div className="card">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <div className="border border-gray-100 dark:border-gray-800 rounded-lg">
+          <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
             <h3 className="font-medium text-gray-900 dark:text-white">
               Project Members
             </h3>
@@ -365,21 +365,21 @@ export function ProjectDetailPage() {
               </button>
             )}
           </div>
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {project.members?.map((member) => (
               <div
                 key={member.id}
                 className="p-4 flex items-center justify-between"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium">
+                  <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
                     {member.name?.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {member.name}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {member.email} · <span className="capitalize">{member.role}</span>
                     </p>
                   </div>
@@ -387,16 +387,16 @@ export function ProjectDetailPage() {
                 {canManageMembers && member.id !== project.created_by && (
                   <button
                     onClick={() => handleRemoveMember(member.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
                     title="Remove member"
                   >
-                    <UserMinus className="w-5 h-5" />
+                    <UserMinus className="w-4 h-4" />
                   </button>
                 )}
               </div>
             ))}
             {(!project.members || project.members.length === 0) && (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 No members added to this project yet.
               </div>
             )}
@@ -474,9 +474,9 @@ function AssetCard({ asset }: { asset: Asset }) {
   return (
     <Link
       to={`/assets/${asset.id}`}
-      className="block card hover:shadow-md transition-shadow"
+      className="block rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors overflow-hidden"
     >
-      <div className="aspect-video bg-gray-100 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+      <div className="aspect-video bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
         {canShowThumbnail ? (
           <img
             src={thumbnailUrl}
@@ -488,18 +488,18 @@ function AssetCard({ asset }: { asset: Asset }) {
             }}
           />
         ) : null}
-        <Icon className={`w-12 h-12 text-gray-400 ${canShowThumbnail ? 'hidden' : ''}`} />
+        <Icon className={`w-10 h-10 text-gray-300 dark:text-gray-600 ${canShowThumbnail ? 'hidden' : ''}`} />
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <h3 className="font-medium text-gray-900 dark:text-white line-clamp-1">
             {asset.title}
           </h3>
-          <span className="text-xs text-gray-500">v{asset.current_version}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">v{asset.current_version}</span>
         </div>
         <div className="flex items-center justify-between">
           <StatusBadge status={asset.status} type="asset" />
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-gray-400 dark:text-gray-500">
             {asset.uploader?.name}
           </span>
         </div>
@@ -515,21 +515,19 @@ function RequestCard({ request }: { request: CreativeRequest }) {
   return (
     <Link
       to={`/requests/${request.id}`}
-      className={`block card p-4 hover:shadow-md transition-shadow ${
-        isOverdue ? 'border-red-300 dark:border-red-700' : ''
-      }`}
+      className="block p-4 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <h3 className="font-medium text-gray-900 dark:text-white">
             {request.title}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
             {request.description}
           </p>
-          <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+          <div className="flex items-center gap-4 mt-3 text-sm text-gray-400 dark:text-gray-500">
             <span>Assigned to: {request.assignee?.name ?? 'Unassigned'}</span>
-            <span className={isOverdue ? 'text-red-500 font-medium' : ''}>
+            <span className={isOverdue ? 'text-gray-900 dark:text-white font-medium' : ''}>
               Due: {new Date(request.deadline).toLocaleDateString()}
             </span>
           </div>
@@ -602,15 +600,15 @@ function UploadAssetModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 max-w-lg w-full mx-4">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
             Upload Asset
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
               {error}
             </div>
           )}
@@ -618,30 +616,30 @@ function UploadAssetModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div
               {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+              className={`border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors ${
                 isDragActive
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                  ? 'border-gray-400 bg-gray-50 dark:bg-gray-700/50'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
             >
               <input {...getInputProps()} />
               {file ? (
                 <div>
-                  <FileImage className="w-12 h-12 text-primary-500 mx-auto mb-2" />
+                  <FileImage className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                   <p className="font-medium text-gray-900 dark:text-white">
                     {file.name}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
               ) : (
                 <div>
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <Upload className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
                   <p className="text-gray-600 dark:text-gray-400">
                     Drag and drop a file here, or click to select
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                     Images, videos, or PDFs up to 500MB
                   </p>
                 </div>
@@ -650,7 +648,7 @@ function UploadAssetModal({
 
             <div>
               <label htmlFor="title" className="label">
-                Title *
+                Title
               </label>
               <input
                 id="title"
@@ -752,15 +750,15 @@ function CreateRequestModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
             Create Request
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
               {error}
             </div>
           )}
@@ -768,7 +766,7 @@ function CreateRequestModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="title" className="label">
-                Title *
+                Title
               </label>
               <input
                 id="title"
@@ -782,7 +780,7 @@ function CreateRequestModal({
 
             <div>
               <label htmlFor="description" className="label">
-                Description *
+                Description
               </label>
               <textarea
                 id="description"
@@ -816,7 +814,7 @@ function CreateRequestModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="deadline" className="label">
-                  Deadline *
+                  Deadline
                 </label>
                 <input
                   id="deadline"
@@ -860,7 +858,7 @@ function CreateRequestModal({
                 className="btn-primary"
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating...' : 'Create Request'}
+                {isLoading ? 'Creating...' : 'Create'}
               </button>
             </div>
           </form>
@@ -912,15 +910,15 @@ function EditProjectModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
             Edit Project
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
               {error}
             </div>
           )}
@@ -928,7 +926,7 @@ function EditProjectModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="edit-name" className="label">
-                Project Name *
+                Project Name
               </label>
               <input
                 id="edit-name"
@@ -1012,7 +1010,7 @@ function EditProjectModal({
                 className="btn-primary"
                 disabled={isLoading}
               >
-                {isLoading ? 'Saving...' : 'Save Changes'}
+                {isLoading ? 'Saving...' : 'Save'}
               </button>
             </div>
           </form>
@@ -1042,19 +1040,19 @@ function DeleteConfirmModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           {title}
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">{message}</p>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">{message}</p>
         <div className="flex justify-end gap-3">
           <button onClick={onClose} className="btn-secondary" disabled={isLoading}>
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            className="btn-primary bg-red-600 hover:bg-red-700"
+            className="btn-primary"
             disabled={isLoading}
           >
             {isLoading ? 'Deleting...' : 'Delete'}
@@ -1113,14 +1111,14 @@ function AddMemberModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Add Team Member
         </h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
             {error}
           </div>
         )}
@@ -1147,7 +1145,7 @@ function AddMemberModal({
           </div>
 
           {users.length === 0 && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               No available users to add. All active users are already members.
             </p>
           )}
@@ -1166,7 +1164,7 @@ function AddMemberModal({
               className="btn-primary"
               disabled={isLoading || !selectedUserId}
             >
-              {isLoading ? 'Adding...' : 'Add Member'}
+              {isLoading ? 'Adding...' : 'Add'}
             </button>
           </div>
         </form>

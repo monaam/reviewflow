@@ -31,21 +31,21 @@ export function Sidebar() {
   );
 
   return (
-    <div className="flex flex-col w-64 bg-gray-900 text-white">
-      <div className="flex items-center h-16 px-4 border-b border-gray-800">
-        <span className="text-xl font-bold text-primary-400">ReviewFlow</span>
+    <div className="flex flex-col w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+      <div className="flex items-center h-16 px-4">
+        <span className="text-xl font-semibold text-gray-900 dark:text-white">ReviewFlow</span>
       </div>
 
-      <nav className="flex-1 px-2 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1">
         {filteredNav.map((item) => (
           <NavLink
             key={item.name}
             to={item.href}
             className={({ isActive }) =>
-              `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 isActive
-                  ? 'bg-primary-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  ? 'text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-800'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
               }`
             }
           >
@@ -56,8 +56,8 @@ export function Sidebar() {
 
         {user?.role === 'admin' && (
           <>
-            <div className="pt-4 mt-4 border-t border-gray-800">
-              <p className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-800">
+              <p className="px-3 text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                 Admin
               </p>
             </div>
@@ -66,10 +66,10 @@ export function Sidebar() {
                 key={item.name}
                 to={item.href}
                 className={({ isActive }) =>
-                  `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? 'bg-primary-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      ? 'text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-800'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`
                 }
               >
@@ -81,19 +81,19 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="p-4 border-t border-gray-800">
+      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center mb-3">
-          <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-sm font-medium">
+          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
             {user?.name?.charAt(0).toUpperCase()}
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium">{user?.name}</p>
-            <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{user?.name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
           </div>
         </div>
         <button
           onClick={logout}
-          className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-lg hover:bg-gray-800 hover:text-white transition-colors"
+          className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 rounded-md hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <LogOut className="w-5 h-5 mr-3" />
           Logout

@@ -41,13 +41,14 @@ export function ProjectsPage() {
   });
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
             Projects
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-500 dark:text-gray-400 mt-1">
             Manage your creative projects
           </p>
         </div>
@@ -62,10 +63,10 @@ export function ProjectsPage() {
         )}
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search projects..."
@@ -78,41 +79,40 @@ export function ProjectsPage() {
               onClick={() => setSearchQuery('')}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           )}
         </div>
+
+        <div className="flex gap-1">
+          {['all', 'active', 'on_hold', 'completed', 'archived'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                filter === status
+                  ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              {status === 'all' ? 'All' : status.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 mb-6">
-        {['all', 'active', 'on_hold', 'completed', 'archived'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              filter === status
-                ? 'bg-primary-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-          >
-            {status === 'all' ? 'All' : status.replace('_', ' ')}
-          </button>
-        ))}
-      </div>
-
-      {/* Projects Grid */}
+      {/* Projects */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-gray-100"></div>
         </div>
       ) : filteredProjects.length === 0 ? (
-        <div className="text-center py-12">
-          <FolderKanban className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+        <div className="text-center py-16">
+          <FolderKanban className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             {searchQuery ? 'No matching projects' : 'No projects found'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-500 dark:text-gray-400">
             {searchQuery
               ? 'Try adjusting your search terms.'
               : canCreateProject
@@ -121,62 +121,50 @@ export function ProjectsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project) => (
             <Link
               key={project.id}
               to={`/projects/${project.id}`}
-              className="block card hover:shadow-md transition-shadow"
+              className="block p-5 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
             >
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {project.name}
-                    </h3>
-                    {project.client_name && (
-                      <p className="text-sm text-gray-500">{project.client_name}</p>
-                    )}
-                  </div>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      project.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : project.status === 'on_hold'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : project.status === 'completed'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {project.status.replace('_', ' ')}
-                  </span>
-                </div>
-
-                {project.description && (
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">
-                    {project.description}
-                  </p>
-                )}
-
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center">
-                      <FolderKanban className="w-4 h-4 mr-1" />
-                      {project.assets_count || 0} assets
-                    </span>
-                    <span className="flex items-center">
-                      <Users className="w-4 h-4 mr-1" />
-                      {project.members?.length || 0}
-                    </span>
-                  </div>
-                  {project.deadline && (
-                    <span className="flex items-center">
-                      <Calendar className="w-4 h-4 mr-1" />
-                      {new Date(project.deadline).toLocaleDateString()}
-                    </span>
+              <div className="flex items-start justify-between mb-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                    {project.name}
+                  </h3>
+                  {project.client_name && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                      {project.client_name}
+                    </p>
                   )}
                 </div>
+                <span className="ml-3 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 capitalize">
+                  {project.status.replace('_', ' ')}
+                </span>
+              </div>
+
+              {project.description && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                  {project.description}
+                </p>
+              )}
+
+              <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
+                <span className="flex items-center gap-1">
+                  <FolderKanban className="w-3.5 h-3.5" />
+                  {project.assets_count || 0}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  {project.members?.length || 0}
+                </span>
+                {project.deadline && (
+                  <span className="flex items-center gap-1 ml-auto">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {new Date(project.deadline).toLocaleDateString()}
+                  </span>
+                )}
               </div>
             </Link>
           ))}
@@ -234,15 +222,15 @@ function CreateProjectModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4">
         <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
             Create New Project
           </h2>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
               {error}
             </div>
           )}
@@ -250,7 +238,7 @@ function CreateProjectModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="name" className="label">
-                Project Name *
+                Project Name
               </label>
               <input
                 id="name"
@@ -315,7 +303,7 @@ function CreateProjectModal({
                 className="btn-primary"
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating...' : 'Create Project'}
+                {isLoading ? 'Creating...' : 'Create'}
               </button>
             </div>
           </form>
