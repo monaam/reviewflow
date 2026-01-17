@@ -91,6 +91,19 @@ export function Sidebar() {
             <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user?.role}</p>
           </div>
         </div>
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              isActive
+                ? 'text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-800'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`
+          }
+        >
+          <Settings className="w-5 h-5 mr-3" />
+          Settings
+        </NavLink>
         <button
           onClick={logout}
           className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 rounded-md hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
