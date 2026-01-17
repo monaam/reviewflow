@@ -35,12 +35,23 @@ class DashboardController extends Controller
                 'pending_assets' => Asset::pendingReview()->count(),
                 'overdue_requests' => CreativeRequest::overdue()->count(),
             ],
+            'asset_status_distribution' => $this->getAssetStatusDistribution(),
             'recent_activity' => $this->getRecentActivity(),
             'pending_approvals' => Asset::pendingReview()
                 ->with(['uploader', 'project', 'latestVersion'])
                 ->latest()
                 ->limit(10)
                 ->get(),
+        ];
+    }
+
+    protected function getAssetStatusDistribution(): array
+    {
+        return [
+            ['label' => 'Pending Review', 'value' => Asset::where('status', 'pending_review')->count()],
+            ['label' => 'In Review', 'value' => Asset::where('status', 'in_review')->count()],
+            ['label' => 'Approved', 'value' => Asset::where('status', 'approved')->count()],
+            ['label' => 'Revision Requested', 'value' => Asset::where('status', 'revision_requested')->count()],
         ];
     }
 
@@ -68,7 +79,16 @@ class DashboardController extends Controller
                 ->get(),
             'my_projects' => Project::forUser($user)
                 ->with(['creator'])
-                ->withCount(['assets', 'creativeRequests'])
+                ->withCount([
+                    'assets',
+                    'assets as approved_assets_count' => function ($query) {
+                        $query->where('status', 'approved');
+                    },
+                    'assets as pending_assets_count' => function ($query) {
+                        $query->where('status', 'pending_review');
+                    },
+                    'creativeRequests',
+                ])
                 ->active()
                 ->latest()
                 ->limit(5)
@@ -119,7 +139,16 @@ class DashboardController extends Controller
                 ->get(),
             'my_projects' => Project::forUser($user)
                 ->with(['creator'])
-                ->withCount(['assets', 'creativeRequests'])
+                ->withCount([
+                    'assets',
+                    'assets as approved_assets_count' => function ($query) {
+                        $query->where('status', 'approved');
+                    },
+                    'assets as pending_assets_count' => function ($query) {
+                        $query->where('status', 'pending_review');
+                    },
+                    'creativeRequests',
+                ])
                 ->active()
                 ->latest()
                 ->limit(5)

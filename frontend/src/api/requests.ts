@@ -11,6 +11,11 @@ export interface CreateRequestData {
 }
 
 export const requestsApi = {
+  listAll: async (params?: { status?: string; priority?: string; assigned_to?: string; filter?: string; search?: string; page?: number }): Promise<PaginatedResponse<CreativeRequest>> => {
+    const response = await apiClient.get('/requests', { params });
+    return response.data;
+  },
+
   list: async (projectId: string, params?: { status?: string; priority?: string; page?: number }): Promise<PaginatedResponse<CreativeRequest>> => {
     const response = await apiClient.get(`/projects/${projectId}/requests`, { params });
     return response.data;

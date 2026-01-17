@@ -24,6 +24,49 @@ class AssetController extends Controller
         protected AssetTypeRegistry $assetTypeRegistry
     ) {}
 
+    public function listAll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Get projects the user has access to
+        $projectIds = $user->isAdmin()
+            ? Project::pluck('id')
+            : $user->projects()->pluck('projects.id');
+
+        $query = Asset::whereIn('project_id', $projectIds)
+            ->with(['uploader', 'project', 'latestVersion']);
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->has('uploaded_by')) {
+            if ($request->uploaded_by === 'me') {
+                $query->where('uploaded_by', $user->id);
+            } else {
+                $query->where('uploaded_by', $request->uploaded_by);
+            }
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhereHas('project', function ($pq) use ($search) {
+                      $pq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $assets = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return response()->json($assets);
+    }
+
     public function index(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);

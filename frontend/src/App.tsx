@@ -5,7 +5,9 @@ import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { ProjectsPage } from './pages/Projects';
 import { ProjectDetailPage } from './pages/ProjectDetail';
+import { AssetsPage } from './pages/Assets';
 import { AssetReviewPage } from './pages/AssetReview';
+import { RequestsPage } from './pages/Requests';
 import { CreativeQueuePage } from './pages/CreativeQueue';
 import { ReviewQueuePage } from './pages/ReviewQueue';
 import { RequestDetailPage } from './pages/RequestDetail';
@@ -76,10 +78,12 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
+          <Route path="assets" element={<AssetsPage />} />
           <Route path="assets/:id" element={<AssetReviewPage />} />
+          <Route path="requests" element={<RequestsPage />} />
+          <Route path="requests/:id" element={<RequestDetailPage />} />
           <Route path="queue" element={<CreativeQueuePage />} />
           <Route path="review-queue" element={<ReviewQueuePage />} />
-          <Route path="requests/:id" element={<RequestDetailPage />} />
 
           {/* Admin Routes */}
           <Route
