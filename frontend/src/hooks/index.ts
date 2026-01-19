@@ -6,3 +6,8 @@ export {
   type Rectangle,
   type AssetReviewState,
 } from './useAssetReviewState';
+export {
+  useUploadProgress,
+  type UploadProgress,
+  type UseUploadProgressReturn,
+} from './useUploadProgress';

@@ -23,9 +23,11 @@ import { requestsApi } from '../api/requests';
 import { adminApi } from '../api/admin';
 import { Project, Asset, CreativeRequest, User } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { UploadProgress } from '../components/common/UploadProgress';
 import { useAuthStore } from '../stores/authStore';
 import { usersApi } from '../api/users';
 import { getAssetTypeIcon, supportsThumbnail } from '../config/assetTypeRegistry';
+import { useUploadProgress } from '../hooks';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -555,6 +557,7 @@ function UploadAssetModal({
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const { uploadProgress, onUploadProgress, startUpload, resetUpload } = useUploadProgress();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -583,17 +586,19 @@ function UploadAssetModal({
 
     setError('');
     setIsLoading(true);
+    startUpload();
 
     try {
       const asset = await assetsApi.create(projectId, {
         file,
         title,
         description: description || undefined,
-      });
+      }, { onUploadProgress });
       onUploaded(asset);
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || 'Failed to upload asset');
+      resetUpload();
     } finally {
       setIsLoading(false);
     }
@@ -620,9 +625,9 @@ function UploadAssetModal({
                 isDragActive
                   ? 'border-gray-400 bg-gray-50 dark:bg-gray-700/50'
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-              }`}
+              } ${isLoading ? 'pointer-events-none opacity-50' : ''}`}
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} disabled={isLoading} />
               {file ? (
                 <div>
                   <FileImage className="w-10 h-10 text-gray-400 mx-auto mb-2" />
@@ -646,6 +651,10 @@ function UploadAssetModal({
               )}
             </div>
 
+            {uploadProgress.isUploading && (
+              <UploadProgress progress={uploadProgress} fileName={file?.name} />
+            )}
+
             <div>
               <label htmlFor="title" className="label">
                 Title
@@ -657,6 +666,7 @@ function UploadAssetModal({
                 onChange={(e) => setTitle(e.target.value)}
                 className="input"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -670,6 +680,7 @@ function UploadAssetModal({
                 onChange={(e) => setDescription(e.target.value)}
                 className="input"
                 rows={3}
+                disabled={isLoading}
               />
             </div>
 
@@ -687,7 +698,7 @@ function UploadAssetModal({
                 className="btn-primary"
                 disabled={isLoading || !file}
               >
-                {isLoading ? 'Uploading...' : 'Upload'}
+                {isLoading ? `Uploading${uploadProgress.progress > 0 ? ` (${uploadProgress.progress}%)` : '...'}` : 'Upload'}
               </button>
             </div>
           </form>
