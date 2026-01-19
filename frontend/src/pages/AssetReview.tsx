@@ -251,17 +251,6 @@ export function AssetReviewPage() {
     }
   };
 
-  const handleUploadVersion = async (file: File, versionNotes?: string) => {
-    try {
-      await assetsApi.uploadVersion(id!, file, versionNotes);
-      fetchAsset();
-      fetchTimeline();
-      closeModal();
-    } catch (error) {
-      console.error('Failed to upload version:', error);
-    }
-  };
-
   const handleLock = async () => {
     if (!asset) return;
     setIsLocking(true);
@@ -473,7 +462,15 @@ export function AssetReviewPage() {
         <RevisionModal onClose={closeModal} onSubmit={handleRequestRevision} />
       )}
       {state.activeModal === 'upload' && (
-        <UploadVersionModal onClose={closeModal} onUpload={handleUploadVersion} />
+        <UploadVersionModal
+          assetId={id!}
+          onClose={closeModal}
+          onSuccess={() => {
+            fetchAsset();
+            fetchTimeline();
+            closeModal();
+          }}
+        />
       )}
       {state.activeModal === 'edit' && (
         <EditAssetModal

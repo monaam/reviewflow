@@ -1,3 +1,4 @@
+import { AxiosProgressEvent } from 'axios';
 import apiClient from './client';
 import { Asset, AssetVersion, Comment, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem } from '../types';
 
@@ -6,6 +7,10 @@ export interface CreateAssetRequest {
   title: string;
   description?: string;
   request_id?: string;
+}
+
+export interface UploadOptions {
+  onUploadProgress?: (event: AxiosProgressEvent) => void;
 }
 
 export interface CreateCommentRequest {
@@ -36,7 +41,7 @@ export const assetsApi = {
     return response.data;
   },
 
-  create: async (projectId: string, data: CreateAssetRequest): Promise<Asset> => {
+  create: async (projectId: string, data: CreateAssetRequest, options?: UploadOptions): Promise<Asset> => {
     const formData = new FormData();
     formData.append('file', data.file);
     formData.append('title', data.title);
@@ -45,6 +50,7 @@ export const assetsApi = {
 
     const response = await apiClient.post(`/projects/${projectId}/assets`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: options?.onUploadProgress,
     });
     return response.data;
   },
@@ -58,13 +64,14 @@ export const assetsApi = {
     await apiClient.delete(`/assets/${id}`);
   },
 
-  uploadVersion: async (id: string, file: File, versionNotes?: string): Promise<Asset> => {
+  uploadVersion: async (id: string, file: File, versionNotes?: string, options?: UploadOptions): Promise<Asset> => {
     const formData = new FormData();
     formData.append('file', file);
     if (versionNotes) formData.append('version_notes', versionNotes);
 
     const response = await apiClient.post(`/assets/${id}/versions`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: options?.onUploadProgress,
     });
     return response.data;
   },
