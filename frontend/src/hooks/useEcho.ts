@@ -3,7 +3,24 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
-import { Notification } from '../types';
+import { Notification, NotificationData, NotificationType } from '../types';
+
+interface BroadcastNotification {
+  id?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  actor?: NotificationData['actor'];
+  asset_id?: string;
+  comment_id?: string;
+  project_id?: string;
+  request_id?: string;
+  parent_comment_id?: string;
+  feedback?: string;
+  version?: number;
+  old_status?: string;
+  new_status?: string;
+}
 
 declare global {
   interface Window {
@@ -59,12 +76,22 @@ export function useEcho() {
     // Subscribe to user's private notification channel
     echo
       .private(`App.Models.User.${user.id}`)
-      .notification((notification: Notification & { id?: string }) => {
+      .notification((notification: unknown) => {
+        const data = notification as BroadcastNotification;
         // Transform broadcast notification to Notification type
         const notificationData: Notification = {
-          id: notification.id || crypto.randomUUID(),
-          type: notification.type,
-          data: notification as Notification['data'],
+          id: data.id || crypto.randomUUID(),
+          type: data.type,
+          data: {
+            type: data.type,
+            title: data.title,
+            message: data.message,
+            actor: data.actor,
+            asset_id: data.asset_id,
+            comment_id: data.comment_id,
+            project_id: data.project_id,
+            request_id: data.request_id,
+          },
           read_at: null,
           created_at: new Date().toISOString(),
         };
