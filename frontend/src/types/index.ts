@@ -82,6 +82,7 @@ export interface Comment {
   asset_id: string;
   asset_version: number;
   user_id: string;
+  parent_id: string | null;
   content: string;
   rectangle: {
     x: number;
@@ -98,6 +99,7 @@ export interface Comment {
   updated_at: string;
   user?: User;
   resolver?: User;
+  replies?: Comment[];
 }
 
 export interface CreativeRequest {

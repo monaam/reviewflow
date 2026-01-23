@@ -23,6 +23,7 @@ export interface CreateCommentRequest {
   };
   video_timestamp?: number;
   page_number?: number;
+  parent_id?: string;
 }
 
 export const assetsApi = {

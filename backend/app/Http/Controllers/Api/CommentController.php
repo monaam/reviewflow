@@ -24,7 +24,9 @@ class CommentController extends Controller
             return $this->getTimeline($request, $asset);
         }
 
-        $query = $asset->comments()->with(['user', 'resolver']);
+        $query = $asset->comments()
+            ->with(['user', 'resolver', 'replies.user', 'replies.resolver'])
+            ->whereNull('parent_id'); // Only top-level comments
 
         if ($request->has('version')) {
             $query->where('asset_version', $request->version);
@@ -45,8 +47,10 @@ class CommentController extends Controller
     {
         $timeline = collect();
 
-        // Get comments
-        $commentsQuery = $asset->comments()->with(['user', 'resolver']);
+        // Get comments (only top-level, with replies nested)
+        $commentsQuery = $asset->comments()
+            ->with(['user', 'resolver', 'replies.user', 'replies.resolver'])
+            ->whereNull('parent_id'); // Only top-level comments
         if ($request->has('version')) {
             $commentsQuery->where('asset_version', $request->version);
         } elseif (!$request->boolean('all')) {
@@ -103,16 +107,42 @@ class CommentController extends Controller
             'rectangle.height' => 'required_with:rectangle|numeric|min:0|max:1',
             'video_timestamp' => 'nullable|numeric|min:0',
             'page_number' => 'nullable|integer|min:1',
+            'parent_id' => 'nullable|uuid|exists:comments,id',
         ]);
+
+        // If replying to a comment, validate the parent
+        $parentComment = null;
+        if (!empty($validated['parent_id'])) {
+            $parentComment = Comment::find($validated['parent_id']);
+
+            // Ensure parent belongs to the same asset
+            if ($parentComment->asset_id !== $asset->id) {
+                return response()->json([
+                    'message' => 'Parent comment does not belong to this asset.',
+                ], 422);
+            }
+
+            // Ensure single-level threading (parent cannot be a reply)
+            if ($parentComment->isReply()) {
+                return response()->json([
+                    'message' => 'Cannot reply to a reply. Only single-level threading is supported.',
+                ], 422);
+            }
+        }
+
+        // For replies: inherit asset_version from parent, no annotations
+        $isReply = $parentComment !== null;
 
         $comment = Comment::create([
             'asset_id' => $asset->id,
-            'asset_version' => $asset->current_version,
+            'asset_version' => $isReply ? $parentComment->asset_version : $asset->current_version,
             'user_id' => $request->user()->id,
+            'parent_id' => $validated['parent_id'] ?? null,
             'content' => $validated['content'],
-            'rectangle' => $validated['rectangle'] ?? null,
-            'video_timestamp' => $validated['video_timestamp'] ?? null,
-            'page_number' => $validated['page_number'] ?? null,
+            // Replies do NOT have annotations
+            'rectangle' => $isReply ? null : ($validated['rectangle'] ?? null),
+            'video_timestamp' => $isReply ? null : ($validated['video_timestamp'] ?? null),
+            'page_number' => $isReply ? null : ($validated['page_number'] ?? null),
         ]);
 
         // Send Discord notification
