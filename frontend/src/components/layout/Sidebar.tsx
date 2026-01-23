@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   CheckSquare,
+  Bell,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -16,6 +17,7 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'My Queue', href: '/queue', icon: ClipboardList, roles: ['creative'] },
   { name: 'Review Queue', href: '/review-queue', icon: CheckSquare, roles: ['reviewer', 'pm', 'admin'] },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
 ];
 
 const adminNavigation = [

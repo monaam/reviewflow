@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\Comment;
 use App\Services\DiscordNotificationService;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
     public function __construct(
-        protected DiscordNotificationService $discord
+        protected DiscordNotificationService $discord,
+        protected NotificationDispatcher $notificationDispatcher
     ) {}
 
     public function index(Request $request, Asset $asset): JsonResponse
@@ -147,6 +149,9 @@ class CommentController extends Controller
 
         // Send Discord notification
         $this->discord->notifyNewComment($comment);
+
+        // Send in-app notification
+        $this->notificationDispatcher->notifyCommentCreated($comment, $request->user());
 
         return response()->json($comment->load('user'), 201);
     }

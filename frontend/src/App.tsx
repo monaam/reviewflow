@@ -11,6 +11,7 @@ import { RequestsPage } from './pages/Requests';
 import { CreativeQueuePage } from './pages/CreativeQueue';
 import { ReviewQueuePage } from './pages/ReviewQueue';
 import { RequestDetailPage } from './pages/RequestDetail';
+import { NotificationsPage } from './pages/Notifications';
 import { AdminUsersPage } from './pages/AdminUsers';
 import { AdminSettingsPage } from './pages/AdminSettings';
 import { ProfileSettingsPage } from './pages/ProfileSettings';
@@ -85,6 +86,7 @@ function App() {
           <Route path="requests/:id" element={<RequestDetailPage />} />
           <Route path="queue" element={<CreativeQueuePage />} />
           <Route path="review-queue" element={<ReviewQueuePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<ProfileSettingsPage />} />
 
           {/* Admin Routes */}

@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\RequestAttachment;
+use App\Models\User;
 use App\Services\DiscordNotificationService;
 use App\Services\FileUploadService;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +17,8 @@ class CreativeRequestController extends Controller
 {
     public function __construct(
         protected FileUploadService $uploadService,
-        protected DiscordNotificationService $discord
+        protected DiscordNotificationService $discord,
+        protected NotificationDispatcher $notificationDispatcher
     ) {}
 
     public function listAll(Request $request): JsonResponse
@@ -136,6 +139,14 @@ class CreativeRequestController extends Controller
         // Send Discord notification
         $this->discord->notifyNewRequest($creativeRequest);
 
+        // Send in-app notification if assigned
+        if ($creativeRequest->assigned_to) {
+            $assignee = User::find($creativeRequest->assigned_to);
+            if ($assignee) {
+                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $assignee, $request->user());
+            }
+        }
+
         return response()->json($creativeRequest->load(['creator', 'assignee', 'project']), 201);
     }
 
@@ -169,7 +180,23 @@ class CreativeRequestController extends Controller
             'status' => 'sometimes|in:pending,in_progress,asset_submitted,completed',
         ]);
 
+        $oldStatus = $creativeRequest->status;
+        $oldAssignee = $creativeRequest->assigned_to;
+
         $creativeRequest->update($validated);
+
+        // Notify on assignment change
+        if (isset($validated['assigned_to']) && $validated['assigned_to'] !== $oldAssignee) {
+            $assignee = User::find($validated['assigned_to']);
+            if ($assignee) {
+                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $assignee, $request->user());
+            }
+        }
+
+        // Notify on status change
+        if (isset($validated['status']) && $validated['status'] !== $oldStatus) {
+            $this->notificationDispatcher->notifyRequestStatusChanged($creativeRequest, $oldStatus, $request->user());
+        }
 
         return response()->json($creativeRequest->fresh(['creator', 'assignee']));
     }
@@ -193,9 +220,11 @@ class CreativeRequestController extends Controller
         $this->authorize('start', $creativeRequest);
 
         $user = $request->user();
+        $oldStatus = $creativeRequest->status;
+        $wasUnassigned = $creativeRequest->assigned_to === null;
 
         // Auto-assign if unassigned
-        if ($creativeRequest->assigned_to === null) {
+        if ($wasUnassigned) {
             $creativeRequest->update(['assigned_to' => $user->id]);
         }
 
@@ -210,6 +239,9 @@ class CreativeRequestController extends Controller
 
         $creativeRequest->start();
 
+        // Notify status change
+        $this->notificationDispatcher->notifyRequestStatusChanged($creativeRequest, $oldStatus, $user);
+
         return response()->json($creativeRequest->fresh(['creator', 'assignee']));
     }
 
@@ -217,7 +249,11 @@ class CreativeRequestController extends Controller
     {
         $this->authorize('complete', $creativeRequest);
 
+        $oldStatus = $creativeRequest->status;
         $creativeRequest->complete();
+
+        // Notify status change
+        $this->notificationDispatcher->notifyRequestStatusChanged($creativeRequest, $oldStatus, $request->user());
 
         return response()->json($creativeRequest->fresh(['creator', 'assignee']));
     }

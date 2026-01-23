@@ -6,9 +6,12 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\CreativeRequestController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\StreamController;
 use App\Http\Controllers\Api\UserController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -16,6 +19,11 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 
 // Video streaming with range request support
 Route::get('/stream/{path}', [StreamController::class, 'stream'])->where('path', '.*');
+
+// Broadcasting authentication for Sanctum
+Route::middleware('auth:sanctum')->post('/broadcasting/auth', function (Request $request) {
+    return Broadcast::auth($request);
+});
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -84,4 +92,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/settings', [AdminController::class, 'updateSettings']);
         Route::get('/analytics', [AdminController::class, 'analytics']);
     });
+
+    // Notifications
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/unread', [NotificationController::class, 'unread']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{id}', [NotificationController::class, 'destroy']);
+    });
+
+    // Push subscription
+    Route::post('/user/push-subscription', [NotificationController::class, 'registerPushSubscription']);
+    Route::put('/user/push-preferences', [NotificationController::class, 'updatePushPreferences']);
 });
