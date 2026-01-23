@@ -21,6 +21,8 @@ class User extends Authenticatable
         'role',
         'avatar',
         'is_active',
+        'onesignal_player_id',
+        'push_notifications_enabled',
     ];
 
     protected $hidden = [
@@ -34,7 +36,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'push_notifications_enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * Route notifications to OneSignal player ID.
+     */
+    public function routeNotificationForOneSignal(): ?string
+    {
+        return $this->onesignal_player_id;
     }
 
     public function isAdmin(): bool

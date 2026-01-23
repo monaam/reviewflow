@@ -82,6 +82,7 @@ export interface Comment {
   asset_id: string;
   asset_version: number;
   user_id: string;
+  parent_id: string | null;
   content: string;
   rectangle: {
     x: number;
@@ -98,6 +99,7 @@ export interface Comment {
   updated_at: string;
   user?: User;
   resolver?: User;
+  replies?: Comment[];
 }
 
 export interface CreativeRequest {
@@ -222,4 +224,48 @@ export interface TimelineItem {
   id: string;
   created_at: string;
   data: Comment | AssetVersion | ApprovalLog;
+}
+
+// Notification types
+export type NotificationType =
+  | 'comment.created'
+  | 'comment.reply'
+  | 'asset.uploaded'
+  | 'asset.new_version'
+  | 'asset.approved'
+  | 'asset.revision_requested'
+  | 'request.assigned'
+  | 'request.status_changed';
+
+export interface NotificationData {
+  type: NotificationType;
+  title: string;
+  message: string;
+  actor?: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  asset_id?: string;
+  comment_id?: string;
+  parent_comment_id?: string;
+  project_id?: string;
+  request_id?: string;
+  feedback?: string;
+  version?: number;
+  old_status?: string;
+  new_status?: string;
+}
+
+export interface Notification {
+  id: string;
+  type: string;
+  data: NotificationData;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface UnreadNotificationsResponse {
+  notifications: Notification[];
+  unread_count: number;
 }

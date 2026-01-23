@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import {
   MessageSquare,
   Upload,
@@ -8,6 +8,8 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  Reply,
+  X,
 } from 'lucide-react';
 import { TimelineItem, Comment, AssetVersion, ApprovalLog } from '../../types';
 import { supportsTemporalAnnotations } from '../../config/assetTypeRegistry';
@@ -31,6 +33,7 @@ interface ActivityPanelProps {
   onDeleteComment: (commentId: string) => void;
   onResolveComment: (commentId: string, isResolved: boolean) => void;
   onToggleShowAllVersions: () => void;
+  onSubmitReply: (parentId: string, content: string) => Promise<void>;
 
   // Comment actions (from useAssetActions hook)
   getCommentActions: (comment: Comment) => { canDelete: boolean; canResolve: boolean };
@@ -55,8 +58,36 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   onDeleteComment,
   onResolveComment,
   onToggleShowAllVersions,
+  onSubmitReply,
   getCommentActions,
 }) => {
+  // Reply state
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
+  const handleStartReply = (commentId: string) => {
+    setReplyingToId(commentId);
+    setReplyContent('');
+  };
+
+  const handleCancelReply = () => {
+    setReplyingToId(null);
+    setReplyContent('');
+  };
+
+  const handleSubmitReply = async () => {
+    if (!replyingToId || !replyContent.trim()) return;
+    setIsSubmittingReply(true);
+    try {
+      await onSubmitReply(replyingToId, replyContent);
+      setReplyingToId(null);
+      setReplyContent('');
+    } finally {
+      setIsSubmittingReply(false);
+    }
+  };
+
   // Filter timeline items based on version visibility
   const filteredTimeline = timeline.filter((item) => {
     if (showAllVersionsComments) return true;
@@ -125,21 +156,77 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
             );
           }
 
-          // Comment item
+          // Comment item (with replies)
           const comment = item.data as Comment;
           return (
-            <CommentItem
-              key={item.id}
-              comment={comment}
-              isSelected={selectedCommentId === comment.id}
-              selectedVersion={selectedVersion}
-              showAllVersionsComments={showAllVersionsComments}
-              assetType={assetType}
-              onClick={() => onCommentClick(comment)}
-              onDelete={() => onDeleteComment(comment.id)}
-              onResolve={() => onResolveComment(comment.id, comment.is_resolved)}
-              getCommentActions={getCommentActions}
-            />
+            <div key={item.id} className="space-y-2">
+              <CommentItem
+                comment={comment}
+                isSelected={selectedCommentId === comment.id}
+                selectedVersion={selectedVersion}
+                showAllVersionsComments={showAllVersionsComments}
+                assetType={assetType}
+                onClick={() => onCommentClick(comment)}
+                onDelete={() => onDeleteComment(comment.id)}
+                onResolve={() => onResolveComment(comment.id, comment.is_resolved)}
+                onReply={() => handleStartReply(comment.id)}
+                getCommentActions={getCommentActions}
+                isReply={false}
+              />
+
+              {/* Replies */}
+              {comment.replies && comment.replies.length > 0 && (
+                <div className="ml-6 space-y-2 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
+                  {comment.replies.map((reply) => (
+                    <CommentItem
+                      key={reply.id}
+                      comment={reply}
+                      isSelected={selectedCommentId === reply.id}
+                      selectedVersion={selectedVersion}
+                      showAllVersionsComments={showAllVersionsComments}
+                      assetType={assetType}
+                      onClick={() => onCommentClick(reply)}
+                      onDelete={() => onDeleteComment(reply.id)}
+                      onResolve={() => onResolveComment(reply.id, reply.is_resolved)}
+                      getCommentActions={getCommentActions}
+                      isReply={true}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Reply Form */}
+              {replyingToId === comment.id && (
+                <div className="ml-6 border-l-2 border-primary-300 dark:border-primary-700 pl-3">
+                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                    <textarea
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      placeholder="Write a reply..."
+                      className="input mb-2 text-sm"
+                      rows={2}
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={handleCancelReply}
+                        className="btn-secondary text-sm px-3 py-1"
+                        disabled={isSubmittingReply}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSubmitReply}
+                        disabled={!replyContent.trim() || isSubmittingReply}
+                        className="btn-primary text-sm px-3 py-1"
+                      >
+                        {isSubmittingReply ? 'Replying...' : 'Reply'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -260,7 +347,9 @@ interface CommentItemProps {
   onClick: () => void;
   onDelete: () => void;
   onResolve: () => void;
+  onReply?: () => void;
   getCommentActions: (comment: Comment) => { canDelete: boolean; canResolve: boolean };
+  isReply: boolean;
 }
 
 const CommentItem: FC<CommentItemProps> = ({
@@ -272,7 +361,9 @@ const CommentItem: FC<CommentItemProps> = ({
   onClick,
   onDelete,
   onResolve,
+  onReply,
   getCommentActions,
+  isReply,
 }) => {
   const { canDelete, canResolve } = getCommentActions(comment);
 
@@ -281,35 +372,51 @@ const CommentItem: FC<CommentItemProps> = ({
       className={`p-3 rounded-lg border transition-colors cursor-pointer ${
         isSelected
           ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+          : isReply
+          ? 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200'
           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
       }`}
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-xs text-white font-medium">
+          <div className={`rounded-full bg-primary-600 flex items-center justify-center text-white font-medium ${isReply ? 'w-5 h-5 text-[10px]' : 'w-6 h-6 text-xs'}`}>
             {comment.user?.name?.charAt(0)}
           </div>
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
+          <span className={`font-medium text-gray-900 dark:text-white ${isReply ? 'text-xs' : 'text-sm'}`}>
             {comment.user?.name}
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* Reply button - only for top-level comments */}
+          {!isReply && onReply && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onReply();
+              }}
+              className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-500"
+              title="Reply to comment"
+            >
+              <Reply className="w-4 h-4" />
+            </button>
+          )}
           {canDelete && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm('Delete this comment?')) {
+                if (confirm(isReply ? 'Delete this reply?' : 'Delete this comment?')) {
                   onDelete();
                 }
               }}
               className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
-              title="Delete comment"
+              title={isReply ? 'Delete reply' : 'Delete comment'}
             >
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-          {canResolve && (
+          {/* Resolve button - only for top-level comments */}
+          {canResolve && !isReply && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -330,9 +437,9 @@ const CommentItem: FC<CommentItemProps> = ({
         </div>
       </div>
 
-      <p className="text-sm text-gray-700 dark:text-gray-300">{comment.content}</p>
+      <p className={`text-gray-700 dark:text-gray-300 ${isReply ? 'text-xs' : 'text-sm'}`}>{comment.content}</p>
 
-      <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 flex-wrap">
+      <div className={`flex items-center gap-2 mt-2 text-gray-500 flex-wrap ${isReply ? 'text-[10px]' : 'text-xs'}`}>
         {showAllVersionsComments && (
           <span
             className={`px-1.5 py-0.5 rounded ${

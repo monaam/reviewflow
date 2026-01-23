@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Comment extends Model
 {
@@ -15,6 +16,7 @@ class Comment extends Model
         'asset_id',
         'asset_version',
         'user_id',
+        'parent_id',
         'content',
         'rectangle',
         'video_timestamp',
@@ -49,6 +51,26 @@ class Comment extends Model
     public function resolver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'resolved_by');
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Comment::class, 'parent_id');
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'parent_id');
+    }
+
+    public function isReply(): bool
+    {
+        return $this->parent_id !== null;
+    }
+
+    public function hasReplies(): bool
+    {
+        return $this->replies()->exists();
     }
 
     public function hasAnnotation(): bool

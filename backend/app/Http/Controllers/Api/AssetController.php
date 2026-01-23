@@ -12,6 +12,7 @@ use App\Models\VersionLock;
 use App\Services\AssetTypes\AssetTypeRegistry;
 use App\Services\DiscordNotificationService;
 use App\Services\FileUploadService;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,8 @@ class AssetController extends Controller
     public function __construct(
         protected FileUploadService $uploadService,
         protected DiscordNotificationService $discord,
-        protected AssetTypeRegistry $assetTypeRegistry
+        protected AssetTypeRegistry $assetTypeRegistry,
+        protected NotificationDispatcher $notificationDispatcher
     ) {}
 
     public function listAll(Request $request): JsonResponse
@@ -150,6 +152,9 @@ class AssetController extends Controller
         // Send Discord notification
         $this->discord->notifyNewUpload($asset);
 
+        // Send in-app notification
+        $this->notificationDispatcher->notifyAssetUploaded($asset, $request->user());
+
         return response()->json($asset->load(['uploader', 'latestVersion', 'project']), 201);
     }
 
@@ -248,6 +253,9 @@ class AssetController extends Controller
         // Send Discord notification
         $this->discord->notifyNewVersion($asset);
 
+        // Send in-app notification
+        $this->notificationDispatcher->notifyNewVersion($asset, $request->user());
+
         return response()->json($asset->fresh(['uploader', 'versions', 'latestVersion']), 201);
     }
 
@@ -291,6 +299,9 @@ class AssetController extends Controller
         // Send Discord notification
         $this->discord->notifyApproval($asset, $request->user());
 
+        // Send in-app notification
+        $this->notificationDispatcher->notifyAssetApproved($asset, $request->user());
+
         return response()->json($asset->fresh(['approvalLogs.user', 'creativeRequests']));
     }
 
@@ -314,6 +325,9 @@ class AssetController extends Controller
 
         // Send Discord notification
         $this->discord->notifyRevisionRequested($asset, $request->user(), $validated['comment'] ?? null);
+
+        // Send in-app notification
+        $this->notificationDispatcher->notifyRevisionRequested($asset, $request->user(), $validated['comment'] ?? null);
 
         return response()->json($asset->fresh(['approvalLogs.user']));
     }

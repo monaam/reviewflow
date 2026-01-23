@@ -132,18 +132,22 @@ export function AssetReviewPage() {
   };
 
   // Drawing handlers
+  // Use fresh bounding rect to handle scroll position correctly (especially for PDFs)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!mediaBounds) return;
-    const x = (e.clientX - mediaBounds.left) / mediaBounds.width;
-    const y = (e.clientY - mediaBounds.top) / mediaBounds.height;
+    const bounds = mediaRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const x = (e.clientX - bounds.left) / bounds.width;
+    const y = (e.clientY - bounds.top) / bounds.height;
     if (x < 0 || x > 1 || y < 0 || y > 1) return;
     startDrawing({ x, y, width: 0, height: 0 });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!state.isDrawing || !state.currentRect || !mediaBounds) return;
-    const x = Math.max(0, Math.min(1, (e.clientX - mediaBounds.left) / mediaBounds.width));
-    const y = Math.max(0, Math.min(1, (e.clientY - mediaBounds.top) / mediaBounds.height));
+    if (!state.isDrawing || !state.currentRect) return;
+    const bounds = mediaRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const x = Math.max(0, Math.min(1, (e.clientX - bounds.left) / bounds.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - bounds.top) / bounds.height));
     updateDrawing({
       ...state.currentRect,
       width: x - state.currentRect.x,
@@ -219,12 +223,58 @@ export function AssetReviewPage() {
   const handleDeleteComment = async (commentId: string) => {
     try {
       await assetsApi.deleteComment(commentId);
-      setTimeline(timeline.filter((item) => !(item.type === 'comment' && item.id === commentId)));
+      // Remove the comment from timeline (could be a top-level comment or a reply)
+      setTimeline(timeline.map((item) => {
+        if (item.type === 'comment') {
+          const comment = item.data as Comment;
+          // If this is the deleted comment itself
+          if (item.id === commentId) {
+            return null;
+          }
+          // If this comment has replies, filter out the deleted reply
+          if (comment.replies) {
+            return {
+              ...item,
+              data: {
+                ...comment,
+                replies: comment.replies.filter((reply) => reply.id !== commentId),
+              },
+            };
+          }
+        }
+        return item;
+      }).filter(Boolean) as TimelineItem[]);
       if (state.selectedCommentId === commentId) {
         setSelectedCommentId(null);
       }
     } catch (error) {
       console.error('Failed to delete comment:', error);
+    }
+  };
+
+  const handleReply = async (parentId: string, content: string) => {
+    try {
+      const reply = await assetsApi.createComment(id!, {
+        content,
+        parent_id: parentId,
+      });
+      // Add the reply to the parent comment's replies array
+      setTimeline(timeline.map((item) => {
+        if (item.type === 'comment' && item.id === parentId) {
+          const comment = item.data as Comment;
+          return {
+            ...item,
+            data: {
+              ...comment,
+              replies: [...(comment.replies || []), reply],
+            },
+          };
+        }
+        return item;
+      }));
+    } catch (error) {
+      console.error('Failed to create reply:', error);
+      throw error; // Re-throw so the UI can handle it
     }
   };
 
@@ -450,6 +500,7 @@ export function AssetReviewPage() {
           onDeleteComment={handleDeleteComment}
           onResolveComment={handleResolveComment}
           onToggleShowAllVersions={toggleAllVersionsComments}
+          onSubmitReply={handleReply}
           getCommentActions={getCommentActions}
         />
       </div>
