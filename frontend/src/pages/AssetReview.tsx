@@ -132,18 +132,22 @@ export function AssetReviewPage() {
   };
 
   // Drawing handlers
+  // Use fresh bounding rect to handle scroll position correctly (especially for PDFs)
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!mediaBounds) return;
-    const x = (e.clientX - mediaBounds.left) / mediaBounds.width;
-    const y = (e.clientY - mediaBounds.top) / mediaBounds.height;
+    const bounds = mediaRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const x = (e.clientX - bounds.left) / bounds.width;
+    const y = (e.clientY - bounds.top) / bounds.height;
     if (x < 0 || x > 1 || y < 0 || y > 1) return;
     startDrawing({ x, y, width: 0, height: 0 });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!state.isDrawing || !state.currentRect || !mediaBounds) return;
-    const x = Math.max(0, Math.min(1, (e.clientX - mediaBounds.left) / mediaBounds.width));
-    const y = Math.max(0, Math.min(1, (e.clientY - mediaBounds.top) / mediaBounds.height));
+    if (!state.isDrawing || !state.currentRect) return;
+    const bounds = mediaRef.current?.getBoundingClientRect();
+    if (!bounds) return;
+    const x = Math.max(0, Math.min(1, (e.clientX - bounds.left) / bounds.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - bounds.top) / bounds.height));
     updateDrawing({
       ...state.currentRect,
       width: x - state.currentRect.x,
