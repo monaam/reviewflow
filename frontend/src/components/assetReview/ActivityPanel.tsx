@@ -15,11 +15,14 @@ import { TimelineItem, Comment, AssetVersion, ApprovalLog } from '../../types';
 import { supportsTemporalAnnotations } from '../../config/assetTypeRegistry';
 import { formatTime } from '../../utils/time';
 import { Rectangle } from '../../hooks/useAssetReviewState';
+import { MentionInput } from '../common/MentionInput';
+import { MentionText } from '../common/MentionText';
 
 interface ActivityPanelProps {
   timeline: TimelineItem[];
   selectedVersion: number;
   assetType: string;
+  assetId: string;
   selectedCommentId: string | null;
   selectedRect: Rectangle | null;
   newComment: string;
@@ -47,6 +50,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   timeline,
   selectedVersion,
   assetType,
+  assetId,
   selectedCommentId,
   selectedRect,
   newComment,
@@ -199,11 +203,12 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
               {replyingToId === comment.id && (
                 <div className="ml-6 border-l-2 border-primary-300 dark:border-primary-700 pl-3">
                   <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
-                    <textarea
+                    <MentionInput
                       value={replyContent}
-                      onChange={(e) => setReplyContent(e.target.value)}
-                      placeholder="Write a reply..."
-                      className="input mb-2 text-sm"
+                      onChange={setReplyContent}
+                      assetId={assetId}
+                      placeholder="Write a reply... Use @ to mention someone"
+                      className="mb-2 text-sm"
                       rows={2}
                       autoFocus
                     />
@@ -238,11 +243,12 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
             Annotation selected. Your comment will be linked to this area.
           </div>
         )}
-        <textarea
+        <MentionInput
           value={newComment}
-          onChange={(e) => onCommentChange(e.target.value)}
-          placeholder="Add a comment..."
-          className="input mb-2"
+          onChange={onCommentChange}
+          assetId={assetId}
+          placeholder="Add a comment... Use @ to mention someone"
+          className="mb-2"
           rows={3}
         />
         <div className="flex justify-between">
@@ -437,7 +443,11 @@ const CommentItem: FC<CommentItemProps> = ({
         </div>
       </div>
 
-      <p className={`text-gray-700 dark:text-gray-300 ${isReply ? 'text-xs' : 'text-sm'}`}>{comment.content}</p>
+      <MentionText
+        content={comment.content}
+        mentions={comment.mentions}
+        className={`text-gray-700 dark:text-gray-300 ${isReply ? 'text-xs' : 'text-sm'}`}
+      />
 
       <div className={`flex items-center gap-2 mt-2 text-gray-500 flex-wrap ${isReply ? 'text-[10px]' : 'text-xs'}`}>
         {showAllVersionsComments && (

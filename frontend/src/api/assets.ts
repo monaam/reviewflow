@@ -1,6 +1,6 @@
 import { AxiosProgressEvent } from 'axios';
 import apiClient from './client';
-import { Asset, AssetVersion, Comment, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem } from '../types';
+import { Asset, AssetVersion, Comment, MentionableUser, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem } from '../types';
 
 export interface CreateAssetRequest {
   file: File;
@@ -131,6 +131,12 @@ export const assetsApi = {
 
   unresolveComment: async (commentId: string): Promise<Comment> => {
     const response = await apiClient.post(`/comments/${commentId}/unresolve`);
+    return response.data;
+  },
+
+  getMentionableUsers: async (assetId: string, search?: string): Promise<MentionableUser[]> => {
+    const params = search ? { search } : {};
+    const response = await apiClient.get(`/assets/${assetId}/mentionable-users`, { params });
     return response.data;
   },
 

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\Comment;
+use App\Models\User;
 use App\Services\DiscordNotificationService;
+use App\Services\MentionParser;
 use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +16,8 @@ class CommentController extends Controller
 {
     public function __construct(
         protected DiscordNotificationService $discord,
-        protected NotificationDispatcher $notificationDispatcher
+        protected NotificationDispatcher $notificationDispatcher,
+        protected MentionParser $mentionParser
     ) {}
 
     public function index(Request $request, Asset $asset): JsonResponse
@@ -27,7 +30,7 @@ class CommentController extends Controller
         }
 
         $query = $asset->comments()
-            ->with(['user', 'resolver', 'replies.user', 'replies.resolver'])
+            ->with(['user', 'resolver', 'mentions', 'replies.user', 'replies.resolver', 'replies.mentions'])
             ->whereNull('parent_id'); // Only top-level comments
 
         if ($request->has('version')) {
@@ -51,7 +54,7 @@ class CommentController extends Controller
 
         // Get comments (only top-level, with replies nested)
         $commentsQuery = $asset->comments()
-            ->with(['user', 'resolver', 'replies.user', 'replies.resolver'])
+            ->with(['user', 'resolver', 'mentions', 'replies.user', 'replies.resolver', 'replies.mentions'])
             ->whereNull('parent_id'); // Only top-level comments
         if ($request->has('version')) {
             $commentsQuery->where('asset_version', $request->version);
@@ -147,13 +150,36 @@ class CommentController extends Controller
             'page_number' => $isReply ? null : ($validated['page_number'] ?? null),
         ]);
 
+        // Parse mentions from content and create mention records
+        $mentionedUserIds = $this->mentionParser->extractMentionedUserIds($validated['content']);
+        $mentionedUsers = collect();
+
+        if (!empty($mentionedUserIds)) {
+            // Get valid users who have access to this project (members + admins)
+            $projectMemberIds = $asset->project->members()->pluck('users.id');
+            $adminIds = User::where('role', 'admin')->pluck('id');
+            $validUserIds = $projectMemberIds->merge($adminIds)->unique()->toArray();
+
+            $validMentionIds = array_intersect($mentionedUserIds, $validUserIds);
+
+            if (!empty($validMentionIds)) {
+                $comment->mentions()->attach($validMentionIds);
+                $mentionedUsers = User::whereIn('id', $validMentionIds)->get();
+            }
+        }
+
         // Send Discord notification
         $this->discord->notifyNewComment($comment);
 
         // Send in-app notification
         $this->notificationDispatcher->notifyCommentCreated($comment, $request->user());
 
-        return response()->json($comment->load('user'), 201);
+        // Send mention notifications
+        if ($mentionedUsers->isNotEmpty()) {
+            $this->notificationDispatcher->notifyMentionedUsers($comment, $mentionedUsers, $request->user());
+        }
+
+        return response()->json($comment->load(['user', 'mentions']), 201);
     }
 
     public function update(Request $request, Comment $comment): JsonResponse
@@ -168,7 +194,7 @@ class CommentController extends Controller
             'content' => $validated['content'],
         ]);
 
-        return response()->json($comment->fresh('user'));
+        return response()->json($comment->fresh(['user', 'mentions']));
     }
 
     public function destroy(Request $request, Comment $comment): JsonResponse
@@ -196,5 +222,34 @@ class CommentController extends Controller
         $comment->unresolve();
 
         return response()->json($comment->fresh(['user', 'resolver']));
+    }
+
+    public function mentionableUsers(Request $request, Asset $asset): JsonResponse
+    {
+        $this->authorize('view', $asset);
+
+        // Get project member IDs
+        $memberIds = $asset->project->members()->pluck('users.id');
+
+        // Get all admin IDs (admins have access to all projects)
+        $adminIds = User::where('role', 'admin')->pluck('id');
+
+        // Merge and get unique user IDs
+        $userIds = $memberIds->merge($adminIds)->unique();
+
+        // Query users with optional search filter
+        $query = User::whereIn('id', $userIds)
+            ->where('is_active', true);
+
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        $users = $query->select('id', 'name', 'avatar')
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return response()->json($users);
     }
 }
