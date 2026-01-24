@@ -10,12 +10,21 @@ interface MiniDonutChartProps {
   centerValue?: number;
 }
 
-const COLORS = [
-  'fill-gray-800 dark:fill-gray-200',
-  'fill-gray-600 dark:fill-gray-400',
-  'fill-gray-400 dark:fill-gray-500',
-  'fill-gray-200 dark:fill-gray-600',
-];
+// Status-based colors matching StatusBadge (using hex for inline styles)
+const STATUS_COLORS: Record<string, string> = {
+  'Pending Review': '#f59e0b',    // amber-500
+  'In Review': '#3b82f6',         // blue-500
+  'Client Review': '#a855f7',     // purple-500
+  'Approved': '#22c55e',          // green-500
+  'Revision Requested': '#f97316', // orange-500
+};
+
+// Fallback colors
+const FALLBACK_COLORS = ['#1f2937', '#4b5563', '#9ca3af', '#d1d5db'];
+
+function getColorForLabel(label: string, index: number): string {
+  return STATUS_COLORS[label] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+}
 
 export function MiniDonutChart({
   data,
@@ -59,7 +68,7 @@ export function MiniDonutChart({
       ...item,
       dashArray,
       rotation,
-      colorClass: COLORS[index % COLORS.length],
+      color: getColorForLabel(item.label, index),
     };
   });
 
@@ -74,11 +83,10 @@ export function MiniDonutChart({
               cy={center}
               r={radius}
               fill="none"
-              stroke="currentColor"
+              stroke={segment.color}
               strokeWidth={strokeWidth}
               strokeDasharray={segment.dashArray}
               strokeDashoffset="0"
-              className={segment.colorClass.replace('fill-', 'text-')}
               style={{
                 transform: `rotate(${segment.rotation}deg)`,
                 transformOrigin: 'center',
@@ -103,7 +111,8 @@ export function MiniDonutChart({
         {segments.map((segment, index) => (
           <div key={index} className="flex items-center gap-1.5">
             <div
-              className={`w-2.5 h-2.5 rounded-sm ${COLORS[index % COLORS.length].replace('fill-', 'bg-')}`}
+              className="w-2.5 h-2.5 rounded-sm"
+              style={{ backgroundColor: segment.color }}
             />
             <span className="text-xs text-gray-600 dark:text-gray-400">
               {segment.label} ({segment.value})
