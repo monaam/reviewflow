@@ -57,14 +57,23 @@ export function AssetsPage() {
     );
   });
 
-  const statusOptions = [
-    { value: 'all', label: 'All' },
-    { value: 'pending_review', label: 'Pending Review' },
-    { value: 'in_review', label: 'In Review' },
-    { value: 'client_review', label: 'Client Review' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'revision_requested', label: 'Revision Requested' },
-  ];
+  const isReviewer = user?.role === 'reviewer';
+
+  const statusOptions = isReviewer
+    ? [
+        { value: 'all', label: 'All' },
+        { value: 'client_review', label: 'Client Review' },
+        { value: 'approved', label: 'Approved' },
+        { value: 'revision_requested', label: 'Revision Requested' },
+      ]
+    : [
+        { value: 'all', label: 'All' },
+        { value: 'pending_review', label: 'Pending Review' },
+        { value: 'in_review', label: 'In Review' },
+        { value: 'client_review', label: 'Client Review' },
+        { value: 'approved', label: 'Approved' },
+        { value: 'revision_requested', label: 'Revision Requested' },
+      ];
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

@@ -14,12 +14,18 @@ export function RequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const isReviewer = user?.role === 'reviewer';
   const statusFilter = searchParams.get('status') || 'all';
   const filterType = searchParams.get('filter') || '';
 
   useEffect(() => {
-    fetchRequests();
-  }, [statusFilter, filterType]);
+    // Reviewers cannot access requests
+    if (!isReviewer) {
+      fetchRequests();
+    } else {
+      setIsLoading(false);
+    }
+  }, [statusFilter, filterType, isReviewer]);
 
   const fetchRequests = async () => {
     setIsLoading(true);
@@ -77,6 +83,23 @@ export function RequestsPage() {
   const isOverdue = (deadline: string) => {
     return new Date(deadline) < new Date();
   };
+
+  // Reviewers don't have access to requests
+  if (isReviewer) {
+    return (
+      <div className="p-8 max-w-7xl mx-auto">
+        <div className="text-center py-12">
+          <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Access Restricted
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400">
+            Creative requests are not available for your role.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

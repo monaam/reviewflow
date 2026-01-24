@@ -52,16 +52,29 @@ export function ProjectDetailPage() {
     }
   }, [id]);
 
+  const isReviewer = user?.role === 'reviewer';
+
   const fetchProject = async () => {
     try {
-      const [projectData, assetsData, requestsData] = await Promise.all([
-        projectsApi.get(id!),
-        assetsApi.list(id!),
-        requestsApi.list(id!),
-      ]);
-      setProject(projectData);
-      setAssets(assetsData.data);
-      setRequests(requestsData.data);
+      // Reviewers don't have access to requests
+      if (isReviewer) {
+        const [projectData, assetsData] = await Promise.all([
+          projectsApi.get(id!),
+          assetsApi.list(id!),
+        ]);
+        setProject(projectData);
+        setAssets(assetsData.data);
+        setRequests([]);
+      } else {
+        const [projectData, assetsData, requestsData] = await Promise.all([
+          projectsApi.get(id!),
+          assetsApi.list(id!),
+          requestsApi.list(id!),
+        ]);
+        setProject(projectData);
+        setAssets(assetsData.data);
+        setRequests(requestsData.data);
+      }
     } catch (error) {
       console.error('Failed to fetch project:', error);
     } finally {
@@ -154,10 +167,12 @@ export function ProjectDetailPage() {
                   Due {new Date(project.deadline).toLocaleDateString()}
                 </span>
               )}
-              <span className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                {project.members?.length || 0} members
-              </span>
+              {!isReviewer && (
+                <span className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  {project.members?.length || 0} members
+                </span>
+              )}
             </div>
           </div>
 
@@ -221,26 +236,30 @@ export function ProjectDetailPage() {
           >
             Assets ({assets.length})
           </button>
-          <button
-            onClick={() => setActiveTab('requests')}
-            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'requests'
-                ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-white'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            Requests ({requests.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('members')}
-            className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'members'
-                ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-white'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            Members ({project.members?.length || 0})
-          </button>
+          {!isReviewer && (
+            <>
+              <button
+                onClick={() => setActiveTab('requests')}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'requests'
+                    ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                Requests ({requests.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('members')}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'members'
+                    ? 'border-gray-900 text-gray-900 dark:border-gray-100 dark:text-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                Members ({project.members?.length || 0})
+              </button>
+            </>
+          )}
         </nav>
       </div>
 
@@ -273,7 +292,10 @@ export function ProjectDetailPage() {
         <>
           {/* Asset Filters */}
           <div className="flex gap-1 mb-6">
-            {['all', 'pending_review', 'in_review', 'approved', 'revision_requested'].map((status) => (
+            {(isReviewer
+              ? ['all', 'client_review', 'approved', 'revision_requested']
+              : ['all', 'pending_review', 'in_review', 'client_review', 'approved', 'revision_requested']
+            ).map((status) => (
               <button
                 key={status}
                 onClick={() => setFilter(status)}

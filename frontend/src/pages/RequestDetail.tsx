@@ -82,6 +82,7 @@ export function RequestDetailPage() {
 
   const isAssignee = user?.id === request?.assigned_to;
   const isCreator = user?.id === request?.created_by;
+  const isReviewer = user?.role === 'reviewer';
   const canComplete = (isCreator || user?.role === 'admin') && request?.status === 'asset_submitted';
   const canEdit = isCreator || user?.role === 'admin';
   const canDelete = isCreator || user?.role === 'admin';
@@ -99,6 +100,30 @@ export function RequestDetailPage() {
       console.error('Failed to delete request:', error);
     }
   };
+
+  // Reviewers don't have access to requests
+  if (isReviewer) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="text-center py-12">
+          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Access Restricted
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400">
+            Creative requests are not available for your role.
+          </p>
+          <Link
+            to="/"
+            className="inline-flex items-center mt-4 text-primary-600 hover:text-primary-700"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
