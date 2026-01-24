@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   MessageSquare,
   Reply,
+  AtSign,
   Upload,
   FileUp,
   CheckCircle,
@@ -23,6 +24,7 @@ interface NotificationItemProps {
 const iconMap: Record<NotificationType, typeof MessageSquare> = {
   'comment.created': MessageSquare,
   'comment.reply': Reply,
+  'comment.mention': AtSign,
   'asset.uploaded': Upload,
   'asset.new_version': FileUp,
   'asset.approved': CheckCircle,
@@ -34,6 +36,7 @@ const iconMap: Record<NotificationType, typeof MessageSquare> = {
 const colorMap: Record<NotificationType, string> = {
   'comment.created': 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
   'comment.reply': 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
+  'comment.mention': 'text-primary-500 bg-primary-50 dark:bg-primary-900/20',
   'asset.uploaded': 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
   'asset.new_version': 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
   'asset.approved': 'text-green-500 bg-green-50 dark:bg-green-900/20',

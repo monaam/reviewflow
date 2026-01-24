@@ -77,6 +77,12 @@ export interface AssetVersion {
   uploader?: User;
 }
 
+export interface MentionableUser {
+  id: string;
+  name: string;
+  avatar: string | null;
+}
+
 export interface Comment {
   id: string;
   asset_id: string;
@@ -100,6 +106,7 @@ export interface Comment {
   user?: User;
   resolver?: User;
   replies?: Comment[];
+  mentions?: User[];
 }
 
 export interface CreativeRequest {
@@ -230,6 +237,7 @@ export interface TimelineItem {
 export type NotificationType =
   | 'comment.created'
   | 'comment.reply'
+  | 'comment.mention'
   | 'asset.uploaded'
   | 'asset.new_version'
   | 'asset.approved'

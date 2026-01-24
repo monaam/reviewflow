@@ -489,6 +489,7 @@ export function AssetReviewPage() {
           timeline={timeline}
           selectedVersion={selectedVersion}
           assetType={asset.type}
+          assetId={asset.id}
           selectedCommentId={state.selectedCommentId}
           selectedRect={state.selectedRect}
           newComment={newComment}

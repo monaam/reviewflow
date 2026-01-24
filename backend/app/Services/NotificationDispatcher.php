@@ -9,11 +9,13 @@ use App\Models\User;
 use App\Notifications\AssetApprovedNotification;
 use App\Notifications\AssetUploadedNotification;
 use App\Notifications\CommentReplyNotification;
+use App\Notifications\MentionNotification;
 use App\Notifications\NewCommentNotification;
 use App\Notifications\NewVersionNotification;
 use App\Notifications\RequestAssignedNotification;
 use App\Notifications\RequestStatusChangedNotification;
 use App\Notifications\RevisionRequestedNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 class NotificationDispatcher
@@ -153,6 +155,41 @@ class NotificationDispatcher
 
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new RequestStatusChangedNotification($request, $oldStatus, $actor));
+        }
+    }
+
+    public function notifyMentionedUsers(Comment $comment, Collection $mentionedUsers, User $actor): void
+    {
+        $asset = $comment->asset;
+        $project = $asset->project;
+
+        // Start with all mentioned users, excluding the actor
+        $recipients = $mentionedUsers->filter(fn($user) => $user->id !== $actor->id);
+
+        // If this is a reply, exclude the parent comment author (they get CommentReplyNotification)
+        if ($comment->parent_id && $comment->parent) {
+            $recipients = $recipients->filter(fn($user) => $user->id !== $comment->parent->user_id);
+        }
+
+        // For top-level comments, exclude users who will receive NewCommentNotification
+        if (!$comment->parent_id) {
+            // Get users who would receive NewCommentNotification
+            $newCommentRecipientIds = $project->members()
+                ->where('users.id', '!=', $actor->id)
+                ->wherePivot('notify_on_comment', true)
+                ->pluck('users.id')
+                ->toArray();
+
+            // Also include uploader in exclusion if they would receive notification
+            if ($asset->uploaded_by !== $actor->id) {
+                $newCommentRecipientIds[] = $asset->uploaded_by;
+            }
+
+            $recipients = $recipients->filter(fn($user) => !in_array($user->id, $newCommentRecipientIds));
+        }
+
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new MentionNotification($comment, $actor));
         }
     }
 }

@@ -64,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Comments
     Route::get('/assets/{asset}/comments', [CommentController::class, 'index']);
     Route::post('/assets/{asset}/comments', [CommentController::class, 'store']);
+    Route::get('/assets/{asset}/mentionable-users', [CommentController::class, 'mentionableUsers']);
     Route::patch('/comments/{comment}', [CommentController::class, 'update']);
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
     Route::post('/comments/{comment}/resolve', [CommentController::class, 'resolve']);
