@@ -670,6 +670,154 @@ class AssetControllerTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_reviewer_only_sees_current_version(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review', 'current_version' => 2]);
+
+        // Create a second version
+        \App\Models\AssetVersion::factory()->create([
+            'asset_id' => $asset->id,
+            'version_number' => 2,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
+        // Reviewer should only see version 2 (current), not version 1
+        $this->assertCount(1, $response->json('versions'));
+        $this->assertEquals(2, $response->json('versions.0.version_number'));
+    }
+
+    public function test_reviewer_versions_endpoint_only_returns_current(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review', 'current_version' => 2]);
+
+        // Create a second version
+        \App\Models\AssetVersion::factory()->create([
+            'asset_id' => $asset->id,
+            'version_number' => 2,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}/versions");
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json());
+        $this->assertEquals(2, $response->json('0.version_number'));
+    }
+
+    public function test_pm_can_see_all_versions(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['current_version' => 2]);
+
+        // Create a second version
+        \App\Models\AssetVersion::factory()->create([
+            'asset_id' => $asset->id,
+            'version_number' => 2,
+        ]);
+
+        $this->actingAsPM();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('versions'));
+    }
+
+    public function test_reviewer_only_sees_own_approval_logs(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        // PM's approval log - reviewer should NOT see
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->pm->id,
+            'action' => 'revision_requested',
+            'comment' => 'PM requested revision',
+        ]);
+
+        // Reviewer's approval log - reviewer SHOULD see
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->reviewer->id,
+            'action' => 'approved',
+            'comment' => 'Reviewer approved',
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('approval_logs'));
+        $this->assertEquals($this->reviewer->id, $response->json('approval_logs.0.user_id'));
+    }
+
+    public function test_pm_can_see_all_approval_logs(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        // PM's approval log
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->pm->id,
+            'action' => 'revision_requested',
+        ]);
+
+        // Reviewer's approval log
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->reviewer->id,
+            'action' => 'approved',
+        ]);
+
+        $this->actingAsPM();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
+        $this->assertCount(2, $response->json('approval_logs'));
+    }
+
+    public function test_reviewer_only_sees_own_comments_in_asset_show(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        // PM's comment - reviewer should NOT see
+        \App\Models\Comment::factory()->create([
+            'asset_id' => $asset->id,
+            'user_id' => $this->pm->id,
+            'content' => 'PM comment',
+        ]);
+
+        // Reviewer's comment - reviewer SHOULD see
+        \App\Models\Comment::factory()->create([
+            'asset_id' => $asset->id,
+            'user_id' => $this->reviewer->id,
+            'content' => 'Reviewer comment',
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('comments'));
+        $this->assertEquals($this->reviewer->id, $response->json('comments.0.user_id'));
+    }
+
     // REVISION REQUEST TESTS
 
     public function test_pm_can_request_revision(): void

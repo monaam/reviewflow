@@ -82,7 +82,8 @@ class CommentController extends Controller
         $timeline = $timeline->merge($comments);
 
         // Get versions (only if showing all or no specific version filter)
-        if ($request->boolean('all') || !$request->has('version')) {
+        // Reviewers don't see version history - they only see current version
+        if (!$user->isReviewer() && ($request->boolean('all') || !$request->has('version'))) {
             $versions = $asset->versions()->with('uploader')->get()->map(fn($v) => [
                 'type' => 'version',
                 'id' => 'version-' . $v->id,
@@ -93,7 +94,11 @@ class CommentController extends Controller
         }
 
         // Get approval logs
+        // Reviewers only see their own approval actions
         $approvalLogsQuery = $asset->approvalLogs()->with('user');
+        if ($user->isReviewer()) {
+            $approvalLogsQuery->where('user_id', $user->id);
+        }
         if ($request->has('version')) {
             $approvalLogsQuery->where('asset_version', $request->version);
         }

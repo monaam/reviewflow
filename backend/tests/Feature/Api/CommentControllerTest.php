@@ -532,4 +532,119 @@ class CommentControllerTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('is_resolved', false);
     }
+
+    // TIMELINE TESTS FOR REVIEWER VISIBILITY
+
+    public function test_reviewer_timeline_only_shows_own_comments(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        // PM's comment - reviewer should NOT see
+        Comment::factory()->create([
+            'asset_id' => $asset->id,
+            'user_id' => $this->pm->id,
+        ]);
+
+        // Reviewer's comments - reviewer SHOULD see
+        Comment::factory()->count(2)->create([
+            'asset_id' => $asset->id,
+            'user_id' => $this->reviewer->id,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}/comments?timeline=true");
+
+        $response->assertOk();
+        $comments = collect($response->json())->where('type', 'comment');
+        $this->assertCount(2, $comments);
+    }
+
+    public function test_reviewer_timeline_does_not_show_versions(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review', 'current_version' => 2]);
+
+        // Create second version
+        \App\Models\AssetVersion::factory()->create([
+            'asset_id' => $asset->id,
+            'version_number' => 2,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}/comments?timeline=true&all=true");
+
+        $response->assertOk();
+        $versions = collect($response->json())->where('type', 'version');
+        $this->assertCount(0, $versions);
+    }
+
+    public function test_reviewer_timeline_only_shows_own_approval_logs(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        // PM's approval - reviewer should NOT see
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->pm->id,
+            'action' => 'revision_requested',
+        ]);
+
+        // Reviewer's approval - reviewer SHOULD see
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->reviewer->id,
+            'action' => 'approved',
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}/comments?timeline=true");
+
+        $response->assertOk();
+        $approvals = collect($response->json())->where('type', 'approval');
+        $this->assertCount(1, $approvals);
+        $this->assertEquals($this->reviewer->id, $approvals->first()['data']['user_id']);
+    }
+
+    public function test_pm_timeline_shows_all_versions_and_approvals(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['current_version' => 2]);
+
+        // Create second version
+        \App\Models\AssetVersion::factory()->create([
+            'asset_id' => $asset->id,
+            'version_number' => 2,
+        ]);
+
+        // Both PM and reviewer approvals
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->pm->id,
+            'action' => 'revision_requested',
+        ]);
+        \App\Models\ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->reviewer->id,
+            'action' => 'approved',
+        ]);
+
+        $this->actingAsPM();
+        $response = $this->getJson("/api/assets/{$asset->id}/comments?timeline=true&all=true");
+
+        $response->assertOk();
+        $versions = collect($response->json())->where('type', 'version');
+        $approvals = collect($response->json())->where('type', 'approval');
+        $this->assertCount(2, $versions);
+        $this->assertCount(2, $approvals);
+    }
 }

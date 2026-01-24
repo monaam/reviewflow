@@ -177,18 +177,31 @@ class AssetController extends Controller
     {
         $this->authorize('view', $asset);
 
-        $asset->load([
-            'project',
-            'uploader',
-            'versions.uploader',
-            'comments' => fn($q) => $q->with('user')->orderBy('created_at', 'desc'),
-            'approvalLogs' => fn($q) => $q->with('user')->orderBy('created_at', 'desc'),
-            'creativeRequests',
-        ]);
+        $user = $request->user();
 
-        // Mark as in_review if PM is viewing and asset is pending
-        if ($request->user()->canApprove() && $asset->status === 'pending_review') {
-            $asset->update(['status' => 'in_review']);
+        // Reviewers have restricted view - only current version, own comments, own approval logs
+        if ($user->isReviewer()) {
+            $asset->load([
+                'project',
+                'uploader',
+                'versions' => fn($q) => $q->with('uploader')->where('version_number', $asset->current_version),
+                'comments' => fn($q) => $q->with('user')->where('user_id', $user->id)->orderBy('created_at', 'desc'),
+                'approvalLogs' => fn($q) => $q->with('user')->where('user_id', $user->id)->orderBy('created_at', 'desc'),
+            ]);
+        } else {
+            $asset->load([
+                'project',
+                'uploader',
+                'versions.uploader',
+                'comments' => fn($q) => $q->with('user')->orderBy('created_at', 'desc'),
+                'approvalLogs' => fn($q) => $q->with('user')->orderBy('created_at', 'desc'),
+                'creativeRequests',
+            ]);
+
+            // Mark as in_review if PM is viewing and asset is pending
+            if ($user->canApprove() && $asset->status === 'pending_review') {
+                $asset->update(['status' => 'in_review']);
+            }
         }
 
         return response()->json($asset);
@@ -283,10 +296,18 @@ class AssetController extends Controller
     {
         $this->authorize('view', $asset);
 
-        $versions = $asset->versions()
-            ->with('uploader')
-            ->orderBy('version_number', 'desc')
-            ->get();
+        // Reviewers only see the current version, not version history
+        if ($request->user()->isReviewer()) {
+            $versions = $asset->versions()
+                ->with('uploader')
+                ->where('version_number', $asset->current_version)
+                ->get();
+        } else {
+            $versions = $asset->versions()
+                ->with('uploader')
+                ->orderBy('version_number', 'desc')
+                ->get();
+        }
 
         return response()->json($versions);
     }
