@@ -384,7 +384,8 @@ class AssetController extends Controller
 
         $asset->update(['status' => 'client_review']);
 
-        // TODO: Optionally notify client reviewers
+        // Notify reviewer members that asset is ready for review
+        $this->notificationDispatcher->notifySentToClient($asset, $request->user());
 
         return response()->json($asset->load(['uploader', 'project']));
     }

@@ -7,6 +7,7 @@ use App\Models\Comment;
 use App\Models\CreativeRequest;
 use App\Models\User;
 use App\Notifications\AssetApprovedNotification;
+use App\Notifications\AssetSentToClientNotification;
 use App\Notifications\AssetUploadedNotification;
 use App\Notifications\CommentReplyNotification;
 use App\Notifications\MentionNotification;
@@ -30,16 +31,18 @@ class NotificationDispatcher
         $asset = $comment->asset;
         $project = $asset->project;
 
-        // Get project members with notify_on_comment enabled (excluding actor)
+        // Get project members with notify_on_comment enabled (excluding actor and reviewers)
+        // Reviewers only see their own comments, so they shouldn't get new comment notifications
         $recipients = $project->members()
             ->where('users.id', '!=', $actor->id)
+            ->where('users.role', '!=', 'reviewer')
             ->wherePivot('notify_on_comment', true)
             ->get();
 
         // Also notify asset uploader if not actor and not already in recipients
         if ($asset->uploaded_by !== $actor->id) {
             $uploader = User::find($asset->uploaded_by);
-            if ($uploader && !$recipients->contains('id', $uploader->id)) {
+            if ($uploader && !$uploader->isReviewer() && !$recipients->contains('id', $uploader->id)) {
                 $recipients->push($uploader);
             }
         }
@@ -65,8 +68,10 @@ class NotificationDispatcher
     {
         $project = $asset->project;
 
+        // Exclude reviewers - they only see assets when sent to client review
         $recipients = $project->members()
             ->where('users.id', '!=', $uploader->id)
+            ->where('users.role', '!=', 'reviewer')
             ->wherePivot('notify_on_upload', true)
             ->get();
 
@@ -79,8 +84,10 @@ class NotificationDispatcher
     {
         $project = $asset->project;
 
+        // Exclude reviewers - they only see the current version when asset is in client review
         $recipients = $project->members()
             ->where('users.id', '!=', $uploader->id)
+            ->where('users.role', '!=', 'reviewer')
             ->wherePivot('notify_on_upload', true)
             ->get();
 
@@ -93,15 +100,17 @@ class NotificationDispatcher
     {
         $project = $asset->project;
 
+        // Exclude reviewers from approval notifications (internal workflow)
         $recipients = $project->members()
             ->where('users.id', '!=', $approver->id)
+            ->where('users.role', '!=', 'reviewer')
             ->wherePivot('notify_on_approval', true)
             ->get();
 
-        // Always notify uploader
+        // Always notify uploader (if not a reviewer)
         if ($asset->uploaded_by !== $approver->id) {
             $uploader = User::find($asset->uploaded_by);
-            if ($uploader && !$recipients->contains('id', $uploader->id)) {
+            if ($uploader && !$uploader->isReviewer() && !$recipients->contains('id', $uploader->id)) {
                 $recipients->push($uploader);
             }
         }
@@ -120,6 +129,20 @@ class NotificationDispatcher
 
         $uploader = User::find($asset->uploaded_by);
         $uploader?->notify(new RevisionRequestedNotification($asset, $reviewer, $feedback));
+    }
+
+    public function notifySentToClient(Asset $asset, User $sender): void
+    {
+        $project = $asset->project;
+
+        // Only notify reviewer members of this project
+        $reviewers = $project->members()
+            ->where('users.role', 'reviewer')
+            ->get();
+
+        if ($reviewers->isNotEmpty()) {
+            Notification::send($reviewers, new AssetSentToClientNotification($asset, $sender));
+        }
     }
 
     public function notifyRequestAssigned(CreativeRequest $request, User $assignee, ?User $assigner = null): void
