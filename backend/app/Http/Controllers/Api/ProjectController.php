@@ -13,9 +13,20 @@ class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Project::with(['creator', 'members'])
-            ->forUser($request->user())
-            ->withCount(['assets', 'creativeRequests']);
+        $user = $request->user();
+
+        // Reviewers have restricted view - no members, no request counts
+        if ($user->isReviewer()) {
+            $query = Project::with(['creator'])
+                ->forUser($user)
+                ->withCount([
+                    'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested']),
+                ]);
+        } else {
+            $query = Project::with(['creator', 'members'])
+                ->forUser($user)
+                ->withCount(['assets', 'creativeRequests']);
+        }
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -58,14 +69,34 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
-        $project->load([
-            'creator',
-            'members',
-            'assets' => fn($q) => $q->with(['uploader', 'latestVersion'])->latest(),
-            'creativeRequests' => fn($q) => $q->with(['creator', 'assignee'])->latest(),
-        ]);
+        $user = $request->user();
 
-        $project->loadCount(['assets', 'creativeRequests']);
+        // Reviewers have restricted view - no members, no requests, filtered assets
+        if ($user->isReviewer()) {
+            $project->load([
+                'creator',
+                'assets' => fn($q) => $q->with(['uploader', 'latestVersion'])
+                    ->whereIn('status', ['client_review', 'approved', 'revision_requested'])
+                    ->latest(),
+            ]);
+
+            $project->loadCount([
+                'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested']),
+            ]);
+
+            // Remove members from response
+            $project->setRelation('members', collect());
+            $project->creative_requests_count = 0;
+        } else {
+            $project->load([
+                'creator',
+                'members',
+                'assets' => fn($q) => $q->with(['uploader', 'latestVersion'])->latest(),
+                'creativeRequests' => fn($q) => $q->with(['creator', 'assignee'])->latest(),
+            ]);
+
+            $project->loadCount(['assets', 'creativeRequests']);
+        }
 
         return response()->json($project);
     }
@@ -133,6 +164,11 @@ class ProjectController extends Controller
     public function members(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
+
+        // Reviewers cannot see project members (internal team info)
+        if ($request->user()->isReviewer()) {
+            abort(403, 'You do not have permission to view project members.');
+        }
 
         $members = $project->members()->get();
 

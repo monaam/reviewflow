@@ -9,6 +9,11 @@ class CreativeRequestPolicy
 {
     public function view(User $user, CreativeRequest $request): bool
     {
+        // Reviewers cannot see creative requests (internal workflow)
+        if ($user->isReviewer()) {
+            return false;
+        }
+
         if ($user->isAdmin()) {
             return true;
         }

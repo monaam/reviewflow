@@ -25,6 +25,11 @@ class CreativeRequestController extends Controller
     {
         $user = $request->user();
 
+        // Reviewers cannot access creative requests (internal workflow)
+        if ($user->isReviewer()) {
+            return response()->json(['data' => [], 'total' => 0]);
+        }
+
         // Get projects the user has access to
         $projectIds = $user->isAdmin()
             ? Project::pluck('id')
@@ -75,6 +80,11 @@ class CreativeRequestController extends Controller
     public function index(Request $request, Project $project): JsonResponse
     {
         $this->authorize('view', $project);
+
+        // Reviewers cannot access creative requests (internal workflow)
+        if ($request->user()->isReviewer()) {
+            return response()->json(['data' => [], 'total' => 0]);
+        }
 
         $query = $project->creativeRequests()
             ->with(['creator', 'assignee', 'assets'])

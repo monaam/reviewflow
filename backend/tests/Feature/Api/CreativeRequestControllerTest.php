@@ -346,6 +346,23 @@ class CreativeRequestControllerTest extends TestCase
 
     public function test_project_member_can_view_request(): void
     {
+        $otherCreative = User::factory()->creative()->create();
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $otherCreative]);
+        $request = CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+            'assigned_to' => $this->creative->id,
+        ]);
+
+        // Another creative (project member) can view the request
+        $this->actingAsUser($otherCreative);
+        $response = $this->getJson("/api/requests/{$request->id}");
+
+        $response->assertOk();
+    }
+
+    public function test_reviewer_cannot_view_creative_request(): void
+    {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
         $request = CreativeRequest::factory()->create([
             'project_id' => $project->id,
@@ -353,10 +370,26 @@ class CreativeRequestControllerTest extends TestCase
             'assigned_to' => $this->creative->id,
         ]);
 
+        // Reviewers cannot see creative requests (internal workflow)
         $this->actingAsReviewer();
         $response = $this->getJson("/api/requests/{$request->id}");
 
+        $response->assertForbidden();
+    }
+
+    public function test_reviewer_cannot_list_creative_requests(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
+        CreativeRequest::factory()->count(3)->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/projects/{$project->id}/requests");
+
         $response->assertOk();
+        $this->assertEmpty($response->json('data'));
     }
 
     public function test_non_related_user_cannot_view_request(): void

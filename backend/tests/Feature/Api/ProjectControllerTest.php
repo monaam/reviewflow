@@ -408,4 +408,59 @@ class ProjectControllerTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_reviewer_cannot_list_project_members(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/projects/{$project->id}/members");
+
+        $response->assertForbidden();
+    }
+
+    public function test_reviewer_project_show_hides_members_and_requests(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
+
+        // Create some assets and requests
+        \App\Models\Asset::factory()->create([
+            'project_id' => $project->id,
+            'uploaded_by' => $this->creative->id,
+            'status' => 'client_review',
+        ]);
+        \App\Models\Asset::factory()->create([
+            'project_id' => $project->id,
+            'uploaded_by' => $this->creative->id,
+            'status' => 'in_review', // Reviewer shouldn't see this
+        ]);
+        \App\Models\CreativeRequest::factory()->create([
+            'project_id' => $project->id,
+            'created_by' => $this->pm->id,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response->assertOk();
+        // Should not include members
+        $this->assertEmpty($response->json('members'));
+        // Should only see client_review asset (not in_review)
+        $this->assertCount(1, $response->json('assets'));
+        // Should not include creative requests count
+        $this->assertEquals(0, $response->json('creative_requests_count'));
+    }
+
+    public function test_reviewer_project_index_hides_members(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson('/api/projects');
+
+        $response->assertOk();
+        $projectData = collect($response->json('data'))->firstWhere('id', $project->id);
+        // Members should not be loaded for reviewers
+        $this->assertArrayNotHasKey('members', $projectData);
+    }
 }
