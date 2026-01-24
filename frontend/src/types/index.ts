@@ -71,6 +71,7 @@ export interface AssetVersion {
   file_size: number;
   file_size_formatted?: string;
   file_meta: Record<string, unknown>;
+  thumbnail_url?: string | null;
   version_notes: string | null;
   uploaded_by: string;
   created_at: string;

@@ -7,6 +7,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { DashboardData, Asset } from '../../../types';
+import { getAssetTypeIcon } from '../../../config/assetTypeRegistry';
 import { assetsApi } from '../../../api/assets';
 import { StatCard } from '../StatCard';
 import { DashboardSection } from '../DashboardSection';
@@ -76,20 +77,33 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
               >
                 {/* Thumbnail */}
                 <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">
-                  {asset.latest_version?.file_url ? (
-                    <img
-                      src={asset.latest_version.file_url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Eye className="w-6 h-6 text-gray-400 dark:text-gray-500" />
-                    </div>
-                  )}
+                  {(() => {
+                    const thumbnailUrl = asset.latest_version?.thumbnail_url;
+                    const fileUrl = asset.latest_version?.file_url;
+                    const TypeIcon = getAssetTypeIcon(asset.type);
+
+                    // Use thumbnail_url for video/pdf, file_url for images
+                    const displayUrl = asset.type === 'image' ? fileUrl : thumbnailUrl;
+
+                    if (displayUrl) {
+                      return (
+                        <img
+                          src={displayUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      );
+                    }
+
+                    return (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <TypeIcon className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Info */}

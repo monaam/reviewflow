@@ -13,6 +13,7 @@ use App\Services\AssetTypes\AssetTypeRegistry;
 use App\Services\DiscordNotificationService;
 use App\Services\FileUploadService;
 use App\Services\NotificationDispatcher;
+use App\Services\ThumbnailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,7 +24,8 @@ class AssetController extends Controller
         protected FileUploadService $uploadService,
         protected DiscordNotificationService $discord,
         protected AssetTypeRegistry $assetTypeRegistry,
-        protected NotificationDispatcher $notificationDispatcher
+        protected NotificationDispatcher $notificationDispatcher,
+        protected ThumbnailService $thumbnailService
     ) {}
 
     public function listAll(Request $request): JsonResponse
@@ -142,6 +144,13 @@ class AssetController extends Controller
             'current_version' => 1,
         ]);
 
+        // Generate thumbnail for video and PDF assets
+        $thumbnailData = $this->thumbnailService->generateThumbnail(
+            $uploadResult['path'],
+            $type,
+            "assets/{$project->id}/thumbnails"
+        );
+
         // Create first version with metadata from registry
         AssetVersion::create([
             'asset_id' => $asset->id,
@@ -150,6 +159,8 @@ class AssetController extends Controller
             'file_path' => $uploadResult['path'],
             'file_size' => $file->getSize(),
             'file_meta' => $this->assetTypeRegistry->extractMetadata($file),
+            'thumbnail_url' => $thumbnailData['url'] ?? null,
+            'thumbnail_path' => $thumbnailData['path'] ?? null,
             'uploaded_by' => $request->user()->id,
         ]);
 
@@ -260,6 +271,13 @@ class AssetController extends Controller
         // Upload file
         $uploadResult = $this->uploadService->upload($file, "assets/{$asset->project_id}");
 
+        // Generate thumbnail for video and PDF assets
+        $thumbnailData = $this->thumbnailService->generateThumbnail(
+            $uploadResult['path'],
+            $asset->type,
+            "assets/{$asset->project_id}/thumbnails"
+        );
+
         // Create new version with metadata from registry
         AssetVersion::create([
             'asset_id' => $asset->id,
@@ -268,6 +286,8 @@ class AssetController extends Controller
             'file_path' => $uploadResult['path'],
             'file_size' => $file->getSize(),
             'file_meta' => $this->assetTypeRegistry->extractMetadata($file),
+            'thumbnail_url' => $thumbnailData['url'] ?? null,
+            'thumbnail_path' => $thumbnailData['path'] ?? null,
             'version_notes' => $validated['version_notes'] ?? null,
             'uploaded_by' => $request->user()->id,
         ]);
@@ -515,6 +535,7 @@ class AssetController extends Controller
                     'file_size' => $version->file_size,
                     'file_size_formatted' => $version->file_size_formatted,
                     'file_meta' => $version->file_meta,
+                    'thumbnail_url' => $version->thumbnail_url,
                     'version_notes' => $version->version_notes,
                     'uploaded_by' => $version->uploader,
                     'created_at' => $version->created_at,

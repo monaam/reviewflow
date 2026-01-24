@@ -19,6 +19,8 @@ class AssetVersion extends Model
         'file_path',
         'file_size',
         'file_meta',
+        'thumbnail_url',
+        'thumbnail_path',
         'version_notes',
         'uploaded_by',
     ];
