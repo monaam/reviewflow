@@ -1002,4 +1002,74 @@ class AssetControllerTest extends TestCase
             'assigned_to' => $otherCreative->id,
         ]);
     }
+
+    // HISTORY ENDPOINT TESTS
+
+    public function test_reviewer_history_only_shows_current_version(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = Asset::factory()->create([
+            'project_id' => $project->id,
+            'uploaded_by' => $this->creative->id,
+            'current_version' => 3,
+            'status' => 'client_review',
+        ]);
+
+        // Create multiple versions
+        AssetVersion::factory()->create(['asset_id' => $asset->id, 'version_number' => 1]);
+        AssetVersion::factory()->create(['asset_id' => $asset->id, 'version_number' => 2]);
+        AssetVersion::factory()->create(['asset_id' => $asset->id, 'version_number' => 3]);
+
+        // Create PM approval log (reviewer should not see)
+        ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 2,
+            'user_id' => $this->pm->id,
+            'action' => 'revision_requested',
+            'comment' => 'PM feedback',
+        ]);
+
+        // Create reviewer approval log (reviewer should see)
+        ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => 3,
+            'user_id' => $this->reviewer->id,
+            'action' => 'approved',
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}/history");
+
+        $response->assertOk();
+        // Should only see 1 version (current)
+        $this->assertCount(1, $response->json('versions'));
+        $this->assertEquals(3, $response->json('versions.0.version_number'));
+        // Timeline should only contain current version + own approval
+        $timeline = $response->json('timeline');
+        $versionEvents = collect($timeline)->where('type', 'version');
+        $approvalEvents = collect($timeline)->where('type', 'approval');
+        $this->assertCount(1, $versionEvents);
+        $this->assertCount(1, $approvalEvents);
+        $this->assertEquals($this->reviewer->id, $approvalEvents->first()['user']['id']);
+    }
+
+    public function test_pm_history_shows_all_versions(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = Asset::factory()->create([
+            'project_id' => $project->id,
+            'uploaded_by' => $this->creative->id,
+            'current_version' => 3,
+        ]);
+
+        AssetVersion::factory()->create(['asset_id' => $asset->id, 'version_number' => 1]);
+        AssetVersion::factory()->create(['asset_id' => $asset->id, 'version_number' => 2]);
+        AssetVersion::factory()->create(['asset_id' => $asset->id, 'version_number' => 3]);
+
+        $this->actingAsPM();
+        $response = $this->getJson("/api/assets/{$asset->id}/history");
+
+        $response->assertOk();
+        $this->assertCount(3, $response->json('versions'));
+    }
 }

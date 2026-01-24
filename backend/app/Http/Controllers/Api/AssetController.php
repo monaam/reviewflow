@@ -495,9 +495,16 @@ class AssetController extends Controller
     {
         $this->authorize('view', $asset);
 
-        // Get all versions with uploader info
-        $versions = $asset->versions()
-            ->with('uploader')
+        $user = $request->user();
+        $isReviewer = $user->isReviewer();
+
+        // Reviewers only see current version, own approval logs, no lock events
+        $versionsQuery = $asset->versions()->with('uploader');
+        if ($isReviewer) {
+            $versionsQuery->where('version_number', $asset->current_version);
+        }
+
+        $versions = $versionsQuery
             ->orderBy('version_number', 'desc')
             ->get()
             ->map(function ($version) {
@@ -514,9 +521,13 @@ class AssetController extends Controller
                 ];
             });
 
-        // Get approval logs for timeline
-        $approvalLogs = $asset->approvalLogs()
-            ->with('user')
+        // Get approval logs for timeline (reviewers only see own)
+        $approvalLogsQuery = $asset->approvalLogs()->with('user');
+        if ($isReviewer) {
+            $approvalLogsQuery->where('user_id', $user->id);
+        }
+
+        $approvalLogs = $approvalLogsQuery
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($log) {
@@ -531,21 +542,24 @@ class AssetController extends Controller
                 ];
             });
 
-        // Get lock/unlock events for timeline
-        $lockEvents = $asset->versionLocks()
-            ->with('user')
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($lock) {
-                return [
-                    'id' => $lock->id,
-                    'type' => 'lock',
-                    'action' => $lock->action,
-                    'user' => $lock->user,
-                    'reason' => $lock->reason,
-                    'created_at' => $lock->created_at,
-                ];
-            });
+        // Get lock/unlock events for timeline (not for reviewers)
+        $lockEvents = collect();
+        if (!$isReviewer) {
+            $lockEvents = $asset->versionLocks()
+                ->with('user')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($lock) {
+                    return [
+                        'id' => $lock->id,
+                        'type' => 'lock',
+                        'action' => $lock->action,
+                        'user' => $lock->user,
+                        'reason' => $lock->reason,
+                        'created_at' => $lock->created_at,
+                    ];
+                });
+        }
 
         // Merge and sort all events by created_at descending
         $timeline = collect()
@@ -558,9 +572,9 @@ class AssetController extends Controller
         return response()->json([
             'versions' => $versions,
             'timeline' => $timeline,
-            'is_locked' => $asset->is_locked,
-            'locked_by' => $asset->locker,
-            'locked_at' => $asset->locked_at,
+            'is_locked' => $isReviewer ? false : $asset->is_locked, // Hide lock status from reviewers
+            'locked_by' => $isReviewer ? null : $asset->locker,
+            'locked_at' => $isReviewer ? null : $asset->locked_at,
         ]);
     }
 }

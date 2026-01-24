@@ -115,25 +115,24 @@ export const assetActions: ActionDefinition[] = [
     disabledTooltip: 'Asset is locked. Unlock to upload a new version.',
   },
 
-  // Compare versions - primary for reviewer, in dropdown for others
+  // Compare versions - in dropdown for admin/pm/creative, hidden for reviewers (they only see current version)
   {
     id: 'compare-versions',
     label: 'Compare',
     icon: Layers,
-    roles: 'all',
-    primaryForRoles: ['reviewer'],
+    roles: ['admin', 'pm', 'creative'],
     conditions: [conditions.hasMultipleVersions],
     variant: 'secondary',
-    // showInDropdown defaults to !isPrimary, so it will be in dropdown for non-reviewers
+    showInDropdown: true,
   },
 
-  // View timeline - primary for creative and reviewer, in dropdown for others
+  // View timeline - primary for creative, in dropdown for admin/pm, hidden for reviewers
   {
     id: 'view-timeline',
     label: 'Timeline',
     icon: Clock,
-    roles: 'all',
-    primaryForRoles: ['creative', 'reviewer'],
+    roles: ['admin', 'pm', 'creative'],
+    primaryForRoles: ['creative'],
     variant: 'secondary',
     // showInDropdown defaults to !isPrimary, so it will be in dropdown for admin/pm
   },
