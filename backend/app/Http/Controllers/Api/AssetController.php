@@ -127,13 +127,18 @@ class AssetController extends Controller
         $uploadResult = $this->uploadService->upload($file, "assets/{$project->id}");
 
         // Create asset
+        // Admin/PM uploads go directly to in_review (they don't need to wait for PM review)
+        $initialStatus = $request->user()->isAdmin() || $request->user()->isPM()
+            ? 'in_review'
+            : 'pending_review';
+
         $asset = Asset::create([
             'project_id' => $project->id,
             'uploaded_by' => $request->user()->id,
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'type' => $type,
-            'status' => 'pending_review',
+            'status' => $initialStatus,
             'current_version' => 1,
         ]);
 
@@ -255,9 +260,14 @@ class AssetController extends Controller
         ]);
 
         // Update asset
+        // Admin/PM uploads go directly to in_review
+        $newStatus = $request->user()->isAdmin() || $request->user()->isPM()
+            ? 'in_review'
+            : 'pending_review';
+
         $asset->update([
             'current_version' => $newVersion,
-            'status' => 'pending_review',
+            'status' => $newStatus,
         ]);
 
         // Send Discord notification

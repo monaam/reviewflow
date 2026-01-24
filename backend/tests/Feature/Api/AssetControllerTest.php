@@ -105,10 +105,11 @@ class AssetControllerTest extends TestCase
             'description' => 'Test description',
         ]);
 
+        // Admin uploads go directly to in_review (no need to wait for PM review)
         $response->assertCreated()
             ->assertJsonPath('title', 'Test Image')
             ->assertJsonPath('type', 'image')
-            ->assertJsonPath('status', 'pending_review')
+            ->assertJsonPath('status', 'in_review')
             ->assertJsonPath('current_version', 1);
 
         $this->assertDatabaseHas('assets', [
