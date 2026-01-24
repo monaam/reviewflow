@@ -13,6 +13,12 @@ class AssetPolicy
             return true;
         }
 
+        // Reviewers can only view assets sent to them (client_review) or already acted upon (approved/revision_requested)
+        if ($user->isReviewer()) {
+            return in_array($asset->status, ['client_review', 'approved', 'revision_requested'])
+                && $asset->project->members()->where('users.id', $user->id)->exists();
+        }
+
         return $asset->project->members()->where('users.id', $user->id)->exists();
     }
 
@@ -87,8 +93,8 @@ class AssetPolicy
 
     public function lock(User $user, Asset $asset): bool
     {
-        // Only PM and Admin can lock/unlock assets
-        if (!$user->canApprove()) {
+        // Only PM and Admin can lock/unlock assets (not reviewers)
+        if (!$user->isAdmin() && !$user->isPM()) {
             return false;
         }
 

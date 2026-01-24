@@ -33,7 +33,7 @@ class CommentPolicy
 
     public function resolve(User $user, Comment $comment): bool
     {
-        if ($user->isAdmin() || $user->isPM()) {
+        if ($user->isAdmin() || $user->isPM() || $user->isReviewer()) {
             return $comment->asset->project->members()
                 ->where('users.id', $user->id)
                 ->exists();

@@ -8,6 +8,7 @@ interface StatusBadgeProps {
 const assetStatusConfig: Record<AssetStatus, { label: string; className: string }> = {
   pending_review: { label: 'Pending Review', className: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
   in_review: { label: 'In Review', className: 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200' },
+  client_review: { label: 'Client Review', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
   approved: { label: 'Approved', className: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
   revision_requested: { label: 'Revision Requested', className: 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200' },
 };

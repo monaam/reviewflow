@@ -92,6 +92,11 @@ export const assetsApi = {
     return response.data;
   },
 
+  sendToClient: async (id: string): Promise<Asset> => {
+    const response = await apiClient.post(`/assets/${id}/send-to-client`);
+    return response.data;
+  },
+
   linkRequest: async (id: string, requestId: string): Promise<Asset> => {
     const response = await apiClient.post(`/assets/${id}/link-request`, { request_id: requestId });
     return response.data;

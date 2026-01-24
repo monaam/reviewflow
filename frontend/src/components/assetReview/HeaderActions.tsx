@@ -85,9 +85,9 @@ export const HeaderActions: FC<HeaderActionsProps> = ({
         />
       )}
 
-      {/* Approval actions at the end for emphasis */}
+      {/* Send to Client and Approval actions at the end for emphasis */}
       {primaryActions
-        .filter((action) => ['request-revision', 'approve'].includes(action.id))
+        .filter((action) => ['send-to-client', 'request-revision', 'approve'].includes(action.id))
         .map((action) => (
           <ActionButton
             key={action.id}

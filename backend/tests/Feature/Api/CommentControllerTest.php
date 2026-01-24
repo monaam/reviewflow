@@ -21,7 +21,7 @@ class CommentControllerTest extends TestCase
 
     // INDEX TESTS
 
-    public function test_member_can_list_asset_comments(): void
+    public function test_pm_can_list_all_asset_comments(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
         $asset = $this->createAssetWithVersion($project, $this->creative);
@@ -30,11 +30,37 @@ class CommentControllerTest extends TestCase
             'asset_version' => 1,
         ]);
 
-        $this->actingAsReviewer();
+        $this->actingAsPM();
         $response = $this->getJson("/api/assets/{$asset->id}/comments");
 
         $response->assertOk()
             ->assertJsonCount(3);
+    }
+
+    public function test_reviewer_only_sees_own_comments(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        // PM's comment - reviewer should NOT see this
+        Comment::factory()->create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->pm->id,
+        ]);
+        // Reviewer's own comments - reviewer SHOULD see these
+        Comment::factory()->count(2)->create([
+            'asset_id' => $asset->id,
+            'asset_version' => 1,
+            'user_id' => $this->reviewer->id,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}/comments");
+
+        $response->assertOk()
+            ->assertJsonCount(2); // Only reviewer's own comments
     }
 
     public function test_comments_default_to_current_version(): void
@@ -119,6 +145,7 @@ class CommentControllerTest extends TestCase
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
         $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']); // Reviewers can only see client-facing assets
 
         $this->actingAsReviewer();
         $response = $this->postJson("/api/assets/{$asset->id}/comments", [
@@ -138,6 +165,7 @@ class CommentControllerTest extends TestCase
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
         $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']); // Reviewers can only see client-facing assets
 
         $this->actingAsReviewer();
         $response = $this->postJson("/api/assets/{$asset->id}/comments", [
@@ -159,7 +187,7 @@ class CommentControllerTest extends TestCase
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
         $asset = $this->createAssetWithVersion($project, $this->creative);
-        $asset->update(['type' => 'video']);
+        $asset->update(['type' => 'video', 'status' => 'client_review']); // Reviewers can only see client-facing assets
 
         $this->actingAsReviewer();
         $response = $this->postJson("/api/assets/{$asset->id}/comments", [
@@ -435,19 +463,39 @@ class CommentControllerTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_reviewer_cannot_resolve_comment(): void
+    public function test_reviewer_can_resolve_comment_on_client_review_asset(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
         $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']); // Reviewers can resolve comments on client-facing assets
         $comment = Comment::factory()->create([
             'asset_id' => $asset->id,
-            'user_id' => $this->reviewer->id,
+            'user_id' => $this->pm->id,
         ]);
 
         $this->actingAsReviewer();
         $response = $this->postJson("/api/comments/{$comment->id}/resolve");
 
-        $response->assertForbidden();
+        $response->assertOk()
+            ->assertJsonPath('is_resolved', true)
+            ->assertJsonPath('resolved_by', $this->reviewer->id);
+    }
+
+    public function test_reviewer_can_unresolve_comment_on_client_review_asset(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+        $comment = Comment::factory()->resolved()->create([
+            'asset_id' => $asset->id,
+            'user_id' => $this->pm->id,
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->postJson("/api/comments/{$comment->id}/unresolve");
+
+        $response->assertOk()
+            ->assertJsonPath('is_resolved', false);
     }
 
     // UNRESOLVE TESTS

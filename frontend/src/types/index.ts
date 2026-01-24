@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'pm' | 'creative' | 'reviewer';
 export type ProjectStatus = 'active' | 'on_hold' | 'completed' | 'archived';
-export type AssetStatus = 'pending_review' | 'in_review' | 'approved' | 'revision_requested';
+export type AssetStatus = 'pending_review' | 'in_review' | 'client_review' | 'approved' | 'revision_requested';
 // AssetType is a string to allow extensibility via the registry
 // Common types are 'image' | 'video' | 'pdf' | 'design' but new types can be added
 export type AssetType = string;

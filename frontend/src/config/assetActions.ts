@@ -9,6 +9,7 @@ import {
   Trash2,
   Layers,
   Clock,
+  Send,
 } from 'lucide-react';
 import { ActionDefinition, ActionContext } from '../types/actions';
 
@@ -34,6 +35,16 @@ const conditions = {
     return ctx.asset.status !== 'approved';
   },
 
+  /** Check if asset is in review (ready to send to client) */
+  isInReview: (ctx: ActionContext): boolean => {
+    return ctx.asset.status === 'in_review';
+  },
+
+  /** Check if asset can be approved (in_review or client_review) */
+  canBeApproved: (ctx: ActionContext): boolean => {
+    return ['in_review', 'client_review'].includes(ctx.asset.status);
+  },
+
   /** Check if asset has multiple versions */
   hasMultipleVersions: (ctx: ActionContext): boolean => {
     return (ctx.asset.versions?.length ?? 0) > 1;
@@ -57,14 +68,25 @@ const conditions = {
  * All asset actions with their role permissions and conditions
  */
 export const assetActions: ActionDefinition[] = [
-  // Primary actions for admin/pm
+  // Send to Client - for PM/Admin to send assets to client review
+  {
+    id: 'send-to-client',
+    label: 'Send to Client',
+    icon: Send,
+    roles: ['admin', 'pm'],
+    primaryForRoles: ['admin', 'pm'],
+    conditions: [conditions.isInReview],
+    variant: 'primary',
+    showInDropdown: false,
+  },
+  // Primary actions for admin/pm/reviewer
   {
     id: 'approve',
     label: 'Approve',
     icon: Check,
-    roles: ['admin', 'pm'],
-    primaryForRoles: ['admin', 'pm'],
-    conditions: [conditions.notApproved],
+    roles: ['admin', 'pm', 'reviewer'],
+    primaryForRoles: ['admin', 'pm', 'reviewer'],
+    conditions: [conditions.canBeApproved],
     variant: 'success',
     showInDropdown: false,
   },
@@ -72,9 +94,9 @@ export const assetActions: ActionDefinition[] = [
     id: 'request-revision',
     label: 'Revision',
     icon: RotateCcw,
-    roles: ['admin', 'pm'],
-    primaryForRoles: ['admin', 'pm'],
-    conditions: [conditions.notApproved],
+    roles: ['admin', 'pm', 'reviewer'],
+    primaryForRoles: ['admin', 'pm', 'reviewer'],
+    conditions: [conditions.canBeApproved],
     variant: 'warning',
     showInDropdown: false,
   },

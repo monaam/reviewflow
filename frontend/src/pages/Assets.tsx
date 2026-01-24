@@ -61,6 +61,7 @@ export function AssetsPage() {
     { value: 'all', label: 'All' },
     { value: 'pending_review', label: 'Pending Review' },
     { value: 'in_review', label: 'In Review' },
+    { value: 'client_review', label: 'Client Review' },
     { value: 'approved', label: 'Approved' },
     { value: 'revision_requested', label: 'Revision Requested' },
   ];

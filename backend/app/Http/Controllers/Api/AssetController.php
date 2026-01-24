@@ -38,6 +38,11 @@ class AssetController extends Controller
         $query = Asset::whereIn('project_id', $projectIds)
             ->with(['uploader', 'project', 'latestVersion']);
 
+        // Reviewers can only see assets sent to them or already acted upon
+        if ($user->isReviewer()) {
+            $query->whereIn('status', ['client_review', 'approved', 'revision_requested']);
+        }
+
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
@@ -75,6 +80,11 @@ class AssetController extends Controller
 
         $query = $project->assets()
             ->with(['uploader', 'latestVersion']);
+
+        // Reviewers can only see assets sent to them or already acted upon
+        if ($request->user()->isReviewer()) {
+            $query->whereIn('status', ['client_review', 'approved', 'revision_requested']);
+        }
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -310,7 +320,7 @@ class AssetController extends Controller
         $this->authorize('approve', $asset);
 
         $validated = $request->validate([
-            'comment' => 'nullable|string',
+            'comment' => 'required|string',
         ]);
 
         $asset->update(['status' => 'revision_requested']);
@@ -330,6 +340,22 @@ class AssetController extends Controller
         $this->notificationDispatcher->notifyRevisionRequested($asset, $request->user(), $validated['comment'] ?? null);
 
         return response()->json($asset->fresh(['approvalLogs.user']));
+    }
+
+    public function sendToClientReview(Request $request, Asset $asset): JsonResponse
+    {
+        $this->authorize('approve', $asset);
+
+        // Only PM/Admin can send to client (not reviewers)
+        if (!$request->user()->isAdmin() && !$request->user()->isPM()) {
+            abort(403, 'Only PM or Admin can send assets to client review.');
+        }
+
+        $asset->update(['status' => 'client_review']);
+
+        // TODO: Optionally notify client reviewers
+
+        return response()->json($asset->load(['uploader', 'project']));
     }
 
     public function linkRequest(Request $request, Asset $asset): JsonResponse

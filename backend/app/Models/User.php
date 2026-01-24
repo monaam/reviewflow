@@ -70,7 +70,7 @@ class User extends Authenticatable
 
     public function canApprove(): bool
     {
-        return in_array($this->role, ['admin', 'pm']);
+        return in_array($this->role, ['admin', 'pm', 'reviewer']);
     }
 
     public function projects(): BelongsToMany

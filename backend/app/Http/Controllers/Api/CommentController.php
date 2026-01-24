@@ -33,6 +33,11 @@ class CommentController extends Controller
             ->with(['user', 'resolver', 'mentions', 'replies.user', 'replies.resolver', 'replies.mentions'])
             ->whereNull('parent_id'); // Only top-level comments
 
+        // Reviewers only see their own comments and replies to their comments
+        if ($request->user()->isReviewer()) {
+            $query->where('user_id', $request->user()->id);
+        }
+
         if ($request->has('version')) {
             $query->where('asset_version', $request->version);
         } elseif (!$request->boolean('all')) {
@@ -51,11 +56,18 @@ class CommentController extends Controller
     protected function getTimeline(Request $request, Asset $asset): JsonResponse
     {
         $timeline = collect();
+        $user = $request->user();
 
         // Get comments (only top-level, with replies nested)
         $commentsQuery = $asset->comments()
             ->with(['user', 'resolver', 'mentions', 'replies.user', 'replies.resolver', 'replies.mentions'])
             ->whereNull('parent_id'); // Only top-level comments
+
+        // Reviewers only see their own comments and replies to their comments
+        if ($user->isReviewer()) {
+            $commentsQuery->where('user_id', $user->id);
+        }
+
         if ($request->has('version')) {
             $commentsQuery->where('asset_version', $request->version);
         } elseif (!$request->boolean('all')) {

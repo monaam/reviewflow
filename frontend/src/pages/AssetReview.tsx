@@ -318,6 +318,15 @@ export function AssetReviewPage() {
     }
   };
 
+  const handleSendToClient = async () => {
+    try {
+      await assetsApi.sendToClient(id!);
+      fetchAsset();
+    } catch (error) {
+      console.error('Failed to send to client:', error);
+    }
+  };
+
   const handleDownloadVersion = async (version?: number) => {
     try {
       const response = await assetsApi.download(id!, version);
@@ -350,6 +359,7 @@ export function AssetReviewPage() {
       'compare-versions': () => openModal('compare'),
       'view-timeline': toggleTimeline,
       'lock': handleLock,
+      'send-to-client': handleSendToClient,
       'download': () => handleDownloadVersion(selectedVersion),
       'download-all': () => asset?.versions?.forEach((v) => handleDownloadVersion(v.version_number)),
       'edit': () => openModal('edit'),

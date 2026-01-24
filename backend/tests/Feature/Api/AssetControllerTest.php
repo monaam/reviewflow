@@ -521,15 +521,152 @@ class AssetControllerTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_reviewer_cannot_approve_asset(): void
+    public function test_reviewer_can_approve_client_review_asset(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
         $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
 
         $this->actingAsReviewer();
         $response = $this->postJson("/api/assets/{$asset->id}/approve");
 
+        $response->assertOk()
+            ->assertJsonPath('status', 'approved');
+    }
+
+    public function test_reviewer_cannot_view_non_client_review_assets(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'pending_review']);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
         $response->assertForbidden();
+    }
+
+    public function test_reviewer_can_view_client_review_assets(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
+    }
+
+    public function test_reviewer_can_request_revision_on_client_review_asset(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        $this->actingAsReviewer();
+        $response = $this->postJson("/api/assets/{$asset->id}/request-revision", [
+            'comment' => 'Please adjust the colors',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'revision_requested');
+    }
+
+    public function test_pm_can_send_asset_to_client_review(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'in_review']);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/send-to-client");
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'client_review');
+    }
+
+    public function test_admin_can_send_asset_to_client_review(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'in_review']);
+
+        $this->actingAsAdmin();
+        $response = $this->postJson("/api/assets/{$asset->id}/send-to-client");
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'client_review');
+    }
+
+    public function test_reviewer_cannot_send_to_client_review(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'client_review']);
+
+        $this->actingAsReviewer();
+        $response = $this->postJson("/api/assets/{$asset->id}/send-to-client");
+
+        $response->assertForbidden();
+    }
+
+    public function test_creative_cannot_send_to_client_review(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'in_review']);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/send-to-client");
+
+        $response->assertForbidden();
+    }
+
+    public function test_reviewer_only_sees_client_facing_assets_in_list(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        // These should NOT be visible to reviewer
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'pending_review']);
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'in_review']);
+        // These SHOULD be visible to reviewer
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'client_review']);
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'approved']);
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'revision_requested']);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/projects/{$project->id}/assets");
+
+        $response->assertOk();
+        $this->assertCount(3, $response->json('data'));
+        $statuses = collect($response->json('data'))->pluck('status')->all();
+        $this->assertContains('client_review', $statuses);
+        $this->assertContains('approved', $statuses);
+        $this->assertContains('revision_requested', $statuses);
+    }
+
+    public function test_reviewer_can_view_approved_assets(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'approved']);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
+    }
+
+    public function test_reviewer_can_view_revision_requested_assets(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset->update(['status' => 'revision_requested']);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/assets/{$asset->id}");
+
+        $response->assertOk();
     }
 
     // REVISION REQUEST TESTS

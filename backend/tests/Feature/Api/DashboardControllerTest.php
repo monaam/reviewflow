@@ -278,8 +278,9 @@ class DashboardControllerTest extends TestCase
         $accessibleProject = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
         $inaccessibleProject = Project::factory()->create();
 
-        Asset::factory()->pendingReview()->count(3)->create(['project_id' => $accessibleProject->id]);
-        Asset::factory()->pendingReview()->count(5)->create(['project_id' => $inaccessibleProject->id]);
+        // Reviewers only see client_review assets (sent to them by PM)
+        Asset::factory()->clientReview()->count(3)->create(['project_id' => $accessibleProject->id]);
+        Asset::factory()->clientReview()->count(5)->create(['project_id' => $inaccessibleProject->id]);
 
         $this->actingAsReviewer();
         $response = $this->getJson('/api/dashboard');
@@ -289,17 +290,19 @@ class DashboardControllerTest extends TestCase
             ->assertJsonPath('stats.pending_review', 3);
     }
 
-    public function test_reviewer_dashboard_includes_pending_review_assets(): void
+    public function test_reviewer_dashboard_includes_client_review_assets(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
-        Asset::factory()->pendingReview()->count(3)->create(['project_id' => $project->id]);
+        // Reviewers see client_review assets (sent to them), not internal pending_review
+        Asset::factory()->clientReview()->count(3)->create(['project_id' => $project->id]);
+        Asset::factory()->pendingReview()->count(2)->create(['project_id' => $project->id]); // Not visible to reviewer
         Asset::factory()->approved()->count(2)->create(['project_id' => $project->id]);
 
         $this->actingAsReviewer();
         $response = $this->getJson('/api/dashboard');
 
         $response->assertOk()
-            ->assertJsonCount(3, 'pending_review');
+            ->assertJsonCount(3, 'pending_review'); // Only client_review assets
     }
 
     // AUTHENTICATION TESTS

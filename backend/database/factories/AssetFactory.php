@@ -42,6 +42,13 @@ class AssetFactory extends Factory
         ]);
     }
 
+    public function clientReview(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'client_review',
+        ]);
+    }
+
     public function approved(): static
     {
         return $this->state(fn (array $attributes) => [
