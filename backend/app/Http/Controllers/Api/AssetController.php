@@ -9,11 +9,11 @@ use App\Models\AssetVersion;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\VersionLock;
+use App\Jobs\GenerateThumbnailJob;
 use App\Services\AssetTypes\AssetTypeRegistry;
 use App\Services\DiscordNotificationService;
 use App\Services\FileUploadService;
 use App\Services\NotificationDispatcher;
-use App\Services\ThumbnailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -24,8 +24,7 @@ class AssetController extends Controller
         protected FileUploadService $uploadService,
         protected DiscordNotificationService $discord,
         protected AssetTypeRegistry $assetTypeRegistry,
-        protected NotificationDispatcher $notificationDispatcher,
-        protected ThumbnailService $thumbnailService
+        protected NotificationDispatcher $notificationDispatcher
     ) {}
 
     public function listAll(Request $request): JsonResponse
@@ -144,25 +143,26 @@ class AssetController extends Controller
             'current_version' => 1,
         ]);
 
-        // Generate thumbnail for video and PDF assets
-        $thumbnailData = $this->thumbnailService->generateThumbnail(
-            $uploadResult['path'],
-            $type,
-            "assets/{$project->id}/thumbnails"
-        );
-
         // Create first version with metadata from registry
-        AssetVersion::create([
+        $assetVersion = AssetVersion::create([
             'asset_id' => $asset->id,
             'version_number' => 1,
             'file_url' => $uploadResult['url'],
             'file_path' => $uploadResult['path'],
             'file_size' => $file->getSize(),
             'file_meta' => $this->assetTypeRegistry->extractMetadata($file),
-            'thumbnail_url' => $thumbnailData['url'] ?? null,
-            'thumbnail_path' => $thumbnailData['path'] ?? null,
             'uploaded_by' => $request->user()->id,
         ]);
+
+        // Dispatch thumbnail generation job in background for video/PDF
+        if (in_array($type, ['video', 'pdf'])) {
+            GenerateThumbnailJob::dispatch(
+                $assetVersion->id,
+                $type,
+                $uploadResult['path'],
+                $project->id
+            );
+        }
 
         // Link to request if provided
         if (isset($validated['request_id'])) {
@@ -271,26 +271,27 @@ class AssetController extends Controller
         // Upload file
         $uploadResult = $this->uploadService->upload($file, "assets/{$asset->project_id}");
 
-        // Generate thumbnail for video and PDF assets
-        $thumbnailData = $this->thumbnailService->generateThumbnail(
-            $uploadResult['path'],
-            $asset->type,
-            "assets/{$asset->project_id}/thumbnails"
-        );
-
         // Create new version with metadata from registry
-        AssetVersion::create([
+        $assetVersion = AssetVersion::create([
             'asset_id' => $asset->id,
             'version_number' => $newVersion,
             'file_url' => $uploadResult['url'],
             'file_path' => $uploadResult['path'],
             'file_size' => $file->getSize(),
             'file_meta' => $this->assetTypeRegistry->extractMetadata($file),
-            'thumbnail_url' => $thumbnailData['url'] ?? null,
-            'thumbnail_path' => $thumbnailData['path'] ?? null,
             'version_notes' => $validated['version_notes'] ?? null,
             'uploaded_by' => $request->user()->id,
         ]);
+
+        // Dispatch thumbnail generation job in background for video/PDF
+        if (in_array($asset->type, ['video', 'pdf'])) {
+            GenerateThumbnailJob::dispatch(
+                $assetVersion->id,
+                $asset->type,
+                $uploadResult['path'],
+                $asset->project_id
+            );
+        }
 
         // Update asset
         // Admin/PM uploads go directly to in_review
