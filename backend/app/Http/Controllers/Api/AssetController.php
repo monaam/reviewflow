@@ -37,7 +37,7 @@ class AssetController extends Controller
             : $user->projects()->pluck('projects.id');
 
         $query = Asset::whereIn('project_id', $projectIds)
-            ->with(['uploader', 'project', 'latestVersion']);
+            ->with(['uploader', 'project', 'latest_version']);
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($user->isReviewer()) {
@@ -80,7 +80,7 @@ class AssetController extends Controller
         $this->authorize('view', $project);
 
         $query = $project->assets()
-            ->with(['uploader', 'latestVersion']);
+            ->with(['uploader', 'latest_version']);
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($request->user()->isReviewer()) {
@@ -181,7 +181,7 @@ class AssetController extends Controller
         // Send in-app notification
         $this->notificationDispatcher->notifyAssetUploaded($asset, $request->user());
 
-        return response()->json($asset->load(['uploader', 'latestVersion', 'project']), 201);
+        return response()->json($asset->load(['uploader', 'latest_version', 'project']), 201);
     }
 
     public function show(Request $request, Asset $asset): JsonResponse
@@ -230,7 +230,7 @@ class AssetController extends Controller
 
         $asset->update($validated);
 
-        return response()->json($asset->fresh(['uploader', 'latestVersion']));
+        return response()->json($asset->fresh(['uploader', 'latest_version']));
     }
 
     public function destroy(Request $request, Asset $asset): JsonResponse
@@ -310,7 +310,7 @@ class AssetController extends Controller
         // Send in-app notification
         $this->notificationDispatcher->notifyNewVersion($asset, $request->user());
 
-        return response()->json($asset->fresh(['uploader', 'versions', 'latestVersion']), 201);
+        return response()->json($asset->fresh(['uploader', 'versions', 'latest_version']), 201);
     }
 
     public function versions(Request $request, Asset $asset): JsonResponse

@@ -44,13 +44,8 @@ class FileUploadService
             return Storage::disk($this->disk)->temporaryUrl($path, now()->addHours(24));
         }
 
-        // Return full URL for local storage
-        $url = Storage::disk($this->disk)->url($path);
-        if (!str_starts_with($url, 'http')) {
-            $url = rtrim(config('app.url'), '/') . $url;
-        }
-
-        return $url;
+        // Use the stream route for local files
+        return rtrim(config('app.url'), '/') . '/api/stream/' . $path;
     }
 
     public function exists(string $path): bool

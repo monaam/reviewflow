@@ -52,7 +52,7 @@ class Asset extends Model
         return $this->hasMany(AssetVersion::class)->orderBy('version_number', 'desc');
     }
 
-    public function latestVersion()
+    public function latest_version()
     {
         return $this->hasOne(AssetVersion::class)->latestOfMany('version_number');
     }
@@ -75,7 +75,7 @@ class Asset extends Model
 
     public function getFileUrlAttribute(): ?string
     {
-        return $this->latestVersion?->file_url;
+        return $this->latest_version?->file_url;
     }
 
     public function getUnresolvedCommentsCountAttribute(): int
