@@ -304,7 +304,7 @@ sudo apt-get install ffmpeg imagemagick ghostscript
 brew install ffmpeg imagemagick ghostscript
 ```
 
-**Docker (Sail):** Add to your Dockerfile or use a custom Sail image with these packages.
+**Docker (Sail):** The included Sail Docker images already have FFmpeg, ImageMagick, and Ghostscript installed. No additional setup required.
 
 ## Code Quality
 
