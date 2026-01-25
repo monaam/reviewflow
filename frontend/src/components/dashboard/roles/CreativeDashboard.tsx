@@ -16,6 +16,7 @@ import { EmptyState } from '../EmptyState';
 import { AlertBanner } from '../AlertBanner';
 import { QuickActionCard } from '../QuickActionCard';
 import { StatusBadge } from '../../common/StatusBadge';
+import { getAssetTypeIcon } from '../../../config/assetTypeRegistry';
 import { formatDistanceToNow } from 'date-fns';
 
 interface CreativeDashboardProps {
@@ -183,18 +184,29 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
                   className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    {asset.latest_version?.file_url && (
-                      <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">
-                        <img
-                          src={asset.latest_version.file_url}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
+                    {(() => {
+                      const displayUrl = asset.latest_version?.display_thumbnail_url;
+                      const TypeIcon = getAssetTypeIcon(asset.type);
+
+                      return (
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">
+                          {displayUrl ? (
+                            <img
+                              src={displayUrl}
+                              alt=""
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <TypeIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900 dark:text-white truncate">
                         {asset.title}

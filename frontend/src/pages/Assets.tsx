@@ -4,6 +4,7 @@ import { FileImage, Search, X, Eye } from 'lucide-react';
 import { assetsApi } from '../api/assets';
 import { Asset } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { getAssetTypeIcon } from '../config/assetTypeRegistry';
 import { useAuthStore } from '../stores/authStore';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -176,20 +177,29 @@ export function AssetsPage() {
             >
               {/* Thumbnail */}
               <div className="aspect-video bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
-                {asset.latest_version?.file_url && asset.type === 'image' ? (
-                  <img
-                    src={asset.latest_version.file_url}
-                    alt={asset.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <FileImage className="w-12 h-12 text-gray-300 dark:text-gray-600" />
-                  </div>
-                )}
+                {(() => {
+                  const displayUrl = asset.latest_version?.display_thumbnail_url;
+                  const TypeIcon = getAssetTypeIcon(asset.type);
+
+                  if (displayUrl) {
+                    return (
+                      <img
+                        src={displayUrl}
+                        alt={asset.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    );
+                  }
+
+                  return (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <TypeIcon className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                    </div>
+                  );
+                })()}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
                   <Eye className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>

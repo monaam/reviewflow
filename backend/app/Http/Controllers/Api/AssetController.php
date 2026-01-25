@@ -9,6 +9,7 @@ use App\Models\AssetVersion;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\VersionLock;
+use App\Jobs\GenerateThumbnailJob;
 use App\Services\AssetTypes\AssetTypeRegistry;
 use App\Services\DiscordNotificationService;
 use App\Services\FileUploadService;
@@ -36,7 +37,7 @@ class AssetController extends Controller
             : $user->projects()->pluck('projects.id');
 
         $query = Asset::whereIn('project_id', $projectIds)
-            ->with(['uploader', 'project', 'latestVersion']);
+            ->with(['uploader', 'project', 'latest_version']);
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($user->isReviewer()) {
@@ -79,7 +80,7 @@ class AssetController extends Controller
         $this->authorize('view', $project);
 
         $query = $project->assets()
-            ->with(['uploader', 'latestVersion']);
+            ->with(['uploader', 'latest_version']);
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($request->user()->isReviewer()) {
@@ -143,7 +144,7 @@ class AssetController extends Controller
         ]);
 
         // Create first version with metadata from registry
-        AssetVersion::create([
+        $assetVersion = AssetVersion::create([
             'asset_id' => $asset->id,
             'version_number' => 1,
             'file_url' => $uploadResult['url'],
@@ -152,6 +153,16 @@ class AssetController extends Controller
             'file_meta' => $this->assetTypeRegistry->extractMetadata($file),
             'uploaded_by' => $request->user()->id,
         ]);
+
+        // Dispatch thumbnail generation job in background for video/PDF
+        if (in_array($type, ['video', 'pdf'])) {
+            GenerateThumbnailJob::dispatch(
+                $assetVersion->id,
+                $type,
+                $uploadResult['path'],
+                $project->id
+            );
+        }
 
         // Link to request if provided
         if (isset($validated['request_id'])) {
@@ -170,7 +181,7 @@ class AssetController extends Controller
         // Send in-app notification
         $this->notificationDispatcher->notifyAssetUploaded($asset, $request->user());
 
-        return response()->json($asset->load(['uploader', 'latestVersion', 'project']), 201);
+        return response()->json($asset->load(['uploader', 'latest_version', 'project']), 201);
     }
 
     public function show(Request $request, Asset $asset): JsonResponse
@@ -219,7 +230,7 @@ class AssetController extends Controller
 
         $asset->update($validated);
 
-        return response()->json($asset->fresh(['uploader', 'latestVersion']));
+        return response()->json($asset->fresh(['uploader', 'latest_version']));
     }
 
     public function destroy(Request $request, Asset $asset): JsonResponse
@@ -261,7 +272,7 @@ class AssetController extends Controller
         $uploadResult = $this->uploadService->upload($file, "assets/{$asset->project_id}");
 
         // Create new version with metadata from registry
-        AssetVersion::create([
+        $assetVersion = AssetVersion::create([
             'asset_id' => $asset->id,
             'version_number' => $newVersion,
             'file_url' => $uploadResult['url'],
@@ -271,6 +282,16 @@ class AssetController extends Controller
             'version_notes' => $validated['version_notes'] ?? null,
             'uploaded_by' => $request->user()->id,
         ]);
+
+        // Dispatch thumbnail generation job in background for video/PDF
+        if (in_array($asset->type, ['video', 'pdf'])) {
+            GenerateThumbnailJob::dispatch(
+                $assetVersion->id,
+                $asset->type,
+                $uploadResult['path'],
+                $asset->project_id
+            );
+        }
 
         // Update asset
         // Admin/PM uploads go directly to in_review
@@ -289,7 +310,7 @@ class AssetController extends Controller
         // Send in-app notification
         $this->notificationDispatcher->notifyNewVersion($asset, $request->user());
 
-        return response()->json($asset->fresh(['uploader', 'versions', 'latestVersion']), 201);
+        return response()->json($asset->fresh(['uploader', 'versions', 'latest_version']), 201);
     }
 
     public function versions(Request $request, Asset $asset): JsonResponse
@@ -515,6 +536,7 @@ class AssetController extends Controller
                     'file_size' => $version->file_size,
                     'file_size_formatted' => $version->file_size_formatted,
                     'file_meta' => $version->file_meta,
+                    'thumbnail_url' => $version->thumbnail_url,
                     'version_notes' => $version->version_notes,
                     'uploaded_by' => $version->uploader,
                     'created_at' => $version->created_at,

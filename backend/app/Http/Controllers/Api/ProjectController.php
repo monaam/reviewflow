@@ -75,7 +75,7 @@ class ProjectController extends Controller
         if ($user->isReviewer()) {
             $project->load([
                 'creator',
-                'assets' => fn($q) => $q->with(['uploader', 'latestVersion'])
+                'assets' => fn($q) => $q->with(['uploader', 'latest_version'])
                     ->whereIn('status', ['client_review', 'approved', 'revision_requested'])
                     ->latest(),
             ]);
@@ -91,7 +91,7 @@ class ProjectController extends Controller
             $project->load([
                 'creator',
                 'members',
-                'assets' => fn($q) => $q->with(['uploader', 'latestVersion'])->latest(),
+                'assets' => fn($q) => $q->with(['uploader', 'latest_version'])->latest(),
                 'creativeRequests' => fn($q) => $q->with(['creator', 'assignee'])->latest(),
             ]);
 

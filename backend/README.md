@@ -241,6 +241,71 @@ APP_PORT=80
 FORWARD_DB_PORT=3306
 ```
 
+## Background Jobs & Horizon
+
+ReviewFlow uses Laravel Horizon for managing background job processing with Redis queues.
+
+### Prerequisites
+
+- **Redis** - Required for queue processing
+- **FFmpeg** - Required for video thumbnail generation
+- **ImageMagick** (with Ghostscript) - Required for PDF thumbnail generation
+
+### Configuration
+
+Ensure these environment variables are set in `.env`:
+
+```env
+QUEUE_CONNECTION=redis
+CACHE_STORE=redis
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+```
+
+### Running Horizon
+
+```bash
+# Start Horizon (development)
+./vendor/bin/sail artisan horizon
+
+# Or in production with Supervisor
+php artisan horizon
+```
+
+### Horizon Dashboard
+
+Access the Horizon dashboard at `/horizon` (admin users only).
+
+### Queue Configuration
+
+| Queue | Purpose | Workers | Timeout |
+|-------|---------|---------|---------|
+| `default` | General jobs | 3-10 | 60s |
+| `thumbnails` | Video/PDF thumbnail generation | 2-3 | 120s |
+
+### Thumbnail Generation
+
+Thumbnails are automatically generated in the background when video or PDF assets are uploaded:
+
+- **Videos**: FFmpeg extracts a frame at 1 second, crops to 480x270 (handles both 16:9 and 9:16)
+- **PDFs**: ImageMagick renders the first page, crops from top to show document header
+
+#### Installing Dependencies
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install ffmpeg imagemagick ghostscript
+```
+
+**macOS:**
+```bash
+brew install ffmpeg imagemagick ghostscript
+```
+
+**Docker (Sail):** The included Sail Docker images already have FFmpeg, ImageMagick, and Ghostscript installed. No additional setup required.
+
 ## Code Quality
 
 ```bash

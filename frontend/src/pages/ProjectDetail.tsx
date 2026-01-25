@@ -492,7 +492,7 @@ export function ProjectDetailPage() {
 
 function AssetCard({ asset }: { asset: Asset }) {
   const Icon = getAssetTypeIcon(asset.type);
-  const thumbnailUrl = asset.latest_version?.file_url;
+  const thumbnailUrl = asset.latest_version?.display_thumbnail_url;
   const canShowThumbnail = thumbnailUrl && supportsThumbnail(asset.type);
 
   return (

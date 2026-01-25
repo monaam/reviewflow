@@ -58,7 +58,7 @@ export const assetTypeRegistry: Record<string, AssetTypeHandler> = {
     Renderer: PdfRenderer,
     Controls: PdfControls as unknown as AssetTypeHandler['Controls'],
     getMediaUrl: toRelativeStorageUrl,
-    supportsThumbnail: false,
+    supportsThumbnail: true,
   },
 
   design: {

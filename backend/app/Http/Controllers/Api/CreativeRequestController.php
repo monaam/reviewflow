@@ -170,7 +170,7 @@ class CreativeRequestController extends Controller
             'project',
             'attachments.uploader',
             'assets.uploader',
-            'assets.latestVersion',
+            'assets.latest_version',
         ]);
 
         return response()->json($creativeRequest);

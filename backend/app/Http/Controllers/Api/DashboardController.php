@@ -38,7 +38,7 @@ class DashboardController extends Controller
             'asset_status_distribution' => $this->getAssetStatusDistribution(),
             'recent_activity' => $this->getRecentActivity(),
             'pending_approvals' => Asset::pendingReview()
-                ->with(['uploader', 'project', 'latestVersion'])
+                ->with(['uploader', 'project', 'latest_version'])
                 ->latest()
                 ->limit(10)
                 ->get(),
@@ -74,7 +74,7 @@ class DashboardController extends Controller
             ],
             'pending_approvals' => Asset::whereIn('project_id', $projectIds)
                 ->pendingReview()
-                ->with(['uploader', 'project', 'latestVersion'])
+                ->with(['uploader', 'project', 'latest_version'])
                 ->latest()
                 ->limit(10)
                 ->get(),
@@ -129,12 +129,12 @@ class DashboardController extends Controller
                 ->get(),
             'revision_needed' => Asset::where('uploaded_by', $user->id)
                 ->needsRevision()
-                ->with(['project', 'latestVersion'])
+                ->with(['project', 'latest_version'])
                 ->latest()
                 ->limit(5)
                 ->get(),
             'recent_uploads' => $user->uploadedAssets()
-                ->with(['project', 'latestVersion'])
+                ->with(['project', 'latest_version'])
                 ->latest()
                 ->limit(5)
                 ->get(),
@@ -171,7 +171,7 @@ class DashboardController extends Controller
             ],
             'pending_review' => Asset::whereIn('project_id', $projectIds)
                 ->where('status', 'client_review')
-                ->with(['uploader', 'project', 'latestVersion'])
+                ->with(['uploader', 'project', 'latest_version'])
                 ->latest()
                 ->limit(10)
                 ->get(),
