@@ -30,9 +30,9 @@ export const HeaderActions: FC<HeaderActionsProps> = ({
 }) => {
   return (
     <div className="flex items-center gap-2">
-      {/* Primary actions (excluding approve/revision/upload which get special treatment) */}
+      {/* Primary actions (excluding approve/revision/upload/send-to-client which get special treatment) */}
       {primaryActions
-        .filter((action) => !['approve', 'request-revision', 'upload-version'].includes(action.id))
+        .filter((action) => !['approve', 'request-revision', 'upload-version', 'send-to-client'].includes(action.id))
         .map((action) => (
           <ActionButton
             key={action.id}
