@@ -10,6 +10,7 @@ declare global {
 
 interface OneSignalType {
   init: (config: { appId: string }) => Promise<void>;
+  login: (externalId: string) => Promise<void>;
   User: {
     PushSubscription: {
       id: string | null;
@@ -46,6 +47,9 @@ export function useOneSignal() {
       window.OneSignalDeferred.push(async (OneSignal: OneSignalType) => {
         try {
           await OneSignal.init({ appId });
+
+          // Set external ID to associate this device with the user
+          await OneSignal.login(user.id.toString());
 
           // Get subscription state
           const subscription = OneSignal.User.PushSubscription;
