@@ -50,9 +50,10 @@ class ThumbnailService
             mkdir($thumbnailDir, 0755, true);
         }
 
-        // Extract frame at 1 second or 10% into the video
+        // Extract frame at 1 second, scale to cover and center-crop to fill thumbnail
+        // This handles both landscape (16:9) and portrait (9:16) videos nicely
         $command = sprintf(
-            '%s -i %s -ss 00:00:01 -vframes 1 -vf "scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2" -y %s 2>&1',
+            '%s -i %s -ss 00:00:01 -vframes 1 -vf "scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d" -y %s 2>&1',
             escapeshellarg($ffmpegPath),
             escapeshellarg($fullVideoPath),
             $this->thumbnailWidth,
@@ -119,24 +120,31 @@ class ThumbnailService
             $imagick->setImageFormat('jpeg');
             $imagick->setImageCompressionQuality(85);
 
-            // Resize to thumbnail dimensions maintaining aspect ratio
-            $imagick->thumbnailImage($this->thumbnailWidth, $this->thumbnailHeight, true);
-
-            // Create a canvas with the exact dimensions and center the thumbnail
-            $canvas = new \Imagick();
-            $canvas->newImage($this->thumbnailWidth, $this->thumbnailHeight, new \ImagickPixel('#f3f4f6'));
-            $canvas->setImageFormat('jpeg');
-
-            // Calculate offset to center
+            // Scale to cover thumbnail dimensions (like CSS object-fit: cover)
             $geometry = $imagick->getImageGeometry();
-            $x = ($this->thumbnailWidth - $geometry['width']) / 2;
-            $y = ($this->thumbnailHeight - $geometry['height']) / 2;
+            $srcRatio = $geometry['width'] / $geometry['height'];
+            $targetRatio = $this->thumbnailWidth / $this->thumbnailHeight;
 
-            $canvas->compositeImage($imagick, \Imagick::COMPOSITE_OVER, (int)$x, (int)$y);
-            $canvas->writeImage($fullThumbnailPath);
+            if ($srcRatio > $targetRatio) {
+                // Source is wider - scale by height, crop width
+                $newHeight = $this->thumbnailHeight;
+                $newWidth = (int)($geometry['width'] * ($this->thumbnailHeight / $geometry['height']));
+            } else {
+                // Source is taller - scale by width, crop height
+                $newWidth = $this->thumbnailWidth;
+                $newHeight = (int)($geometry['height'] * ($this->thumbnailWidth / $geometry['width']));
+            }
 
+            $imagick->resizeImage($newWidth, $newHeight, \Imagick::FILTER_LANCZOS, 1);
+
+            // Crop to exact dimensions (from top for PDFs to show document header)
+            $cropX = (int)(($newWidth - $this->thumbnailWidth) / 2);
+            $cropY = 0; // Start from top to show document header
+            $imagick->cropImage($this->thumbnailWidth, $this->thumbnailHeight, $cropX, $cropY);
+            $imagick->setImagePage(0, 0, 0, 0); // Reset virtual canvas
+
+            $imagick->writeImage($fullThumbnailPath);
             $imagick->destroy();
-            $canvas->destroy();
 
             return [
                 'path' => $thumbnailPath,
