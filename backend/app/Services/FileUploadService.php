@@ -44,7 +44,12 @@ class FileUploadService
             return Storage::disk($this->disk)->temporaryUrl($path, now()->addHours(24));
         }
 
-        // Use the stream route for local files
+        if ($this->disk === 'public') {
+            // Public disk uses /storage symlink
+            return rtrim(config('app.url'), '/') . '/storage/' . $path;
+        }
+
+        // Local disk uses the stream route
         return rtrim(config('app.url'), '/') . '/api/stream/' . $path;
     }
 
