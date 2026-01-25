@@ -210,6 +210,19 @@ return [
             'timeout' => 60,
             'nice' => 0,
         ],
+        'supervisor-thumbnails' => [
+            'connection' => 'redis',
+            'queue' => ['thumbnails'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256, // Higher memory for image/video processing
+            'tries' => 3,
+            'timeout' => 120, // 2 minutes for thumbnail generation
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [
@@ -219,11 +232,19 @@ return [
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
             ],
+            'supervisor-thumbnails' => [
+                'maxProcesses' => 3,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
         ],
 
         'local' => [
             'supervisor-1' => [
                 'maxProcesses' => 3,
+            ],
+            'supervisor-thumbnails' => [
+                'maxProcesses' => 2,
             ],
         ],
     ],
