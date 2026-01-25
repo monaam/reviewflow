@@ -12,6 +12,8 @@ class AssetVersion extends Model
 {
     use HasFactory, HasUuids;
 
+    protected $appends = ['display_thumbnail_url', 'file_size_formatted'];
+
     protected $fillable = [
         'asset_id',
         'version_number',
@@ -62,5 +64,21 @@ class AssetVersion extends Model
         }
 
         return round($bytes, 2) . ' ' . $units[$index];
+    }
+
+    /**
+     * Get the display thumbnail URL.
+     * For images, returns the file_url (image itself is the thumbnail).
+     * For video/pdf, returns the thumbnail_url if available, otherwise null.
+     */
+    public function getDisplayThumbnailUrlAttribute(): ?string
+    {
+        $assetType = $this->asset?->type;
+
+        if ($assetType === 'image') {
+            return $this->file_url;
+        }
+
+        return $this->thumbnail_url;
     }
 }

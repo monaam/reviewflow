@@ -78,12 +78,8 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                 {/* Thumbnail */}
                 <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">
                   {(() => {
-                    const thumbnailUrl = asset.latest_version?.thumbnail_url;
-                    const fileUrl = asset.latest_version?.file_url;
+                    const displayUrl = asset.latest_version?.display_thumbnail_url;
                     const TypeIcon = getAssetTypeIcon(asset.type);
-
-                    // Use thumbnail_url for video/pdf, file_url for images
-                    const displayUrl = asset.type === 'image' ? fileUrl : thumbnailUrl;
 
                     if (displayUrl) {
                       return (

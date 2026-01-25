@@ -492,10 +492,7 @@ export function ProjectDetailPage() {
 
 function AssetCard({ asset }: { asset: Asset }) {
   const Icon = getAssetTypeIcon(asset.type);
-  // Use thumbnail_url for video/pdf, file_url for images
-  const thumbnailUrl = asset.type === 'image'
-    ? asset.latest_version?.file_url
-    : asset.latest_version?.thumbnail_url;
+  const thumbnailUrl = asset.latest_version?.display_thumbnail_url;
   const canShowThumbnail = thumbnailUrl && supportsThumbnail(asset.type);
 
   return (

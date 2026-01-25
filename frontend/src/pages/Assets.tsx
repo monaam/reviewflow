@@ -178,12 +178,8 @@ export function AssetsPage() {
               {/* Thumbnail */}
               <div className="aspect-video bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
                 {(() => {
-                  const thumbnailUrl = asset.latest_version?.thumbnail_url;
-                  const fileUrl = asset.latest_version?.file_url;
+                  const displayUrl = asset.latest_version?.display_thumbnail_url;
                   const TypeIcon = getAssetTypeIcon(asset.type);
-
-                  // Use thumbnail_url for video/pdf, file_url for images
-                  const displayUrl = asset.type === 'image' ? fileUrl : thumbnailUrl;
 
                   if (displayUrl) {
                     return (
