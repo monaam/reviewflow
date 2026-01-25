@@ -53,10 +53,7 @@ class AssetPolicy
                        ->exists();
         }
 
-        if ($user->isCreative()) {
-            return $asset->uploaded_by === $user->id;
-        }
-
+        // Creatives cannot delete assets - only admin and PM can delete
         return false;
     }
 

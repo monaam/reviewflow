@@ -328,7 +328,7 @@ class AssetControllerTest extends TestCase
         $this->assertDatabaseMissing('assets', ['id' => $asset->id]);
     }
 
-    public function test_creative_can_delete_own_asset(): void
+    public function test_creative_cannot_delete_own_asset(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
         $asset = $this->createAssetWithVersion($project, $this->creative);
@@ -336,7 +336,7 @@ class AssetControllerTest extends TestCase
         $this->actingAsCreative();
         $response = $this->deleteJson("/api/assets/{$asset->id}");
 
-        $response->assertOk();
+        $response->assertForbidden();
     }
 
     public function test_creative_cannot_delete_others_asset(): void
