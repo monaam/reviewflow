@@ -46,7 +46,11 @@ class FileUploadService
 
         if ($this->disk === 'public') {
             // Public disk uses /storage symlink
-            return rtrim(config('app.url'), '/') . '/storage/' . $path;
+            $url = Storage::disk($this->disk)->url($path);
+            if (!str_starts_with($url, 'http')) {
+                $url = rtrim(config('app.url'), '/') . $url;
+            }
+            return $url;
         }
 
         // Local disk uses the stream route
