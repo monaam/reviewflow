@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\CommentImageController;
 use App\Http\Controllers\Api\CreativeRequestController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\NotificationController;
@@ -19,6 +20,9 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 
 // Video streaming with range request support
 Route::get('/stream/{path}', [StreamController::class, 'stream'])->where('path', '.*');
+
+// Temp comment image preview (public with UUID security)
+Route::get('/comment-images/temp/{tempId}', [CommentImageController::class, 'showTemp'])->name('comment-images.temp.show');
 
 // Broadcasting authentication for Sanctum
 Route::middleware('auth:sanctum')->post('/broadcasting/auth', function (Request $request) {
@@ -70,6 +74,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
     Route::post('/comments/{comment}/resolve', [CommentController::class, 'resolve']);
     Route::post('/comments/{comment}/unresolve', [CommentController::class, 'unresolve']);
+
+    // Comment Images
+    Route::post('/comment-images/temp', [CommentImageController::class, 'uploadTemp']);
+    Route::delete('/comment-images/temp/{tempId}', [CommentImageController::class, 'deleteTemp']);
+    Route::delete('/comments/{comment}/images/{mediaId}', [CommentImageController::class, 'destroy']);
 
     // Creative Requests
     Route::get('/requests', [CreativeRequestController::class, 'listAll']);

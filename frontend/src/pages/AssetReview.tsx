@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock } from 'lucide-react';
 import { assetsApi } from '../api/assets';
-import { Asset, Comment, TimelineItem } from '../types';
+import { Asset, Comment, TimelineItem, TempCommentImage } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
@@ -36,6 +36,7 @@ export function AssetReviewPage() {
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
+  const [pendingImages, setPendingImages] = useState<TempCommentImage[]>([]);
 
   // UI state via reducer
   const {
@@ -174,11 +175,17 @@ export function AssetReviewPage() {
   const handleSubmitComment = async () => {
     if (!newComment.trim() || !asset) return;
     try {
+      // Get temp image IDs that are fully uploaded
+      const tempImageIds = pendingImages
+        .filter((img) => !img.uploading && !img.temp_id.startsWith('pending-'))
+        .map((img) => img.temp_id);
+
       const comment = await assetsApi.createComment(id!, {
         content: newComment,
         rectangle: state.selectedRect || undefined,
         video_timestamp: supportsTemporalAnnotations(asset.type) ? state.currentTime : undefined,
         page_number: asset.type === 'pdf' ? state.currentPage : undefined,
+        temp_image_ids: tempImageIds.length > 0 ? tempImageIds : undefined,
       });
       const newItem: TimelineItem = {
         type: 'comment',
@@ -188,6 +195,7 @@ export function AssetReviewPage() {
       };
       setTimeline([...timeline, newItem]);
       setNewComment('');
+      setPendingImages([]);
       setSelectedRect(null);
     } catch (error) {
       console.error('Failed to create comment:', error);
@@ -252,11 +260,12 @@ export function AssetReviewPage() {
     }
   };
 
-  const handleReply = async (parentId: string, content: string) => {
+  const handleReply = async (parentId: string, content: string, tempImageIds?: string[]) => {
     try {
       const reply = await assetsApi.createComment(id!, {
         content,
         parent_id: parentId,
+        temp_image_ids: tempImageIds,
       });
       // Add the reply to the parent comment's replies array
       setTimeline(timeline.map((item) => {
@@ -504,7 +513,9 @@ export function AssetReviewPage() {
           selectedRect={state.selectedRect}
           newComment={newComment}
           showAllVersionsComments={state.showAllVersionsComments}
+          pendingImages={pendingImages}
           onCommentChange={setNewComment}
+          onPendingImagesChange={setPendingImages}
           onSubmitComment={handleSubmitComment}
           onClearAnnotation={resetAnnotation}
           onCommentClick={handleCommentClick}

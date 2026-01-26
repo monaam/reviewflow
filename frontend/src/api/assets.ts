@@ -1,6 +1,6 @@
 import { AxiosProgressEvent } from 'axios';
 import apiClient from './client';
-import { Asset, AssetVersion, Comment, MentionableUser, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem } from '../types';
+import { Asset, AssetVersion, Comment, MentionableUser, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem, TempCommentImage } from '../types';
 
 export interface CreateAssetRequest {
   file: File;
@@ -24,6 +24,7 @@ export interface CreateCommentRequest {
   video_timestamp?: number;
   page_number?: number;
   parent_id?: string;
+  temp_image_ids?: string[];
 }
 
 export const assetsApi = {
@@ -165,5 +166,41 @@ export const assetsApi = {
   getHistory: async (id: string): Promise<VersionHistoryResponse> => {
     const response = await apiClient.get(`/assets/${id}/history`);
     return response.data;
+  },
+};
+
+export interface TempImageUploadResponse {
+  temp_id: string;
+  filename: string;
+  preview_url: string;
+  size: number;
+}
+
+export const commentImagesApi = {
+  uploadTemp: async (
+    file: File,
+    onProgress?: (progress: number) => void
+  ): Promise<TempImageUploadResponse> => {
+    const formData = new FormData();
+    formData.append('image', file);
+
+    const response = await apiClient.post('/comment-images/temp', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (event) => {
+        if (event.total && onProgress) {
+          const progress = Math.round((event.loaded * 100) / event.total);
+          onProgress(progress);
+        }
+      },
+    });
+    return response.data;
+  },
+
+  deleteTemp: async (tempId: string): Promise<void> => {
+    await apiClient.delete(`/comment-images/temp/${tempId}`);
+  },
+
+  deleteFromComment: async (commentId: string, mediaId: number): Promise<void> => {
+    await apiClient.delete(`/comments/${commentId}/images/${mediaId}`);
   },
 };
