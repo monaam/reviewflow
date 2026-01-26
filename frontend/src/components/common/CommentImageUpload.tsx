@@ -1,4 +1,4 @@
-import { FC, useCallback, useState, useRef } from 'react';
+import { FC, useCallback, useState, useRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { ImagePlus, X, Loader2, AlertCircle } from 'lucide-react';
 import { TempCommentImage } from '../../types';
@@ -36,6 +36,12 @@ export const CommentImageUpload: FC<CommentImageUploadProps> = ({
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const localContainerRef = useRef<HTMLDivElement>(null);
 
+  // Keep a ref to the current images for use in async callbacks
+  const imagesRef = useRef<TempCommentImage[]>(images);
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
   // Use the provided form container ref, or fall back to local container
   const containerRef = formContainerRef || localContainerRef;
 
@@ -72,38 +78,38 @@ export const CommentImageUpload: FC<CommentImageUploadProps> = ({
         if (file.size > maxSizeBytes) {
           errors.push(`${file.name}: File too large (max ${maxSizeBytes / 1024 / 1024}MB)`);
           // Remove the pending image
-          onChange((prev) => prev.filter((img) => img.temp_id !== pendingImage.temp_id));
+          const filtered = imagesRef.current.filter((img) => img.temp_id !== pendingImage.temp_id);
+          onChange(filtered);
           continue;
         }
 
         try {
           const response = await commentImagesApi.uploadTemp(file, (progress) => {
-            onChange((prev) =>
-              prev.map((img) =>
-                img.temp_id === pendingImage.temp_id ? { ...img, progress } : img
-              )
+            const updated = imagesRef.current.map((img) =>
+              img.temp_id === pendingImage.temp_id ? { ...img, progress } : img
             );
+            onChange(updated);
           });
 
           // Replace pending with actual uploaded image
-          onChange((prev) =>
-            prev.map((img) =>
-              img.temp_id === pendingImage.temp_id
-                ? {
-                    temp_id: response.temp_id,
-                    filename: response.filename,
-                    preview_url: response.preview_url,
-                    size: response.size,
-                    uploading: false,
-                    progress: 100,
-                  }
-                : img
-            )
+          const updated = imagesRef.current.map((img) =>
+            img.temp_id === pendingImage.temp_id
+              ? {
+                  temp_id: response.temp_id,
+                  filename: response.filename,
+                  preview_url: response.preview_url,
+                  size: response.size,
+                  uploading: false,
+                  progress: 100,
+                }
+              : img
           );
+          onChange(updated);
         } catch {
           errors.push(`${file.name}: Upload failed`);
           // Remove the pending image
-          onChange((prev) => prev.filter((img) => img.temp_id !== pendingImage.temp_id));
+          const filtered = imagesRef.current.filter((img) => img.temp_id !== pendingImage.temp_id);
+          onChange(filtered);
         }
       }
 
@@ -112,7 +118,7 @@ export const CommentImageUpload: FC<CommentImageUploadProps> = ({
         setTimeout(() => setUploadErrors([]), 5000);
       }
     },
-    [disabled, images, maxImages, maxSizeBytes, onChange]
+    [disabled, images.length, maxImages, maxSizeBytes, onChange]
   );
 
   const handleRemove = useCallback(
