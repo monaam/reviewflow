@@ -12,6 +12,20 @@ class CommentPolicy
         return $comment->user_id === $user->id;
     }
 
+    /**
+     * Determine if the user can manage media on the comment.
+     * This is separate from update because we want admins to be able to
+     * remove images from any comment, but not change the comment text.
+     */
+    public function manageMedia(User $user, Comment $comment): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        return $comment->user_id === $user->id;
+    }
+
     public function delete(User $user, Comment $comment): bool
     {
         if ($user->isAdmin()) {

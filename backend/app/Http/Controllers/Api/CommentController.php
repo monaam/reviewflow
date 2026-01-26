@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\CommentImageController;
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\Comment;
@@ -30,7 +31,7 @@ class CommentController extends Controller
         }
 
         $query = $asset->comments()
-            ->with(['user', 'resolver', 'mentions', 'replies.user', 'replies.resolver', 'replies.mentions'])
+            ->with(['user', 'resolver', 'mentions', 'media', 'replies.user', 'replies.resolver', 'replies.mentions', 'replies.media'])
             ->whereNull('parent_id'); // Only top-level comments
 
         // Reviewers only see their own comments and replies to their comments
@@ -60,7 +61,7 @@ class CommentController extends Controller
 
         // Get comments (only top-level, with replies nested)
         $commentsQuery = $asset->comments()
-            ->with(['user', 'resolver', 'mentions', 'replies.user', 'replies.resolver', 'replies.mentions'])
+            ->with(['user', 'resolver', 'mentions', 'media', 'replies.user', 'replies.resolver', 'replies.mentions', 'replies.media'])
             ->whereNull('parent_id'); // Only top-level comments
 
         // Reviewers only see their own comments and replies to their comments
@@ -130,6 +131,8 @@ class CommentController extends Controller
             'video_timestamp' => 'nullable|numeric|min:0',
             'page_number' => 'nullable|integer|min:1',
             'parent_id' => 'nullable|uuid|exists:comments,id',
+            'temp_image_ids' => 'nullable|array|max:10',
+            'temp_image_ids.*' => 'uuid',
         ]);
 
         // If replying to a comment, validate the parent
@@ -196,7 +199,16 @@ class CommentController extends Controller
             $this->notificationDispatcher->notifyMentionedUsers($comment, $mentionedUsers, $request->user());
         }
 
-        return response()->json($comment->load(['user', 'mentions']), 201);
+        // Attach temp images if provided
+        if (!empty($validated['temp_image_ids'])) {
+            CommentImageController::attachTempImagesToComment(
+                $comment,
+                $validated['temp_image_ids'],
+                $request->user()->id
+            );
+        }
+
+        return response()->json($comment->load(['user', 'mentions', 'media']), 201);
     }
 
     public function update(Request $request, Comment $comment): JsonResponse
@@ -211,7 +223,7 @@ class CommentController extends Controller
             'content' => $validated['content'],
         ]);
 
-        return response()->json($comment->fresh(['user', 'mentions']));
+        return response()->json($comment->fresh(['user', 'mentions', 'media']));
     }
 
     public function destroy(Request $request, Comment $comment): JsonResponse
@@ -229,7 +241,7 @@ class CommentController extends Controller
 
         $comment->resolve($request->user());
 
-        return response()->json($comment->fresh(['user', 'resolver']));
+        return response()->json($comment->fresh(['user', 'resolver', 'media']));
     }
 
     public function unresolve(Request $request, Comment $comment): JsonResponse
@@ -238,7 +250,7 @@ class CommentController extends Controller
 
         $comment->unresolve();
 
-        return response()->json($comment->fresh(['user', 'resolver']));
+        return response()->json($comment->fresh(['user', 'resolver', 'media']));
     }
 
     public function mentionableUsers(Request $request, Asset $asset): JsonResponse

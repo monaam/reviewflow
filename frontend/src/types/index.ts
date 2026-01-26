@@ -85,6 +85,29 @@ export interface MentionableUser {
   avatar: string | null;
 }
 
+export interface CommentMedia {
+  id: number;
+  uuid: string;
+  collection_name: string;
+  name: string;
+  file_name: string;
+  mime_type: string;
+  size: number;
+  original_url: string;
+  thumbnail_url?: string;
+  preview_url?: string;
+}
+
+export interface TempCommentImage {
+  temp_id: string;
+  filename: string;
+  preview_url: string;
+  size: number;
+  uploading?: boolean;
+  progress?: number;
+  error?: string;
+}
+
 export interface Comment {
   id: string;
   asset_id: string;
@@ -109,6 +132,7 @@ export interface Comment {
   resolver?: User;
   replies?: Comment[];
   mentions?: User[];
+  media?: CommentMedia[];
 }
 
 export interface CreativeRequest {

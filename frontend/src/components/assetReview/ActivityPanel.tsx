@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import { FC, useState, useRef } from 'react';
 import {
   MessageSquare,
   Upload,
@@ -9,14 +9,15 @@ import {
   Eye,
   EyeOff,
   Reply,
-  X,
 } from 'lucide-react';
-import { TimelineItem, Comment, AssetVersion, ApprovalLog } from '../../types';
+import { TimelineItem, Comment, AssetVersion, ApprovalLog, TempCommentImage } from '../../types';
 import { supportsTemporalAnnotations } from '../../config/assetTypeRegistry';
 import { formatTime } from '../../utils/time';
 import { Rectangle } from '../../hooks/useAssetReviewState';
 import { MentionInput } from '../common/MentionInput';
 import { MentionText } from '../common/MentionText';
+import { CommentImageUpload } from '../common/CommentImageUpload';
+import { CommentImages } from '../common/CommentImages';
 
 interface ActivityPanelProps {
   timeline: TimelineItem[];
@@ -27,16 +28,18 @@ interface ActivityPanelProps {
   selectedRect: Rectangle | null;
   newComment: string;
   showAllVersionsComments: boolean;
+  pendingImages: TempCommentImage[];
 
   // Callbacks
   onCommentChange: (comment: string) => void;
+  onPendingImagesChange: (images: TempCommentImage[]) => void;
   onSubmitComment: () => void;
   onClearAnnotation: () => void;
   onCommentClick: (comment: Comment) => void;
   onDeleteComment: (commentId: string) => void;
   onResolveComment: (commentId: string, isResolved: boolean) => void;
   onToggleShowAllVersions: () => void;
-  onSubmitReply: (parentId: string, content: string) => Promise<void>;
+  onSubmitReply: (parentId: string, content: string, tempImageIds?: string[]) => Promise<void>;
 
   // Comment actions (from useAssetActions hook)
   getCommentActions: (comment: Comment) => { canDelete: boolean; canResolve: boolean };
@@ -55,7 +58,9 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   selectedRect,
   newComment,
   showAllVersionsComments,
+  pendingImages,
   onCommentChange,
+  onPendingImagesChange,
   onSubmitComment,
   onClearAnnotation,
   onCommentClick,
@@ -68,7 +73,12 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   // Reply state
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
+  const [replyImages, setReplyImages] = useState<TempCommentImage[]>([]);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
+  // Form container refs for paste handling
+  const mainCommentFormRef = useRef<HTMLDivElement>(null);
+  const replyFormRef = useRef<HTMLDivElement>(null);
 
   const handleStartReply = (commentId: string) => {
     setReplyingToId(commentId);
@@ -78,15 +88,20 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   const handleCancelReply = () => {
     setReplyingToId(null);
     setReplyContent('');
+    setReplyImages([]);
   };
 
   const handleSubmitReply = async () => {
     if (!replyingToId || !replyContent.trim()) return;
     setIsSubmittingReply(true);
     try {
-      await onSubmitReply(replyingToId, replyContent);
+      const tempImageIds = replyImages
+        .filter((img) => !img.uploading && !img.temp_id.startsWith('pending-'))
+        .map((img) => img.temp_id);
+      await onSubmitReply(replyingToId, replyContent, tempImageIds.length > 0 ? tempImageIds : undefined);
       setReplyingToId(null);
       setReplyContent('');
+      setReplyImages([]);
     } finally {
       setIsSubmittingReply(false);
     }
@@ -202,7 +217,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
               {/* Reply Form */}
               {replyingToId === comment.id && (
                 <div className="ml-6 border-l-2 border-primary-300 dark:border-primary-700 pl-3">
-                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                  <div ref={replyFormRef} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
                     <MentionInput
                       value={replyContent}
                       onChange={setReplyContent}
@@ -212,7 +227,15 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
                       rows={2}
                       autoFocus
                     />
-                    <div className="flex justify-end gap-2">
+                    <CommentImageUpload
+                      images={replyImages}
+                      onChange={setReplyImages}
+                      maxImages={5}
+                      disabled={isSubmittingReply}
+                      compact={replyImages.length === 0}
+                      formContainerRef={replyFormRef}
+                    />
+                    <div className="flex justify-end gap-2 mt-2">
                       <button
                         onClick={handleCancelReply}
                         className="btn-secondary text-sm px-3 py-1"
@@ -237,7 +260,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
       </div>
 
       {/* New Comment Form */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <div ref={mainCommentFormRef} className="p-4 border-t border-gray-200 dark:border-gray-700">
         {selectedRect && (
           <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm text-green-700 dark:text-green-300">
             Annotation selected. Your comment will be linked to this area.
@@ -251,7 +274,14 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
           className="mb-2"
           rows={3}
         />
-        <div className="flex justify-between">
+        <CommentImageUpload
+          images={pendingImages}
+          onChange={onPendingImagesChange}
+          maxImages={10}
+          compact={pendingImages.length === 0}
+          formContainerRef={mainCommentFormRef}
+        />
+        <div className="flex justify-between mt-2">
           {selectedRect && (
             <button onClick={onClearAnnotation} className="btn-secondary text-sm">
               Clear Annotation
@@ -448,6 +478,11 @@ const CommentItem: FC<CommentItemProps> = ({
         mentions={comment.mentions}
         className={`text-gray-700 dark:text-gray-300 ${isReply ? 'text-xs' : 'text-sm'}`}
       />
+
+      {/* Comment Images */}
+      {comment.media && comment.media.length > 0 && (
+        <CommentImages media={comment.media} maxVisibleThumbnails={isReply ? 3 : 4} />
+      )}
 
       <div className={`flex items-center gap-2 mt-2 text-gray-500 flex-wrap ${isReply ? 'text-[10px]' : 'text-xs'}`}>
         {showAllVersionsComments && (

@@ -11,3 +11,7 @@ export {
   type UploadProgress,
   type UseUploadProgressReturn,
 } from './useUploadProgress';
+export {
+  useImagePaste,
+  type UseImagePasteOptions,
+} from './useImagePaste';
