@@ -1,4 +1,4 @@
-import { FC, useCallback, useState } from 'react';
+import { FC, useCallback, useState, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { ImagePlus, X, Loader2, AlertCircle } from 'lucide-react';
 import { TempCommentImage } from '../../types';
@@ -12,6 +12,8 @@ interface CommentImageUploadProps {
   maxSizeBytes?: number;
   disabled?: boolean;
   compact?: boolean;
+  /** Ref to the parent form container - paste only works when focus is within this container */
+  formContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
 const MAX_SIZE_DEFAULT = 10 * 1024 * 1024; // 10MB
@@ -29,8 +31,13 @@ export const CommentImageUpload: FC<CommentImageUploadProps> = ({
   maxSizeBytes = MAX_SIZE_DEFAULT,
   disabled = false,
   compact = false,
+  formContainerRef,
 }) => {
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const localContainerRef = useRef<HTMLDivElement>(null);
+
+  // Use the provided form container ref, or fall back to local container
+  const containerRef = formContainerRef || localContainerRef;
 
   const handleUpload = useCallback(
     async (files: File[]) => {
@@ -142,12 +149,13 @@ export const CommentImageUpload: FC<CommentImageUploadProps> = ({
     noKeyboard: false,
   });
 
-  // Handle clipboard paste
+  // Handle clipboard paste - only when focus is within the form container
   useImagePaste({
     onPaste: handleUpload,
     maxFiles: maxImages - images.length,
     maxSizeBytes,
     enabled: !disabled && images.length < maxImages,
+    containerRef,
   });
 
   const canUploadMore = !disabled && images.length < maxImages;

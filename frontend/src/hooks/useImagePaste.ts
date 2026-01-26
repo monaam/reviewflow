@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, RefObject } from 'react';
 
 export interface UseImagePasteOptions {
   onPaste: (files: File[]) => void;
@@ -6,6 +6,8 @@ export interface UseImagePasteOptions {
   maxSizeBytes?: number;
   acceptedMimeTypes?: string[];
   enabled?: boolean;
+  /** Container ref - paste only handled when focus is within this container */
+  containerRef?: RefObject<HTMLElement | null>;
 }
 
 const DEFAULT_MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -17,10 +19,19 @@ export function useImagePaste({
   maxSizeBytes = DEFAULT_MAX_SIZE,
   acceptedMimeTypes = DEFAULT_ACCEPTED_TYPES,
   enabled = true,
+  containerRef,
 }: UseImagePasteOptions) {
   const handlePaste = useCallback(
     (event: ClipboardEvent) => {
       if (!enabled) return;
+
+      // If containerRef is provided, only handle paste when focus is within the container
+      if (containerRef?.current) {
+        const activeElement = document.activeElement;
+        if (!activeElement || !containerRef.current.contains(activeElement)) {
+          return;
+        }
+      }
 
       const items = event.clipboardData?.items;
       if (!items) return;
@@ -52,7 +63,7 @@ export function useImagePaste({
         onPaste(imageFiles);
       }
     },
-    [enabled, maxFiles, maxSizeBytes, acceptedMimeTypes, onPaste]
+    [enabled, maxFiles, maxSizeBytes, acceptedMimeTypes, onPaste, containerRef]
   );
 
   useEffect(() => {

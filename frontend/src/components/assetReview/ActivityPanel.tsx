@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import { FC, useState, useRef } from 'react';
 import {
   MessageSquare,
   Upload,
@@ -75,6 +75,10 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   const [replyContent, setReplyContent] = useState('');
   const [replyImages, setReplyImages] = useState<TempCommentImage[]>([]);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
+  // Form container refs for paste handling
+  const mainCommentFormRef = useRef<HTMLDivElement>(null);
+  const replyFormRef = useRef<HTMLDivElement>(null);
 
   const handleStartReply = (commentId: string) => {
     setReplyingToId(commentId);
@@ -213,7 +217,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
               {/* Reply Form */}
               {replyingToId === comment.id && (
                 <div className="ml-6 border-l-2 border-primary-300 dark:border-primary-700 pl-3">
-                  <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
+                  <div ref={replyFormRef} className="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600">
                     <MentionInput
                       value={replyContent}
                       onChange={setReplyContent}
@@ -229,6 +233,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
                       maxImages={5}
                       disabled={isSubmittingReply}
                       compact={replyImages.length === 0}
+                      formContainerRef={replyFormRef}
                     />
                     <div className="flex justify-end gap-2 mt-2">
                       <button
@@ -255,7 +260,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
       </div>
 
       {/* New Comment Form */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+      <div ref={mainCommentFormRef} className="p-4 border-t border-gray-200 dark:border-gray-700">
         {selectedRect && (
           <div className="mb-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-sm text-green-700 dark:text-green-300">
             Annotation selected. Your comment will be linked to this area.
@@ -274,6 +279,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
           onChange={onPendingImagesChange}
           maxImages={10}
           compact={pendingImages.length === 0}
+          formContainerRef={mainCommentFormRef}
         />
         <div className="flex justify-between mt-2">
           {selectedRect && (
