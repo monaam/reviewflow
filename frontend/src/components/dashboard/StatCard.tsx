@@ -13,7 +13,7 @@ export function StatCard({ title, value, icon: Icon, href, variant = 'default' }
   const content = (
     <div
       className={`card p-6 transition-all ${
-        href ? 'hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer' : ''
+        href ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : ''
       } ${variant === 'alert' && value > 0 ? 'border-gray-400 dark:border-gray-500' : ''}`}
     >
       <div className="flex items-center">

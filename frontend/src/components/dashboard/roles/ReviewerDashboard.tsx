@@ -73,7 +73,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
             {pendingReview.map((asset: Asset) => (
               <div
                 key={asset.id}
-                className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 {/* Thumbnail */}
                 <div className="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden flex-shrink-0">

@@ -121,7 +121,7 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
     <div className="bg-gray-800 rounded-lg overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-750 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-gray-400" />
@@ -168,8 +168,8 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
                     <div
                       className={`p-3 rounded-lg transition-colors ${
                         isVersionEvent
-                          ? `cursor-pointer hover:bg-gray-700 ${isCurrentVersion ? 'bg-blue-900/30 border border-blue-700' : 'bg-gray-750'}`
-                          : 'bg-gray-750'
+                          ? `cursor-pointer hover:bg-gray-700 ${isCurrentVersion ? 'bg-blue-900/30 border border-blue-700' : 'bg-gray-700'}`
+                          : 'bg-gray-700'
                       }`}
                       onClick={() => {
                         if (isVersionEvent && event.version_number && onVersionSelect) {

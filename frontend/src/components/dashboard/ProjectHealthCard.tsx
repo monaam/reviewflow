@@ -26,7 +26,7 @@ export function ProjectHealthCard({
   return (
     <Link
       to={`/projects/${id}`}
-      className="block p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750 transition-all"
+      className="block p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1">

@@ -40,7 +40,7 @@ export function QuickActionCard({
 
   return (
     <div
-      className={`flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${
+      className={`flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
         isLoading ? 'opacity-50 pointer-events-none' : ''
       }`}
     >
