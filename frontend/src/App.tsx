@@ -16,6 +16,7 @@ import { AdminUsersPage } from './pages/AdminUsers';
 import { AdminSettingsPage } from './pages/AdminSettings';
 import { ProfileSettingsPage } from './pages/ProfileSettings';
 import { useAuthStore } from './stores/authStore';
+import { useThemeStore } from './stores/themeStore';
 import './index.css';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -48,10 +49,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   const { checkAuth, isLoading } = useAuthStore();
+  const { initializeTheme } = useThemeStore();
 
   useEffect(() => {
+    initializeTheme();
     checkAuth();
-  }, [checkAuth]);
+  }, [initializeTheme, checkAuth]);
 
   if (isLoading) {
     return (
