@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
 use App\Models\AssetVersion;
+use App\Models\Comment;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\VersionLock;
@@ -371,8 +372,12 @@ class AssetController extends Controller
     {
         $this->authorize('approve', $asset);
 
+        $hasComments = Comment::where('asset_id', $asset->id)
+            ->where('asset_version', $asset->current_version)
+            ->exists();
+
         $validated = $request->validate([
-            'comment' => 'required|string',
+            'comment' => [$hasComments ? 'nullable' : 'required', 'string'],
         ]);
 
         $asset->update(['status' => 'revision_requested']);
