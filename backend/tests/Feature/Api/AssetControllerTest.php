@@ -840,7 +840,7 @@ class AssetControllerTest extends TestCase
         ]);
     }
 
-    public function test_revision_request_requires_comment(): void
+    public function test_revision_request_requires_comment_when_no_comments_on_version(): void
     {
         $project = $this->createProjectWithMembers($this->pm);
         $asset = $this->createAssetWithVersion($project, $this->creative);
@@ -850,6 +850,25 @@ class AssetControllerTest extends TestCase
 
         $response->assertUnprocessable()
             ->assertJsonValidationErrors(['comment']);
+    }
+
+    public function test_revision_request_allows_empty_comment_when_comments_exist_on_version(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        \App\Models\Comment::factory()->create([
+            'asset_id' => $asset->id,
+            'asset_version' => $asset->current_version,
+            'user_id' => $this->pm->id,
+            'content' => 'Existing annotation',
+        ]);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/request-revision", []);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'revision_requested');
     }
 
     public function test_creative_cannot_request_revision(): void

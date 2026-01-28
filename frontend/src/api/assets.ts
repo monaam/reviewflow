@@ -88,7 +88,7 @@ export const assetsApi = {
     return response.data;
   },
 
-  requestRevision: async (id: string, comment: string): Promise<Asset> => {
+  requestRevision: async (id: string, comment?: string): Promise<Asset> => {
     const response = await apiClient.post(`/assets/${id}/request-revision`, { comment });
     return response.data;
   },

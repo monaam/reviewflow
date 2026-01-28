@@ -532,7 +532,7 @@ export function AssetReviewPage() {
         <ApproveModal onClose={closeModal} onApprove={handleApprove} />
       )}
       {state.activeModal === 'revision' && (
-        <RevisionModal onClose={closeModal} onSubmit={handleRequestRevision} />
+        <RevisionModal onClose={closeModal} onSubmit={handleRequestRevision} hasComments={comments.length > 0} />
       )}
       {state.activeModal === 'upload' && (
         <UploadVersionModal
