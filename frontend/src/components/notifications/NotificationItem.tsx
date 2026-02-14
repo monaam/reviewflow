@@ -10,6 +10,7 @@ import {
   AlertCircle,
   UserPlus,
   RefreshCw,
+  Globe,
   X,
 } from 'lucide-react';
 import { Notification, NotificationType } from '../../types';
@@ -29,6 +30,7 @@ const iconMap: Record<NotificationType, typeof MessageSquare> = {
   'asset.new_version': FileUp,
   'asset.approved': CheckCircle,
   'asset.revision_requested': AlertCircle,
+  'asset.published': Globe,
   'request.assigned': UserPlus,
   'request.status_changed': RefreshCw,
 };
@@ -41,6 +43,7 @@ const colorMap: Record<NotificationType, string> = {
   'asset.new_version': 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
   'asset.approved': 'text-green-500 bg-green-50 dark:bg-green-900/20',
   'asset.revision_requested': 'text-orange-500 bg-orange-50 dark:bg-orange-900/20',
+  'asset.published': 'text-teal-500 bg-teal-50 dark:bg-teal-900/20',
   'request.assigned': 'text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20',
   'request.status_changed': 'text-gray-500 bg-gray-50 dark:bg-gray-900/20',
 };
