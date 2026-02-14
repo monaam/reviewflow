@@ -98,6 +98,11 @@ export const assetsApi = {
     return response.data;
   },
 
+  publish: async (id: string, data: { links: { url: string }[]; version?: number }): Promise<Asset> => {
+    const response = await apiClient.post(`/assets/${id}/publish`, data);
+    return response.data;
+  },
+
   linkRequest: async (id: string, requestId: string): Promise<Asset> => {
     const response = await apiClient.post(`/assets/${id}/link-request`, { request_id: requestId });
     return response.data;

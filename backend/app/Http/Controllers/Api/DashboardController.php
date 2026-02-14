@@ -53,6 +53,7 @@ class DashboardController extends Controller
             ['label' => 'Client Review', 'value' => Asset::where('status', 'client_review')->count()],
             ['label' => 'Approved', 'value' => Asset::where('status', 'approved')->count()],
             ['label' => 'Revision Requested', 'value' => Asset::where('status', 'revision_requested')->count()],
+            ['label' => 'Published', 'value' => Asset::where('status', 'published')->count()],
         ];
     }
 

@@ -4,3 +4,4 @@ export { RevisionModal } from './RevisionModal';
 export { UploadVersionModal } from './UploadVersionModal';
 export { EditAssetModal } from './EditAssetModal';
 export { DeleteConfirmModal } from './DeleteConfirmModal';
+export { PublishModal } from './PublishModal';

@@ -19,6 +19,7 @@ import {
   UploadVersionModal,
   EditAssetModal,
   DeleteConfirmModal,
+  PublishModal,
 } from '../components/modals';
 
 /**
@@ -336,6 +337,17 @@ export function AssetReviewPage() {
     }
   };
 
+  const handlePublish = async (data: { links: { url: string }[]; version: number }) => {
+    try {
+      await assetsApi.publish(id!, data);
+      fetchAsset();
+      fetchTimeline();
+      closeModal();
+    } catch (error) {
+      console.error('Failed to publish:', error);
+    }
+  };
+
   const handleDownloadVersion = async (version?: number) => {
     try {
       const response = await assetsApi.download(id!, version);
@@ -369,6 +381,7 @@ export function AssetReviewPage() {
       'view-timeline': toggleTimeline,
       'lock': handleLock,
       'send-to-client': handleSendToClient,
+      'publish': () => openModal('publish'),
       'download': () => handleDownloadVersion(selectedVersion),
       'download-all': () => asset?.versions?.forEach((v) => handleDownloadVersion(v.version_number)),
       'edit': () => openModal('edit'),
@@ -443,6 +456,25 @@ export function AssetReviewPage() {
           />
         </div>
       </div>
+
+      {/* Published Links */}
+      {asset.status === 'published' && asset.published_links && asset.published_links.length > 0 && (
+        <div className="px-4 py-2 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-100 dark:border-teal-800/30 flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-medium text-teal-700 dark:text-teal-300">Published on:</span>
+          {asset.published_links.map((link) => (
+            <a
+              key={link.id}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-800/40 text-xs font-medium text-teal-700 dark:text-teal-300 hover:bg-teal-200 dark:hover:bg-teal-800/60 transition-colors"
+            >
+              {link.platform ? link.platform.charAt(0).toUpperCase() + link.platform.slice(1) : 'Link'}
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            </a>
+          ))}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -561,6 +593,14 @@ export function AssetReviewPage() {
           message={`Are you sure you want to delete "${asset.title}"? This will remove all versions and comments. This action cannot be undone.`}
           onClose={closeModal}
           onConfirm={handleDelete}
+        />
+      )}
+      {state.activeModal === 'publish' && asset.versions && (
+        <PublishModal
+          onClose={closeModal}
+          onPublish={handlePublish}
+          versions={asset.versions}
+          currentVersion={asset.current_version}
         />
       )}
       {state.activeModal === 'compare' && asset.versions && asset.versions.length > 1 && (

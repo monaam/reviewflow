@@ -10,6 +10,7 @@ export type ModalType =
   | 'edit'
   | 'delete'
   | 'compare'
+  | 'publish'
   | null;
 
 /**
