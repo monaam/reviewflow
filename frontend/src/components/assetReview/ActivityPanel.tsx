@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Reply,
+  Globe,
 } from 'lucide-react';
 import { TimelineItem, Comment, AssetVersion, ApprovalLog, TempCommentImage } from '../../types';
 import { supportsTemporalAnnotations } from '../../config/assetTypeRegistry';
@@ -334,31 +335,38 @@ interface ApprovalItemProps {
 const ApprovalItem: FC<ApprovalItemProps> = ({ approval, createdAt }) => {
   const isApproved = approval.action === 'approved';
   const isRevision = approval.action === 'revision_requested';
+  const isPublished = approval.action === 'published';
 
   const bgClass = isApproved
     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+    : isPublished
+    ? 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800'
     : isRevision
     ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
     : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600';
 
   const textClass = isApproved
     ? 'text-green-700 dark:text-green-300'
+    : isPublished
+    ? 'text-teal-700 dark:text-teal-300'
     : 'text-orange-700 dark:text-orange-300';
 
   const subTextClass = isApproved
     ? 'text-green-600 dark:text-green-400'
+    : isPublished
+    ? 'text-teal-600 dark:text-teal-400'
     : 'text-orange-600 dark:text-orange-400';
+
+  const label = isApproved ? 'Approved' : isPublished ? 'Published' : isRevision ? 'Revision Requested' : approval.action;
+  const IconComponent = isApproved ? CheckCircle : isPublished ? Globe : RotateCcw;
+  const iconColor = isApproved ? 'text-green-600' : isPublished ? 'text-teal-600' : 'text-orange-600';
 
   return (
     <div className={`p-3 rounded-lg border ${bgClass}`}>
       <div className="flex items-center gap-2 mb-1">
-        {isApproved ? (
-          <CheckCircle className="w-4 h-4 text-green-600" />
-        ) : (
-          <RotateCcw className="w-4 h-4 text-orange-600" />
-        )}
+        <IconComponent className={`w-4 h-4 ${iconColor}`} />
         <span className={`text-sm font-medium ${textClass}`}>
-          {isApproved ? 'Approved' : 'Revision Requested'}
+          {label}
         </span>
         <span className="text-xs bg-gray-200 dark:bg-gray-600 px-1.5 py-0.5 rounded">
           v{approval.asset_version}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Upload, CheckCircle, XCircle, Lock, Unlock, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, Upload, CheckCircle, XCircle, Globe, Lock, Unlock, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { assetsApi } from '../../api/assets';
 import { TimelineEvent, VersionHistoryResponse, User } from '../../types';
 
@@ -52,6 +52,9 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
       if (event.action === 'revision_requested') {
         return <XCircle className="w-4 h-4 text-orange-500" />;
       }
+      if (event.action === 'published') {
+        return <Globe className="w-4 h-4 text-teal-500" />;
+      }
       return <Clock className="w-4 h-4 text-gray-500" />;
     }
     if (event.type === 'lock') {
@@ -73,6 +76,9 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
       }
       if (event.action === 'revision_requested') {
         return `Revision requested (v${event.asset_version})`;
+      }
+      if (event.action === 'published') {
+        return `Published (v${event.asset_version})`;
       }
       return `Status changed (v${event.asset_version})`;
     }
