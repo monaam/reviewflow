@@ -33,6 +33,8 @@ class DashboardController extends Controller
                 'total_projects' => Project::count(),
                 'active_projects' => Project::active()->count(),
                 'pending_assets' => Asset::pendingReview()->count(),
+                'approved_assets' => Asset::where('status', 'approved')->count(),
+                'published_assets' => Asset::where('status', 'published')->count(),
                 'overdue_requests' => CreativeRequest::overdue()->count(),
             ],
             'asset_status_distribution' => $this->getAssetStatusDistribution(),
@@ -53,7 +55,6 @@ class DashboardController extends Controller
             ['label' => 'Client Review', 'value' => Asset::where('status', 'client_review')->count()],
             ['label' => 'Approved', 'value' => Asset::where('status', 'approved')->count()],
             ['label' => 'Revision Requested', 'value' => Asset::where('status', 'revision_requested')->count()],
-            ['label' => 'Published', 'value' => Asset::where('status', 'published')->count()],
         ];
     }
 

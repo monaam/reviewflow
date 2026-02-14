@@ -36,9 +36,9 @@ const conditions = {
     return ctx.asset.status !== 'approved';
   },
 
-  /** Check if asset is approved (ready to publish) */
-  isApproved: (ctx: ActionContext): boolean => {
-    return ctx.asset.status === 'approved';
+  /** Check if asset is approved or published (can be republished) */
+  canPublish: (ctx: ActionContext): boolean => {
+    return ctx.asset.status === 'approved' || ctx.asset.status === 'published';
   },
 
   /** Check if asset is in review (ready to send to client) */
@@ -110,11 +110,11 @@ export const assetActions: ActionDefinition[] = [
   // Publish - for PM/Admin to mark approved assets as published
   {
     id: 'publish',
-    label: 'Publish',
+    label: (ctx) => ctx.asset.status === 'published' ? 'Republish' : 'Publish',
     icon: Globe,
     roles: ['admin', 'pm'],
     primaryForRoles: ['admin', 'pm'],
-    conditions: [conditions.isApproved],
+    conditions: [conditions.canPublish],
     variant: 'primary',
     showInDropdown: false,
   },

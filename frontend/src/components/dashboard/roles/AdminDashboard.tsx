@@ -4,6 +4,7 @@ import {
   FileImage,
   AlertTriangle,
   CheckCircle,
+  Globe,
   Inbox,
 } from 'lucide-react';
 import { DashboardData, Asset } from '../../../types';
@@ -107,6 +108,55 @@ export function AdminDashboard({ data, onRefresh }: AdminDashboardProps) {
           variant={overdueCount > 0 ? 'alert' : 'default'}
           href="/requests?filter=overdue"
         />
+      </div>
+
+      {/* Approved vs Published */}
+      <div className="card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Approved vs Published</h3>
+        </div>
+        {(() => {
+          const approved = data.stats.approved_assets || 0;
+          const published = data.stats.published_assets || 0;
+          const total = approved + published;
+          const publishedPct = total > 0 ? Math.round((published / total) * 100) : 0;
+          return (
+            <div className="space-y-4">
+              <div className="flex items-end gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{approved}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Approved</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900/30">
+                    <Globe className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white">{published}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Published</p>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <span>Publish rate</span>
+                  <span>{publishedPct}%</span>
+                </div>
+                <div className="w-full h-2 bg-green-200 dark:bg-green-900/40 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-teal-500 rounded-full transition-all"
+                    style={{ width: `${publishedPct}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Charts Row */}
