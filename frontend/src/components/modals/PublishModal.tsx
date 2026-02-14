@@ -2,60 +2,13 @@ import { FC, useState, useMemo } from 'react';
 import { Modal } from './Modal';
 import { Plus, Trash2 } from 'lucide-react';
 import { AssetVersion } from '../../types';
+import { detectPlatform, getPlatformInfo } from '../../config/platformIcons';
 
 interface PublishModalProps {
   onClose: () => void;
   onPublish: (data: { links: { url: string }[]; version: number }) => void;
   versions: AssetVersion[];
   currentVersion: number;
-}
-
-const PLATFORM_MAP: Record<string, { label: string; color: string }> = {
-  instagram: { label: 'Instagram', color: 'text-pink-500' },
-  facebook: { label: 'Facebook', color: 'text-blue-600' },
-  twitter: { label: 'X / Twitter', color: 'text-gray-900 dark:text-white' },
-  youtube: { label: 'YouTube', color: 'text-red-600' },
-  tiktok: { label: 'TikTok', color: 'text-gray-900 dark:text-white' },
-  linkedin: { label: 'LinkedIn', color: 'text-blue-700' },
-  pinterest: { label: 'Pinterest', color: 'text-red-500' },
-  behance: { label: 'Behance', color: 'text-blue-500' },
-  dribbble: { label: 'Dribbble', color: 'text-pink-400' },
-  vimeo: { label: 'Vimeo', color: 'text-cyan-500' },
-  threads: { label: 'Threads', color: 'text-gray-900 dark:text-white' },
-  snapchat: { label: 'Snapchat', color: 'text-yellow-400' },
-};
-
-function detectPlatform(url: string): string | null {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
-    const platforms: Record<string, string> = {
-      'instagram.com': 'instagram',
-      'facebook.com': 'facebook',
-      'fb.com': 'facebook',
-      'fb.watch': 'facebook',
-      'twitter.com': 'twitter',
-      'x.com': 'twitter',
-      'youtube.com': 'youtube',
-      'youtu.be': 'youtube',
-      'tiktok.com': 'tiktok',
-      'linkedin.com': 'linkedin',
-      'pinterest.com': 'pinterest',
-      'pin.it': 'pinterest',
-      'behance.net': 'behance',
-      'dribbble.com': 'dribbble',
-      'vimeo.com': 'vimeo',
-      'threads.net': 'threads',
-      'snapchat.com': 'snapchat',
-    };
-    for (const [domain, platform] of Object.entries(platforms)) {
-      if (host === domain || host.endsWith('.' + domain)) {
-        return platform;
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 export const PublishModal: FC<PublishModalProps> = ({
@@ -137,7 +90,9 @@ export const PublishModal: FC<PublishModalProps> = ({
           <div className="space-y-2">
             {links.map((url, index) => {
               const platform = detectedPlatforms[index];
-              const platformInfo = platform ? PLATFORM_MAP[platform] : null;
+              const hasUrl = url.trim().length > 0;
+              const info = hasUrl ? getPlatformInfo(platform) : null;
+              const Icon = info?.icon;
 
               return (
                 <div key={index} className="flex items-center gap-2">
@@ -147,13 +102,11 @@ export const PublishModal: FC<PublishModalProps> = ({
                       value={url}
                       onChange={(e) => updateLink(index, e.target.value)}
                       placeholder="https://..."
-                      className="input w-full pr-24"
+                      className={`input w-full ${info ? 'pl-9' : ''}`}
                     />
-                    {platformInfo && (
-                      <span
-                        className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium ${platformInfo.color}`}
-                      >
-                        {platformInfo.label}
+                    {info && Icon && (
+                      <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${info.color}`}>
+                        <Icon className="w-4 h-4" />
                       </span>
                     )}
                   </div>
