@@ -10,6 +10,7 @@ import {
   Layers,
   Clock,
   Send,
+  Globe,
 } from 'lucide-react';
 import { ActionDefinition, ActionContext } from '../types/actions';
 
@@ -33,6 +34,11 @@ const conditions = {
   /** Check if asset is not approved */
   notApproved: (ctx: ActionContext): boolean => {
     return ctx.asset.status !== 'approved';
+  },
+
+  /** Check if asset is approved (ready to publish) */
+  isApproved: (ctx: ActionContext): boolean => {
+    return ctx.asset.status === 'approved';
   },
 
   /** Check if asset is in review (ready to send to client) */
@@ -98,6 +104,18 @@ export const assetActions: ActionDefinition[] = [
     primaryForRoles: ['admin', 'pm', 'reviewer'],
     conditions: [conditions.canBeApproved],
     variant: 'warning',
+    showInDropdown: false,
+  },
+
+  // Publish - for PM/Admin to mark approved assets as published
+  {
+    id: 'publish',
+    label: 'Publish',
+    icon: Globe,
+    roles: ['admin', 'pm'],
+    primaryForRoles: ['admin', 'pm'],
+    conditions: [conditions.isApproved],
+    variant: 'primary',
     showInDropdown: false,
   },
 

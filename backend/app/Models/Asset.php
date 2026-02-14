@@ -101,6 +101,21 @@ class Asset extends Model
         return $query->where('status', 'approved');
     }
 
+    public function scopePublished($query)
+    {
+        return $query->where('status', 'published');
+    }
+
+    public function scopeExcludePublished($query)
+    {
+        return $query->where('status', '!=', 'published');
+    }
+
+    public function publishedLinks(): HasMany
+    {
+        return $this->hasMany(AssetPublishedLink::class);
+    }
+
     public function locker(): BelongsTo
     {
         return $this->belongsTo(User::class, 'locked_by');

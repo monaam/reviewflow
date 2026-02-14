@@ -1,6 +1,6 @@
 export type UserRole = 'admin' | 'pm' | 'creative' | 'reviewer';
 export type ProjectStatus = 'active' | 'on_hold' | 'completed' | 'archived';
-export type AssetStatus = 'pending_review' | 'in_review' | 'client_review' | 'approved' | 'revision_requested';
+export type AssetStatus = 'pending_review' | 'in_review' | 'client_review' | 'approved' | 'revision_requested' | 'published';
 // AssetType is a string to allow extensibility via the registry
 // Common types are 'image' | 'video' | 'pdf' | 'design' but new types can be added
 export type AssetType = string;
@@ -60,6 +60,7 @@ export interface Asset {
   comments?: Comment[];
   approval_logs?: ApprovalLog[];
   version_locks?: VersionLock[];
+  published_links?: AssetPublishedLink[];
 }
 
 export interface AssetVersion {
@@ -170,7 +171,7 @@ export interface ApprovalLog {
   asset_id: string;
   asset_version: number;
   user_id: string;
-  action: 'approved' | 'revision_requested' | 'reopened';
+  action: 'approved' | 'revision_requested' | 'reopened' | 'published';
   comment: string | null;
   created_at: string;
   user?: User;
@@ -213,6 +214,17 @@ export interface VersionLock {
   reason: string | null;
   created_at: string;
   user?: User;
+}
+
+export interface AssetPublishedLink {
+  id: string;
+  asset_id: string;
+  asset_version: number;
+  url: string;
+  platform: string | null;
+  published_by: string;
+  created_at: string;
+  publisher?: User;
 }
 
 export interface TimelineEvent {
@@ -268,6 +280,7 @@ export type NotificationType =
   | 'asset.new_version'
   | 'asset.approved'
   | 'asset.revision_requested'
+  | 'asset.published'
   | 'request.assigned'
   | 'request.status_changed';
 

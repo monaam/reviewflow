@@ -11,6 +11,7 @@ const assetStatusConfig: Record<AssetStatus, { label: string; className: string 
   client_review: { label: 'Client Review', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
   approved: { label: 'Approved', className: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' },
   revision_requested: { label: 'Revision Requested', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+  published: { label: 'Published', className: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' },
 };
 
 const requestStatusConfig: Record<RequestStatus, { label: string; className: string }> = {

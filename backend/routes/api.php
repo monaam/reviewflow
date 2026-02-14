@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/assets/{asset}/approve', [AssetController::class, 'approve']);
     Route::post('/assets/{asset}/request-revision', [AssetController::class, 'requestRevision']);
     Route::post('/assets/{asset}/send-to-client', [AssetController::class, 'sendToClientReview']);
+    Route::post('/assets/{asset}/publish', [AssetController::class, 'publish']);
     Route::post('/assets/{asset}/link-request', [AssetController::class, 'linkRequest']);
     Route::post('/assets/{asset}/lock', [AssetController::class, 'lock']);
     Route::post('/assets/{asset}/unlock', [AssetController::class, 'unlock']);

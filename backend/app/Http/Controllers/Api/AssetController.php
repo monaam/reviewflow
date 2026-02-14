@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
+use App\Models\AssetPublishedLink;
 use App\Models\AssetVersion;
 use App\Models\Comment;
 use App\Models\CreativeRequest;
@@ -42,11 +43,14 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($user->isReviewer()) {
-            $query->whereIn('status', ['client_review', 'approved', 'revision_requested']);
+            $query->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']);
         }
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
+        } else {
+            // Exclude published assets from default listing
+            $query->excludePublished();
         }
 
         if ($request->has('type')) {
@@ -85,11 +89,14 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($request->user()->isReviewer()) {
-            $query->whereIn('status', ['client_review', 'approved', 'revision_requested']);
+            $query->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']);
         }
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
+        } else {
+            // Exclude published assets from default listing
+            $query->excludePublished();
         }
 
         if ($request->has('type')) {
@@ -208,6 +215,7 @@ class AssetController extends Controller
                 'comments' => fn($q) => $q->with('user')->orderBy('created_at', 'desc'),
                 'approvalLogs' => fn($q) => $q->with('user')->orderBy('created_at', 'desc'),
                 'creativeRequests',
+                'publishedLinks.publisher',
             ]);
 
             // Mark as in_review if PM is viewing and asset is pending
@@ -414,6 +422,41 @@ class AssetController extends Controller
         $this->notificationDispatcher->notifySentToClient($asset, $request->user());
 
         return response()->json($asset->load(['uploader', 'project']));
+    }
+
+    public function publish(Request $request, Asset $asset): JsonResponse
+    {
+        $this->authorize('publish', $asset);
+
+        $validated = $request->validate([
+            'links' => 'required|array|min:1',
+            'links.*.url' => 'required|url',
+            'version' => 'nullable|integer|min:1',
+        ]);
+
+        $version = $validated['version'] ?? $asset->current_version;
+
+        $asset->update(['status' => 'published']);
+
+        foreach ($validated['links'] as $link) {
+            AssetPublishedLink::create([
+                'asset_id' => $asset->id,
+                'asset_version' => $version,
+                'url' => $link['url'],
+                'platform' => AssetPublishedLink::detectPlatform($link['url']),
+                'published_by' => $request->user()->id,
+            ]);
+        }
+
+        ApprovalLog::create([
+            'asset_id' => $asset->id,
+            'asset_version' => $version,
+            'user_id' => $request->user()->id,
+            'action' => 'published',
+            'comment' => null,
+        ]);
+
+        return response()->json($asset->fresh(['publishedLinks.publisher', 'approvalLogs.user']));
     }
 
     public function linkRequest(Request $request, Asset $asset): JsonResponse

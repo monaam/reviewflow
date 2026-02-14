@@ -66,6 +66,7 @@ export function AssetsPage() {
         { value: 'client_review', label: 'Client Review' },
         { value: 'approved', label: 'Approved' },
         { value: 'revision_requested', label: 'Revision Requested' },
+        { value: 'published', label: 'Published' },
       ]
     : [
         { value: 'all', label: 'All' },
@@ -74,6 +75,7 @@ export function AssetsPage() {
         { value: 'client_review', label: 'Client Review' },
         { value: 'approved', label: 'Approved' },
         { value: 'revision_requested', label: 'Revision Requested' },
+        { value: 'published', label: 'Published' },
       ];
 
   return (
