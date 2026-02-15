@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, UserCheck, UserX } from 'lucide-react';
+import { Plus, Pencil, UserCheck, UserX } from 'lucide-react';
 import { adminApi } from '../api/admin';
 import { User } from '../types';
 
@@ -27,21 +27,13 @@ export function AdminUsersPage() {
   };
 
   const handleToggleActive = async (user: User) => {
+    const action = user.is_active ? 'deactivate' : 'reactivate';
+    if (user.is_active && !confirm(`Are you sure you want to deactivate ${user.name}? They will lose access immediately but all their data (assets, comments, projects) will be preserved.`)) return;
     try {
       await adminApi.updateUser(user.id, { is_active: !user.is_active });
       fetchUsers();
     } catch (error) {
-      console.error('Failed to update user:', error);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-    try {
-      await adminApi.deleteUser(id);
-      fetchUsers();
-    } catch (error) {
-      console.error('Failed to delete user:', error);
+      console.error(`Failed to ${action} user:`, error);
     }
   };
 
@@ -167,12 +159,6 @@ export function AdminUsersPage() {
                         className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
                         <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="p-2 text-red-400 hover:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
