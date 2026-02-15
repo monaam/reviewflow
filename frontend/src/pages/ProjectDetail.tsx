@@ -240,7 +240,7 @@ export function ProjectDetailPage() {
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
             }`}
           >
-            Assets ({assets.length})
+            Assets ({project.assets_count ?? 0})
           </button>
           {!isReviewer && (
             <>
@@ -297,23 +297,28 @@ export function ProjectDetailPage() {
       {activeTab === 'assets' && (
         <>
           {/* Asset Filters */}
-          <div className="flex gap-1 mb-6">
+          <div className="flex gap-1 flex-wrap mb-6">
             {(isReviewer
               ? ['all', 'client_review', 'approved', 'revision_requested', 'published']
               : ['all', 'pending_review', 'in_review', 'client_review', 'approved', 'revision_requested', 'published']
-            ).map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  filter === status
-                    ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
-              </button>
-            ))}
+            ).map((status) => {
+              const count = status === 'all'
+                ? project.assets_count ?? 0
+                : project.asset_status_counts?.[status] ?? 0;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    filter === status
+                      ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  {status === 'all' ? 'All' : status.replace(/_/g, ' ')} ({count})
+                </button>
+              );
+            })}
           </div>
 
           {/* Assets Grid */}
@@ -439,8 +444,9 @@ export function ProjectDetailPage() {
         <UploadAssetModal
           projectId={id!}
           onClose={() => setShowUploadModal(false)}
-          onUploaded={(asset) => {
-            setAssets([asset, ...assets]);
+          onUploaded={() => {
+            fetchProject();
+            fetchAssets();
             setShowUploadModal(false);
           }}
         />

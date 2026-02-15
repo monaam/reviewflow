@@ -72,21 +72,30 @@ class ProjectController extends Controller
         $user = $request->user();
 
         // Reviewers have restricted view - no members, no requests, filtered assets
+        $reviewerStatuses = ['client_review', 'approved', 'revision_requested', 'published'];
+
         if ($user->isReviewer()) {
             $project->load([
                 'creator',
                 'assets' => fn($q) => $q->with(['uploader', 'latest_version'])
-                    ->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published'])
+                    ->whereIn('status', $reviewerStatuses)
                     ->latest(),
             ]);
 
             $project->loadCount([
-                'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']),
+                'assets' => fn($q) => $q->whereIn('status', $reviewerStatuses),
             ]);
 
             // Remove members from response
             $project->setRelation('members', collect());
             $project->creative_requests_count = 0;
+
+            // Per-status counts for reviewer-visible statuses
+            $statusCounts = $project->assets()
+                ->whereIn('status', $reviewerStatuses)
+                ->selectRaw('status, count(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status');
         } else {
             $project->load([
                 'creator',
@@ -96,9 +105,18 @@ class ProjectController extends Controller
             ]);
 
             $project->loadCount(['assets', 'creativeRequests']);
+
+            // Per-status counts for all statuses
+            $statusCounts = $project->assets()
+                ->selectRaw('status, count(*) as count')
+                ->groupBy('status')
+                ->pluck('count', 'status');
         }
 
-        return response()->json($project);
+        $response = $project->toArray();
+        $response['asset_status_counts'] = $statusCounts;
+
+        return response()->json($response);
     }
 
     public function update(Request $request, Project $project): JsonResponse

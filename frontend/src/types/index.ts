@@ -35,6 +35,7 @@ export interface Project {
   approved_assets_count?: number;
   pending_assets_count?: number;
   creative_requests_count?: number;
+  asset_status_counts?: Record<string, number>;
 }
 
 export interface Asset {
