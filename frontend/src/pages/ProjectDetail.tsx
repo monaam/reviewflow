@@ -46,34 +46,30 @@ export function ProjectDetailPage() {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const isReviewer = user?.role === 'reviewer';
+
   useEffect(() => {
     if (id) {
       fetchProject();
     }
   }, [id]);
 
-  const isReviewer = user?.role === 'reviewer';
+  useEffect(() => {
+    if (id) {
+      fetchAssets();
+    }
+  }, [id, filter]);
 
   const fetchProject = async () => {
     try {
-      // Reviewers don't have access to requests
-      if (isReviewer) {
-        const [projectData, assetsData] = await Promise.all([
-          projectsApi.get(id!),
-          assetsApi.list(id!),
-        ]);
-        setProject(projectData);
-        setAssets(assetsData.data);
-        setRequests([]);
-      } else {
-        const [projectData, assetsData, requestsData] = await Promise.all([
-          projectsApi.get(id!),
-          assetsApi.list(id!),
-          requestsApi.list(id!),
-        ]);
-        setProject(projectData);
-        setAssets(assetsData.data);
+      const projectData = await projectsApi.get(id!);
+      setProject(projectData);
+
+      if (!isReviewer) {
+        const requestsData = await requestsApi.list(id!);
         setRequests(requestsData.data);
+      } else {
+        setRequests([]);
       }
     } catch (error) {
       console.error('Failed to fetch project:', error);
@@ -82,12 +78,22 @@ export function ProjectDetailPage() {
     }
   };
 
+  const fetchAssets = async () => {
+    try {
+      const params: Record<string, string> = {};
+      if (filter !== 'all') params.status = filter;
+      const assetsData = await assetsApi.list(id!, params);
+      setAssets(assetsData.data);
+    } catch (error) {
+      console.error('Failed to fetch assets:', error);
+    }
+  };
+
   const filteredAssets = assets.filter((a) => {
-    const matchesFilter = filter === 'all' || a.status === filter;
     const matchesSearch = !searchQuery ||
       a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.uploader?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return matchesSearch;
   });
 
   const filteredRequests = requests.filter((r) => {
