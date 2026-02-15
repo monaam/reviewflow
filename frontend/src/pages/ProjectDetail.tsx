@@ -293,8 +293,8 @@ export function ProjectDetailPage() {
           {/* Asset Filters */}
           <div className="flex gap-1 mb-6">
             {(isReviewer
-              ? ['all', 'client_review', 'approved', 'revision_requested']
-              : ['all', 'pending_review', 'in_review', 'client_review', 'approved', 'revision_requested']
+              ? ['all', 'client_review', 'approved', 'revision_requested', 'published']
+              : ['all', 'pending_review', 'in_review', 'client_review', 'approved', 'revision_requested', 'published']
             ).map((status) => (
               <button
                 key={status}
