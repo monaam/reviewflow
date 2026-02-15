@@ -29,10 +29,6 @@ export const adminApi = {
     return response.data;
   },
 
-  deleteUser: async (id: string): Promise<void> => {
-    await apiClient.delete(`/admin/users/${id}`);
-  },
-
   getSettings: async (): Promise<Record<string, string>> => {
     const response = await apiClient.get('/admin/settings');
     return response.data;

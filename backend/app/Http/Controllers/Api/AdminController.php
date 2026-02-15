@@ -89,6 +89,11 @@ class AdminController extends Controller
 
         $user->update($validated);
 
+        // Revoke tokens when deactivating so the user is immediately locked out
+        if (isset($validated['is_active']) && !$validated['is_active']) {
+            $user->tokens()->delete();
+        }
+
         return response()->json($user->fresh());
     }
 
@@ -100,9 +105,13 @@ class AdminController extends Controller
             return response()->json(['error' => 'Cannot delete your own account'], 400);
         }
 
-        $user->delete();
+        // Deactivate instead of hard-deleting to preserve all related data
+        $user->update(['is_active' => false]);
 
-        return response()->json(['message' => 'User deleted successfully']);
+        // Revoke all access tokens so the user is immediately locked out
+        $user->tokens()->delete();
+
+        return response()->json(['message' => 'User deactivated successfully']);
     }
 
     // Settings
