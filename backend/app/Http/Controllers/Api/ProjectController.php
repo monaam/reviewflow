@@ -20,7 +20,7 @@ class ProjectController extends Controller
             $query = Project::with(['creator'])
                 ->forUser($user)
                 ->withCount([
-                    'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested']),
+                    'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']),
                 ]);
         } else {
             $query = Project::with(['creator', 'members'])
@@ -76,12 +76,12 @@ class ProjectController extends Controller
             $project->load([
                 'creator',
                 'assets' => fn($q) => $q->with(['uploader', 'latest_version'])
-                    ->whereIn('status', ['client_review', 'approved', 'revision_requested'])
+                    ->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published'])
                     ->latest(),
             ]);
 
             $project->loadCount([
-                'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested']),
+                'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']),
             ]);
 
             // Remove members from response
