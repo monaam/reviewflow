@@ -37,21 +37,6 @@ jobs:
       run:
         working-directory: backend
 
-    env:
-      APP_ENV: testing
-      APP_KEY:
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: testing
-      DB_USERNAME: root
-      DB_PASSWORD: password
-      REDIS_HOST: 127.0.0.1
-      CACHE_STORE: array
-      QUEUE_CONNECTION: sync
-      SESSION_DRIVER: array
-      BROADCAST_CONNECTION: log
-
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +64,13 @@ jobs:
       - name: Prepare environment
         run: |
           cp .env.example .env
+          sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_DATABASE=laravel/DB_DATABASE=testing/' .env
+          sed -i 's/DB_USERNAME=sail/DB_USERNAME=root/' .env
+          sed -i 's/CACHE_STORE=redis/CACHE_STORE=array/' .env
+          sed -i 's/QUEUE_CONNECTION=redis/QUEUE_CONNECTION=sync/' .env
+          sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=array/' .env
+          sed -i 's/BROADCAST_CONNECTION=reverb/BROADCAST_CONNECTION=log/' .env
           php artisan key:generate
 
       - name: Run migrations and seed
@@ -143,22 +135,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-    env:
-      APP_ENV: testing
-      APP_KEY:
-      DB_CONNECTION: mysql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_DATABASE: testing
-      DB_USERNAME: root
-      DB_PASSWORD: password
-      REDIS_HOST: 127.0.0.1
-      CACHE_STORE: redis
-      QUEUE_CONNECTION: sync
-      SESSION_DRIVER: database
-      BROADCAST_CONNECTION: log
-      FRONTEND_URL: http://localhost:5173
-
     steps:
       - uses: actions/checkout@v4
 
@@ -195,6 +171,11 @@ jobs:
         working-directory: backend
         run: |
           cp .env.example .env
+          sed -i 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_DATABASE=laravel/DB_DATABASE=testing/' .env
+          sed -i 's/DB_USERNAME=sail/DB_USERNAME=root/' .env
+          sed -i 's/QUEUE_CONNECTION=redis/QUEUE_CONNECTION=sync/' .env
+          sed -i 's/BROADCAST_CONNECTION=reverb/BROADCAST_CONNECTION=log/' .env
           php artisan key:generate
 
       - name: Run migrations and seed
@@ -213,9 +194,13 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
+      - name: Create frontend env
+        working-directory: frontend
+        run: echo "VITE_API_URL=http://localhost:8000/api" > .env
+
       - name: Start Vite dev server
         working-directory: frontend
-        run: npm run dev &
+        run: npx vite --host 127.0.0.1 &
 
       - name: Wait for servers
         run: |
@@ -223,7 +208,7 @@ jobs:
           timeout 30 bash -c 'until curl -s http://127.0.0.1:8000 > /dev/null 2>&1; do sleep 1; done'
           echo "Backend is ready"
           echo "Waiting for frontend..."
-          timeout 30 bash -c 'until curl -s http://127.0.0.1:5173 > /dev/null 2>&1; do sleep 1; done'
+          timeout 60 bash -c 'until curl -s http://127.0.0.1:5173 > /dev/null 2>&1; do sleep 1; done'
           echo "Frontend is ready"
 
       - name: Run Playwright tests
