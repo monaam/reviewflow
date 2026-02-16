@@ -4,8 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssetApproveRequest;
+use App\Http\Requests\AssetLinkRequestRequest;
+use App\Http\Requests\AssetLockRequest;
+use App\Http\Requests\AssetPublishRequest;
+use App\Http\Requests\AssetRequestRevisionRequest;
 use App\Http\Requests\AssetStoreRequest;
 use App\Http\Requests\AssetUpdateRequest;
+use App\Http\Requests\AssetUploadVersionRequest;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
 use App\Models\AssetPublishedLink;
@@ -248,7 +254,7 @@ class AssetController extends Controller
         return response()->json(['message' => 'Asset deleted successfully']);
     }
 
-    public function uploadVersion(Request $request, Asset $asset): JsonResponse
+    public function uploadVersion(AssetUploadVersionRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('uploadVersion', $asset);
 
@@ -261,10 +267,7 @@ class AssetController extends Controller
             ], 403);
         }
 
-        $validated = $request->validate([
-            'file' => 'required|file|max:512000',
-            'version_notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $file = $request->file('file');
         $newVersion = $asset->current_version + 1;
@@ -334,13 +337,11 @@ class AssetController extends Controller
         return response()->json($versions);
     }
 
-    public function approve(Request $request, Asset $asset): JsonResponse
+    public function approve(AssetApproveRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('approve', $asset);
 
-        $validated = $request->validate([
-            'comment' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $asset->update(['status' => AssetStatus::APPROVED->value]);
 
@@ -368,17 +369,11 @@ class AssetController extends Controller
         return response()->json($asset->fresh(['approvalLogs.user', 'creativeRequests']));
     }
 
-    public function requestRevision(Request $request, Asset $asset): JsonResponse
+    public function requestRevision(AssetRequestRevisionRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('approve', $asset);
 
-        $hasComments = Comment::where('asset_id', $asset->id)
-            ->where('asset_version', $asset->current_version)
-            ->exists();
-
-        $validated = $request->validate([
-            'comment' => [$hasComments ? 'nullable' : 'required', 'string'],
-        ]);
+        $validated = $request->validated();
 
         $asset->update(['status' => AssetStatus::REVISION_REQUESTED->value]);
 
@@ -416,15 +411,11 @@ class AssetController extends Controller
         return response()->json($asset->load(['uploader', 'project']));
     }
 
-    public function publish(Request $request, Asset $asset): JsonResponse
+    public function publish(AssetPublishRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('publish', $asset);
 
-        $validated = $request->validate([
-            'links' => 'required|array|min:1',
-            'links.*.url' => 'required|url',
-            'version' => 'nullable|integer|min:1',
-        ]);
+        $validated = $request->validated();
 
         $version = $validated['version'] ?? $asset->current_version;
 
@@ -451,13 +442,11 @@ class AssetController extends Controller
         return response()->json($asset->fresh(['publishedLinks.publisher', 'approvalLogs.user']));
     }
 
-    public function linkRequest(Request $request, Asset $asset): JsonResponse
+    public function linkRequest(AssetLinkRequestRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('update', $asset);
 
-        $validated = $request->validate([
-            'request_id' => 'required|uuid|exists:creative_requests,id',
-        ]);
+        $validated = $request->validated();
 
         $asset->creativeRequests()->syncWithoutDetaching([$validated['request_id']]);
 
@@ -484,7 +473,7 @@ class AssetController extends Controller
         return response()->json($asset->fresh('creativeRequests'));
     }
 
-    public function lock(Request $request, Asset $asset): JsonResponse
+    public function lock(AssetLockRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('lock', $asset);
 
@@ -494,16 +483,14 @@ class AssetController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $asset->lock($request->user(), $validated['reason'] ?? null);
 
         return response()->json($asset->fresh(['locker', 'versionLocks.user']));
     }
 
-    public function unlock(Request $request, Asset $asset): JsonResponse
+    public function unlock(AssetLockRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('lock', $asset);
 
@@ -513,9 +500,7 @@ class AssetController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $asset->unlock($request->user(), $validated['reason'] ?? null);
 

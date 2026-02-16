@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\Priority;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreativeRequestAddAttachmentRequest;
 use App\Http\Requests\CreativeRequestStoreRequest;
 use App\Http\Requests\CreativeRequestUpdateRequest;
 use App\Models\CreativeRequest;
@@ -259,13 +260,11 @@ class CreativeRequestController extends Controller
         return response()->json($creativeRequest->fresh(['creator', 'assignee']));
     }
 
-    public function addAttachment(Request $request, CreativeRequest $creativeRequest): JsonResponse
+    public function addAttachment(CreativeRequestAddAttachmentRequest $request, CreativeRequest $creativeRequest): JsonResponse
     {
         $this->authorize('update', $creativeRequest);
 
-        $request->validate([
-            'file' => 'required|file|max:51200',
-        ]);
+        $request->validated();
 
         $file = $request->file('file');
         $uploadResult = $this->uploadService->upload($file, "requests/{$creativeRequest->id}");

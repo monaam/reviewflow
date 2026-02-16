@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateSettingsRequest;
 use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
 use App\Models\Asset;
@@ -116,13 +117,11 @@ class AdminController extends Controller
         return response()->json($settings);
     }
 
-    public function updateSettings(Request $request): JsonResponse
+    public function updateSettings(UpdateSettingsRequest $request): JsonResponse
     {
         $this->checkAdmin($request);
 
-        $validated = $request->validate([
-            'discord_webhook_url' => 'nullable|url',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated as $key => $value) {
             Setting::set($key, $value);
