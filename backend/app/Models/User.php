@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -50,27 +51,27 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === UserRole::ADMIN->value;
     }
 
     public function isPM(): bool
     {
-        return $this->role === 'pm';
+        return $this->role === UserRole::PM->value;
     }
 
     public function isCreative(): bool
     {
-        return $this->role === 'creative';
+        return $this->role === UserRole::CREATIVE->value;
     }
 
     public function isReviewer(): bool
     {
-        return $this->role === 'reviewer';
+        return $this->role === UserRole::REVIEWER->value;
     }
 
     public function canApprove(): bool
     {
-        return in_array($this->role, ['admin', 'pm', 'reviewer']);
+        return in_array($this->role, UserRole::canApprove());
     }
 
     /**

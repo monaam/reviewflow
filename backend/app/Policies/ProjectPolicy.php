@@ -18,12 +18,12 @@ class ProjectPolicy
             return true;
         }
 
-        return $project->members()->where('users.id', $user->id)->exists();
+        return $project->isMember($user);
     }
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isPM();
+        return $user->isManagerial();
     }
 
     public function update(User $user, Project $project): bool
@@ -50,12 +50,12 @@ class ProjectPolicy
 
     public function uploadAsset(User $user, Project $project): bool
     {
-        if ($user->isAdmin() || $user->isPM()) {
+        if ($user->isManagerial()) {
             return $this->view($user, $project);
         }
 
         if ($user->isCreative()) {
-            return $project->members()->where('users.id', $user->id)->exists();
+            return $project->isMember($user);
         }
 
         return false;
@@ -63,7 +63,7 @@ class ProjectPolicy
 
     public function createRequest(User $user, Project $project): bool
     {
-        if (!$user->isAdmin() && !$user->isPM()) {
+        if (!$user->isManagerial()) {
             return false;
         }
 

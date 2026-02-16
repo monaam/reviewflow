@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Api\CommentImageController;
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
@@ -177,7 +178,7 @@ class CommentController extends Controller
         if (!empty($mentionedUserIds)) {
             // Get valid users who have access to this project (members + admins)
             $projectMemberIds = $asset->project->members()->pluck('users.id');
-            $adminIds = User::where('role', 'admin')->pluck('id');
+            $adminIds = User::where('role', UserRole::ADMIN->value)->pluck('id');
             $validUserIds = $projectMemberIds->merge($adminIds)->unique()->toArray();
 
             $validMentionIds = array_intersect($mentionedUserIds, $validUserIds);

@@ -139,8 +139,8 @@ class AssetController extends Controller
         // Create asset
         // Admin/PM uploads go directly to in_review (they don't need to wait for PM review)
         $initialStatus = $request->user()->isAdmin() || $request->user()->isPM()
-            ? 'in_review'
-            : 'pending_review';
+            ? AssetStatus::IN_REVIEW->value
+            : AssetStatus::PENDING_REVIEW->value;
 
         $asset = Asset::create([
             'project_id' => $project->id,
@@ -220,8 +220,8 @@ class AssetController extends Controller
             ]);
 
             // Mark as in_review if PM is viewing and asset is pending
-            if ($user->canApprove() && $asset->status === 'pending_review') {
-                $asset->update(['status' => 'in_review']);
+            if ($user->canApprove() && $asset->status === AssetStatus::PENDING_REVIEW->value) {
+                $asset->update(['status' => AssetStatus::IN_REVIEW->value]);
             }
         }
 
@@ -306,8 +306,8 @@ class AssetController extends Controller
         // Update asset
         // Admin/PM uploads go directly to in_review
         $newStatus = $request->user()->isAdmin() || $request->user()->isPM()
-            ? 'in_review'
-            : 'pending_review';
+            ? AssetStatus::IN_REVIEW->value
+            : AssetStatus::PENDING_REVIEW->value;
 
         $asset->update([
             'current_version' => $newVersion,
@@ -351,13 +351,13 @@ class AssetController extends Controller
             'comment' => 'nullable|string',
         ]);
 
-        $asset->update(['status' => 'approved']);
+        $asset->update(['status' => AssetStatus::APPROVED->value]);
 
         ApprovalLog::create([
             'asset_id' => $asset->id,
             'asset_version' => $asset->current_version,
             'user_id' => $request->user()->id,
-            'action' => 'approved',
+            'action' => AssetStatus::APPROVED->value,
             'comment' => $validated['comment'] ?? null,
         ]);
 
@@ -389,13 +389,13 @@ class AssetController extends Controller
             'comment' => [$hasComments ? 'nullable' : 'required', 'string'],
         ]);
 
-        $asset->update(['status' => 'revision_requested']);
+        $asset->update(['status' => AssetStatus::REVISION_REQUESTED->value]);
 
         ApprovalLog::create([
             'asset_id' => $asset->id,
             'asset_version' => $asset->current_version,
             'user_id' => $request->user()->id,
-            'action' => 'revision_requested',
+            'action' => AssetStatus::REVISION_REQUESTED->value,
             'comment' => $validated['comment'] ?? null,
         ]);
 
@@ -417,7 +417,7 @@ class AssetController extends Controller
             abort(403, 'Only PM or Admin can send assets to client review.');
         }
 
-        $asset->update(['status' => 'client_review']);
+        $asset->update(['status' => AssetStatus::CLIENT_REVIEW->value]);
 
         // Notify reviewer members that asset is ready for review
         $this->notificationDispatcher->notifySentToClient($asset, $request->user());
@@ -437,7 +437,7 @@ class AssetController extends Controller
 
         $version = $validated['version'] ?? $asset->current_version;
 
-        $asset->update(['status' => 'published']);
+        $asset->update(['status' => AssetStatus::PUBLISHED->value]);
 
         foreach ($validated['links'] as $link) {
             AssetPublishedLink::create([
@@ -453,7 +453,7 @@ class AssetController extends Controller
             'asset_id' => $asset->id,
             'asset_version' => $version,
             'user_id' => $request->user()->id,
-            'action' => 'published',
+            'action' => AssetStatus::PUBLISHED->value,
             'comment' => null,
         ]);
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -65,13 +66,13 @@ class Project extends Model
         $total = $this->assets()->count();
         if ($total === 0) return 0;
 
-        $approved = $this->assets()->where('status', 'approved')->count();
+        $approved = $this->assets()->where('status', AssetStatus::APPROVED->value)->count();
         return round(($approved / $total) * 100, 1);
     }
 
     public function getPendingAssetsCountAttribute(): int
     {
-        return $this->assets()->where('status', 'pending_review')->count();
+        return $this->assets()->where('status', AssetStatus::PENDING_REVIEW->value)->count();
     }
 
     public function scopeActive($query)

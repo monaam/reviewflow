@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
 use App\Models\Asset;
 use App\Models\Comment;
 use App\Models\CreativeRequest;
@@ -35,7 +36,7 @@ class NotificationDispatcher
         // Reviewers only see their own comments, so they shouldn't get new comment notifications
         $recipients = $project->members()
             ->where('users.id', '!=', $actor->id)
-            ->where('users.role', '!=', 'reviewer')
+            ->where('users.role', '!=', UserRole::REVIEWER->value)
             ->wherePivot('notify_on_comment', true)
             ->get();
 
@@ -71,7 +72,7 @@ class NotificationDispatcher
         // Exclude reviewers - they only see assets when sent to client review
         $recipients = $project->members()
             ->where('users.id', '!=', $uploader->id)
-            ->where('users.role', '!=', 'reviewer')
+            ->where('users.role', '!=', UserRole::REVIEWER->value)
             ->wherePivot('notify_on_upload', true)
             ->get();
 
@@ -87,7 +88,7 @@ class NotificationDispatcher
         // Exclude reviewers - they only see the current version when asset is in client review
         $recipients = $project->members()
             ->where('users.id', '!=', $uploader->id)
-            ->where('users.role', '!=', 'reviewer')
+            ->where('users.role', '!=', UserRole::REVIEWER->value)
             ->wherePivot('notify_on_upload', true)
             ->get();
 
@@ -103,7 +104,7 @@ class NotificationDispatcher
         // Exclude reviewers from approval notifications (internal workflow)
         $recipients = $project->members()
             ->where('users.id', '!=', $approver->id)
-            ->where('users.role', '!=', 'reviewer')
+            ->where('users.role', '!=', UserRole::REVIEWER->value)
             ->wherePivot('notify_on_approval', true)
             ->get();
 

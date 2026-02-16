@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\CreativeRequest;
@@ -33,7 +34,7 @@ class DashboardController extends Controller
                 'total_projects' => Project::count(),
                 'active_projects' => Project::active()->count(),
                 'pending_assets' => Asset::pendingReview()->count(),
-                'approved_assets' => Asset::where('status', 'approved')->count(),
+                'approved_assets' => Asset::where('status', AssetStatus::APPROVED->value)->count(),
                 'published_assets' => Asset::where('status', 'published')->count(),
                 'overdue_requests' => CreativeRequest::overdue()->count(),
             ],
@@ -50,10 +51,10 @@ class DashboardController extends Controller
     protected function getAssetStatusDistribution(): array
     {
         return [
-            ['label' => 'Pending Review', 'value' => Asset::where('status', 'pending_review')->count()],
+            ['label' => 'Pending Review', 'value' => Asset::where('status', AssetStatus::PENDING_REVIEW->value)->count()],
             ['label' => 'In Review', 'value' => Asset::where('status', 'in_review')->count()],
             ['label' => 'Client Review', 'value' => Asset::where('status', 'client_review')->count()],
-            ['label' => 'Approved', 'value' => Asset::where('status', 'approved')->count()],
+            ['label' => 'Approved', 'value' => Asset::where('status', AssetStatus::APPROVED->value)->count()],
             ['label' => 'Revision Requested', 'value' => Asset::where('status', 'revision_requested')->count()],
         ];
     }
@@ -85,10 +86,10 @@ class DashboardController extends Controller
                 ->withCount([
                     'assets',
                     'assets as approved_assets_count' => function ($query) {
-                        $query->where('status', 'approved');
+                        $query->where('status', AssetStatus::APPROVED->value);
                     },
                     'assets as pending_assets_count' => function ($query) {
-                        $query->where('status', 'pending_review');
+                        $query->where('status', AssetStatus::PENDING_REVIEW->value);
                     },
                     'creativeRequests',
                 ])
@@ -110,7 +111,7 @@ class DashboardController extends Controller
             'role' => 'creative',
             'stats' => [
                 'assigned_requests' => $user->assignedRequests()
-                    ->whereNotIn('status', ['completed', 'cancelled'])
+                    ->active()
                     ->count(),
                 'pending_requests' => $user->assignedRequests()
                     ->where('status', 'pending')
@@ -124,7 +125,7 @@ class DashboardController extends Controller
                     $q->where('assigned_to', $user->id)
                       ->orWhereNull('assigned_to');
                 })
-                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->active()
                 ->with(['creator', 'project'])
                 ->orderBy('deadline')
                 ->limit(10)
@@ -145,10 +146,10 @@ class DashboardController extends Controller
                 ->withCount([
                     'assets',
                     'assets as approved_assets_count' => function ($query) {
-                        $query->where('status', 'approved');
+                        $query->where('status', AssetStatus::APPROVED->value);
                     },
                     'assets as pending_assets_count' => function ($query) {
-                        $query->where('status', 'pending_review');
+                        $query->where('status', AssetStatus::PENDING_REVIEW->value);
                     },
                     'creativeRequests',
                 ])
@@ -167,7 +168,7 @@ class DashboardController extends Controller
             'role' => 'reviewer',
             'stats' => [
                 'accessible_projects' => $user->projects()->count(),
-                'pending_review' => Asset::whereIn('project_id', $projectIds)
+                AssetStatus::PENDING_REVIEW->value => Asset::whereIn('project_id', $projectIds)
                     ->where('status', 'client_review')
                     ->count(),
             ],

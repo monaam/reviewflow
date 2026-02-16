@@ -114,7 +114,7 @@ class CreativeRequestController extends Controller
                 $q->where('assigned_to', $request->user()->id)
                   ->orWhereNull('assigned_to');
             })
-            ->whereNotIn('status', ['completed', 'cancelled']);
+            ->active();
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -240,7 +240,7 @@ class CreativeRequestController extends Controller
 
         // Add user as project member if not already
         $project = $creativeRequest->project;
-        if (!$project->members()->where('users.id', $user->id)->exists()) {
+        if (!$project->isMember($user)) {
             $project->members()->attach($user->id, [
                 'id' => \Illuminate\Support\Str::uuid(),
                 'role_in_project' => 'member',

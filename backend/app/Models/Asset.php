@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -88,27 +89,27 @@ class Asset extends Model
 
     public function scopePendingReview($query)
     {
-        return $query->where('status', 'pending_review');
+        return $query->where('status', AssetStatus::PENDING_REVIEW->value);
     }
 
     public function scopeNeedsRevision($query)
     {
-        return $query->where('status', 'revision_requested');
+        return $query->where('status', AssetStatus::REVISION_REQUESTED->value);
     }
 
     public function scopeApproved($query)
     {
-        return $query->where('status', 'approved');
+        return $query->where('status', AssetStatus::APPROVED->value);
     }
 
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('status', AssetStatus::PUBLISHED->value);
     }
 
     public function scopeExcludePublished($query)
     {
-        return $query->where('status', '!=', 'published');
+        return $query->where('status', '!=', AssetStatus::PUBLISHED->value);
     }
 
     public function publishedLinks(): HasMany

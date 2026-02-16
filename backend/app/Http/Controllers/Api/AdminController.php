@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\CreativeRequest;
@@ -169,7 +170,7 @@ class AdminController extends Controller
             ->get();
 
         // Approval rate
-        $totalProcessed = Asset::whereIn('status', ['approved', 'revision_requested'])->count();
+        $totalProcessed = Asset::whereIn('status', [AssetStatus::APPROVED->value, AssetStatus::REVISION_REQUESTED->value])->count();
         $approved = Asset::approved()->count();
         $stats['approval_rate'] = $totalProcessed > 0 ? round(($approved / $totalProcessed) * 100, 1) : 0;
 

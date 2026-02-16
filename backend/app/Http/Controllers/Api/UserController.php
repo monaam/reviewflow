@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -12,13 +13,13 @@ class UserController extends Controller
     public function index(Request $request): JsonResponse
     {
         // Only admin and PM can list users
-        if (!$request->user()->isAdmin() && !$request->user()->isPM()) {
+        if (!$request->user()->isManagerial()) {
             abort(403, 'Access denied');
         }
 
         $query = User::query()->where('is_active', true);
 
-        if ($request->has('role') && in_array($request->role, ['admin', 'pm', 'creative', 'reviewer'])) {
+        if ($request->has('role') && in_array($request->role, UserRole::values())) {
             $query->where('role', $request->role);
         }
 
