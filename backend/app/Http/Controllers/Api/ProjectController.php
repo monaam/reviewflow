@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectMember;
@@ -20,7 +21,7 @@ class ProjectController extends Controller
             $query = Project::with(['creator'])
                 ->forUser($user)
                 ->withCount([
-                    'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']),
+                    'assets' => fn($q) => $q->whereIn('status', AssetStatus::reviewerVisible()),
                 ]);
         } else {
             $query = Project::with(['creator', 'members'])
@@ -72,7 +73,7 @@ class ProjectController extends Controller
         $user = $request->user();
 
         // Reviewers have restricted view - no members, no requests, filtered assets
-        $reviewerStatuses = ['client_review', 'approved', 'revision_requested', 'published'];
+        $reviewerStatuses = AssetStatus::reviewerVisible();
 
         if ($user->isReviewer()) {
             $project->load([

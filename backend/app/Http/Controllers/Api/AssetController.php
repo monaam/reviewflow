@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
@@ -43,7 +44,7 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($user->isReviewer()) {
-            $query->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']);
+            $query->whereIn('status', AssetStatus::reviewerVisible());
         }
 
         if ($request->has('status')) {
@@ -89,7 +90,7 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($request->user()->isReviewer()) {
-            $query->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']);
+            $query->whereIn('status', AssetStatus::reviewerVisible());
         }
 
         if ($request->has('status')) {

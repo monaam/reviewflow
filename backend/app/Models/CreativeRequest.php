@@ -90,6 +90,14 @@ class CreativeRequest extends Model
         return $query->where('status', 'in_progress');
     }
 
+    /**
+     * Scope to only active requests (not completed or cancelled)
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereNotIn('status', ['completed', 'cancelled']);
+    }
+
     public function scopeOverdue($query)
     {
         return $query->where('deadline', '<', now())

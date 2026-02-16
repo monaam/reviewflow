@@ -42,6 +42,14 @@ class Project extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Check if a user is a member of this project
+     */
+    public function isMember(User $user): bool
+    {
+        return $this->members()->where('users.id', $user->id)->exists();
+    }
+
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class);

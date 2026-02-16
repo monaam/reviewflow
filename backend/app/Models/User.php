@@ -73,6 +73,14 @@ class User extends Authenticatable
         return in_array($this->role, ['admin', 'pm', 'reviewer']);
     }
 
+    /**
+     * Check if user has managerial permissions (admin or PM)
+     */
+    public function isManagerial(): bool
+    {
+        return $this->isAdmin() || $this->isPM();
+    }
+
     public function projects(): BelongsToMany
     {
         return $this->belongsToMany(Project::class, 'project_members')
