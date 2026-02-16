@@ -35,7 +35,7 @@ class DashboardController extends Controller
                 'active_projects' => Project::active()->count(),
                 'pending_assets' => Asset::pendingReview()->count(),
                 'approved_assets' => Asset::where('status', AssetStatus::APPROVED->value)->count(),
-                'published_assets' => Asset::where('status', 'published')->count(),
+                'published_assets' => Asset::where('status', AssetStatus::PUBLISHED->value)->count(),
                 'overdue_requests' => CreativeRequest::overdue()->count(),
             ],
             'asset_status_distribution' => $this->getAssetStatusDistribution(),
@@ -52,10 +52,10 @@ class DashboardController extends Controller
     {
         return [
             ['label' => 'Pending Review', 'value' => Asset::where('status', AssetStatus::PENDING_REVIEW->value)->count()],
-            ['label' => 'In Review', 'value' => Asset::where('status', 'in_review')->count()],
-            ['label' => 'Client Review', 'value' => Asset::where('status', 'client_review')->count()],
+            ['label' => 'In Review', 'value' => Asset::where('status', AssetStatus::IN_REVIEW->value)->count()],
+            ['label' => 'Client Review', 'value' => Asset::where('status', AssetStatus::CLIENT_REVIEW->value)->count()],
             ['label' => 'Approved', 'value' => Asset::where('status', AssetStatus::APPROVED->value)->count()],
-            ['label' => 'Revision Requested', 'value' => Asset::where('status', 'revision_requested')->count()],
+            ['label' => 'Revision Requested', 'value' => Asset::where('status', AssetStatus::REVISION_REQUESTED->value)->count()],
         ];
     }
 
@@ -117,7 +117,7 @@ class DashboardController extends Controller
                     ->where('status', 'pending')
                     ->count(),
                 'my_assets' => $user->uploadedAssets()->count(),
-                'revision_requested' => $user->uploadedAssets()
+                AssetStatus::REVISION_REQUESTED->value => $user->uploadedAssets()
                     ->needsRevision()
                     ->count(),
             ],
@@ -169,11 +169,11 @@ class DashboardController extends Controller
             'stats' => [
                 'accessible_projects' => $user->projects()->count(),
                 AssetStatus::PENDING_REVIEW->value => Asset::whereIn('project_id', $projectIds)
-                    ->where('status', 'client_review')
+                    ->where('status', AssetStatus::CLIENT_REVIEW->value)
                     ->count(),
             ],
-            'pending_review' => Asset::whereIn('project_id', $projectIds)
-                ->where('status', 'client_review')
+            AssetStatus::PENDING_REVIEW->value => Asset::whereIn('project_id', $projectIds)
+                ->where('status', AssetStatus::CLIENT_REVIEW->value)
                 ->with(['uploader', 'project', 'latest_version'])
                 ->latest()
                 ->limit(10)

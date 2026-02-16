@@ -154,7 +154,7 @@ class AdminController extends Controller
             'total_assets' => Asset::count(),
             'pending_assets' => Asset::pendingReview()->count(),
             'approved_assets' => Asset::approved()->count(),
-            'revision_requested' => Asset::needsRevision()->count(),
+            AssetStatus::REVISION_REQUESTED->value => Asset::needsRevision()->count(),
             'total_requests' => CreativeRequest::count(),
             'pending_requests' => CreativeRequest::pending()->count(),
             'overdue_requests' => CreativeRequest::overdue()->count(),
