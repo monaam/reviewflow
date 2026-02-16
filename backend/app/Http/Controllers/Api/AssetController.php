@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssetStoreRequest;
+use App\Http\Requests\AssetUpdateRequest;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
 use App\Models\AssetPublishedLink;
@@ -113,17 +115,11 @@ class AssetController extends Controller
         return response()->json($assets);
     }
 
-    public function store(Request $request, Project $project): JsonResponse
+    public function store(AssetStoreRequest $request, Project $project): JsonResponse
     {
         $this->authorize('uploadAsset', $project);
 
-        $validated = $request->validate([
-            'file' => 'required|file|max:512000',
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'request_id' => 'nullable|uuid|exists:creative_requests,id',
-        ]);
-
+        $validated = $request->validated();
         $file = $request->file('file');
         $type = $this->assetTypeRegistry->determineType($file);
 
@@ -228,16 +224,11 @@ class AssetController extends Controller
         return response()->json($asset);
     }
 
-    public function update(Request $request, Asset $asset): JsonResponse
+    public function update(AssetUpdateRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('update', $asset);
 
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'deadline' => 'nullable|date',
-        ]);
-
+        $validated = $request->validated();
         $asset->update($validated);
 
         return response()->json($asset->fresh(['uploader', 'latest_version']));

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\Priority;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreativeRequestStoreRequest;
+use App\Http\Requests\CreativeRequestUpdateRequest;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\RequestAttachment;
@@ -127,18 +129,11 @@ class CreativeRequestController extends Controller
         return response()->json($requests);
     }
 
-    public function store(Request $request, Project $project): JsonResponse
+    public function store(CreativeRequestStoreRequest $request, Project $project): JsonResponse
     {
         $this->authorize('createRequest', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'assigned_to' => 'nullable|uuid|exists:users,id',
-            'deadline' => 'required|date|after:now',
-            'priority' => ['sometimes', Rule::in(Priority::values())],
-            'specs' => 'nullable|array',
-        ]);
+        $validated = $request->validated();
 
         $creativeRequest = CreativeRequest::create([
             'project_id' => $project->id,
@@ -179,19 +174,11 @@ class CreativeRequestController extends Controller
         return response()->json($creativeRequest);
     }
 
-    public function update(Request $request, CreativeRequest $creativeRequest): JsonResponse
+    public function update(CreativeRequestUpdateRequest $request, CreativeRequest $creativeRequest): JsonResponse
     {
         $this->authorize('update', $creativeRequest);
 
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'assigned_to' => 'sometimes|uuid|exists:users,id',
-            'deadline' => 'sometimes|date',
-            'priority' => ['sometimes', Rule::in(Priority::values())],
-            'specs' => 'nullable|array',
-            'status' => 'sometimes|in:pending,in_progress,asset_submitted,completed',
-        ]);
+        $validated = $request->validated();
 
         $oldStatus = $creativeRequest->status;
         $oldAssignee = $creativeRequest->assigned_to;
