@@ -7,9 +7,7 @@ test.describe('Review Queue Page', () => {
     await page.goto('/review-queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
-    await expect(
-      page.getByText('Review Queue').or(page.getByRole('heading', { name: /review/i })),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Review Queue' })).toBeVisible();
   });
 
   test('loading spinner during fetch', async ({ page }) => {
@@ -44,7 +42,6 @@ test.describe('Review Queue Page', () => {
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
-    // Search for nonexistent to trigger empty state
     const searchInput = page.locator('input[placeholder*="Search"]');
     if (await searchInput.isVisible()) {
       await searchInput.fill('zzz-no-match-ever-xyz');

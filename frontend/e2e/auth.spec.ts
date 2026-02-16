@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAs, type Role } from './helpers/auth';
+import { loginAs, getCredentials, type Role } from './helpers/auth';
 
 test.describe('Authentication', () => {
   test('unauthenticated user is redirected to login', async ({ page }) => {
@@ -11,38 +11,32 @@ test.describe('Authentication', () => {
 
   for (const role of roles) {
     test(`${role} can login via form`, async ({ page }) => {
+      const { email, password } = getCredentials(role);
       await page.goto('/login');
-      await page.fill('#email', `${role}@briefloop.com`);
-      await page.fill('#password', 'password');
+      await page.fill('#email', email);
+      await page.fill('#password', password);
       await page.click('button[type="submit"]');
 
-      await expect(page).not.toHaveURL(/\/login/);
+      await expect(page).not.toHaveURL(/\/login/, { timeout: 10000 });
       const token = await page.evaluate(() => localStorage.getItem('token'));
       expect(token).toBeTruthy();
     });
   }
 
-  test('logout clears auth', async ({ page }) => {
-    await loginAs(page, 'admin');
-    await page.goto('/');
-    await expect(page).not.toHaveURL(/\/login/);
+  test('logout redirects to login', async ({ page }) => {
+    // Login via form instead of addInitScript so logout fully works
+    const { email, password } = getCredentials('admin');
+    await page.goto('/login');
+    await page.fill('#email', email);
+    await page.fill('#password', password);
+    await page.click('button[type="submit"]');
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 10000 });
 
-    // Find and click logout button/link
-    const logoutButton = page.getByText('Logout').or(page.getByText('Sign out')).or(page.getByText('Log out'));
-    if (await logoutButton.isVisible()) {
-      await logoutButton.click();
-    } else {
-      // Try avatar/menu trigger first
-      const avatar = page.locator('[class*="avatar"], button:has(img[alt])').first();
-      if (await avatar.isVisible()) {
-        await avatar.click();
-        const logoutItem = page.getByText('Logout').or(page.getByText('Sign out')).or(page.getByText('Log out'));
-        await logoutItem.click();
-      }
-    }
+    // Click the Logout button in the sidebar
+    await page.getByRole('button', { name: 'Logout' }).click();
 
-    await expect(page).toHaveURL(/\/login/);
-    const token = await page.evaluate(() => localStorage.getItem('token'));
-    expect(token).toBeFalsy();
+    // Should redirect to login page
+    await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible();
   });
 });

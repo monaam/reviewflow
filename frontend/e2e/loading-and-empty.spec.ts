@@ -50,7 +50,7 @@ test.describe('Loading and Empty States', () => {
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(
-      page.getByText('No requests').or(page.getByText('queue')),
+      page.getByRole('heading', { name: /no requests/i }),
     ).toBeVisible({ timeout: 5000 });
   });
 });

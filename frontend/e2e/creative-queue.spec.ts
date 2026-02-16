@@ -7,9 +7,7 @@ test.describe('Creative Queue Page', () => {
     await page.goto('/queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
-    await expect(
-      page.getByText('Creative Queue').or(page.getByText('My Queue').or(page.getByRole('heading', { name: /queue/i }))),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'My Queue' })).toBeVisible();
   });
 
   test('search filters items', async ({ page }) => {
@@ -34,9 +32,8 @@ test.describe('Creative Queue Page', () => {
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
-    // PM should see empty queue or no requests
     await expect(
-      page.getByText('No requests').or(page.getByText('queue')),
+      page.getByRole('heading', { name: /no requests/i }),
     ).toBeVisible({ timeout: 5000 });
   });
 

@@ -1,17 +1,21 @@
 import { test, expect } from '@playwright/test';
-import { loginAs } from './helpers/auth';
+import { loginAs, type Role } from './helpers/auth';
 
 test.describe('Project Detail Page', () => {
-  // Helper to get the first project ID from the API
-  async function getFirstProjectId(page: import('@playwright/test').Page, role: 'pm' | 'admin' | 'reviewer'): Promise<string | null> {
-    const apiUrl = process.env.API_URL || 'http://localhost:8000/api';
-    const loginResponse = await page.request.post(`${apiUrl}/auth/login`, {
-      data: { email: `${role}@briefloop.com`, password: 'password' },
+  const API_URL = process.env.API_URL || 'http://localhost:8000/api';
+
+  async function getFirstProjectId(page: import('@playwright/test').Page, role: Role): Promise<string | null> {
+    const loginResponse = await page.request.post(`${API_URL}/auth/login`, {
+      data: {
+        email: role === 'pm' ? 'dounia@le2.agency' : role === 'admin' ? 'rym@le2.agency' : 'amir@fatoura.app',
+        password: 'password',
+      },
+      headers: { Accept: 'application/json' },
     });
     const { token } = await loginResponse.json();
 
-    const projectsResponse = await page.request.get(`${apiUrl}/projects`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const projectsResponse = await page.request.get(`${API_URL}/projects`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     });
     const body = await projectsResponse.json();
     const projects = body.data || body;
@@ -26,9 +30,8 @@ test.describe('Project Detail Page', () => {
     await page.goto(`/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
-    // Assets tab should be active or assets content should be visible
     await expect(
-      page.getByRole('button', { name: /assets/i }).or(page.getByText('Assets').first()),
+      page.getByRole('button', { name: /^Assets/i }),
     ).toBeVisible();
   });
 
@@ -40,8 +43,8 @@ test.describe('Project Detail Page', () => {
     await page.goto(`/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
-    await expect(page.getByRole('button', { name: /requests/i }).or(page.getByText('Requests'))).toBeVisible();
-    await expect(page.getByRole('button', { name: /members/i }).or(page.getByText('Members'))).toBeVisible();
+    await expect(page.getByRole('button', { name: /requests/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /members/i })).toBeVisible();
   });
 
   test('reviewer does NOT see Requests and Members tabs', async ({ page }) => {
