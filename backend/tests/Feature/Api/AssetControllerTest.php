@@ -1072,6 +1072,31 @@ class AssetControllerTest extends TestCase
         $this->assertEquals($this->reviewer->id, $approvalEvents->first()['user']['id']);
     }
 
+    public function test_reviewer_sees_published_assets_when_filtered(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'published']);
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'client_review']);
+        $this->createAssetWithVersion($project, $this->creative)->update(['status' => 'in_review']);
+
+        // When explicitly filtering by published status, reviewer should see published assets
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/projects/{$project->id}/assets?status=published");
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('published', $response->json('data.0.status'));
+
+        // Default listing excludes published for all users (including reviewers)
+        $response = $this->getJson("/api/projects/{$project->id}/assets");
+        $response->assertOk();
+        $statuses = collect($response->json('data'))->pluck('status')->all();
+        $this->assertNotContains('published', $statuses);
+        $this->assertContains('client_review', $statuses);
+        // in_review should NOT be visible to reviewer
+        $this->assertNotContains('in_review', $statuses);
+    }
+
     public function test_pm_history_shows_all_versions(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->reviewer]);

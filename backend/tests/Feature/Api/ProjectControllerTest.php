@@ -451,6 +451,29 @@ class ProjectControllerTest extends TestCase
         $this->assertEquals(0, $response->json('creative_requests_count'));
     }
 
+    public function test_reviewer_project_show_includes_published_assets(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);
+
+        \App\Models\Asset::factory()->create([
+            'project_id' => $project->id,
+            'uploaded_by' => $this->creative->id,
+            'status' => 'published',
+        ]);
+        \App\Models\Asset::factory()->create([
+            'project_id' => $project->id,
+            'uploaded_by' => $this->creative->id,
+            'status' => 'in_review',
+        ]);
+
+        $this->actingAsReviewer();
+        $response = $this->getJson("/api/projects/{$project->id}");
+
+        $response->assertOk();
+        $this->assertCount(1, $response->json('assets'));
+        $this->assertEquals('published', $response->json('assets.0.status'));
+    }
+
     public function test_reviewer_project_index_hides_members(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative, $this->reviewer]);

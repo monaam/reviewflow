@@ -295,9 +295,12 @@ class AdminControllerTest extends TestCase
         $response = $this->deleteJson("/api/admin/users/{$user->id}");
 
         $response->assertOk()
-            ->assertJson(['message' => 'User deleted successfully']);
+            ->assertJson(['message' => 'User deactivated successfully']);
 
-        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_active' => false,
+        ]);
     }
 
     public function test_admin_cannot_delete_themselves(): void
