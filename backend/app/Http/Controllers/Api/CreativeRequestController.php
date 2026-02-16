@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Priority;
 use App\Http\Controllers\Controller;
 use App\Models\CreativeRequest;
 use App\Models\Project;
@@ -12,6 +13,7 @@ use App\Services\FileUploadService;
 use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CreativeRequestController extends Controller
 {
@@ -134,7 +136,7 @@ class CreativeRequestController extends Controller
             'description' => 'required|string',
             'assigned_to' => 'nullable|uuid|exists:users,id',
             'deadline' => 'required|date|after:now',
-            'priority' => 'sometimes|in:low,normal,high,urgent',
+            'priority' => ['sometimes', Rule::in(Priority::values())],
             'specs' => 'nullable|array',
         ]);
 
@@ -151,9 +153,10 @@ class CreativeRequestController extends Controller
 
         // Send in-app notification if assigned
         if ($creativeRequest->assigned_to) {
-            $assignee = User::find($creativeRequest->assigned_to);
-            if ($assignee) {
-                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $assignee, $request->user());
+            // Load assignee relationship if not already loaded
+            $creativeRequest->load('assignee');
+            if ($creativeRequest->assignee) {
+                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $creativeRequest->assignee, $request->user());
             }
         }
 
@@ -185,7 +188,7 @@ class CreativeRequestController extends Controller
             'description' => 'sometimes|string',
             'assigned_to' => 'sometimes|uuid|exists:users,id',
             'deadline' => 'sometimes|date',
-            'priority' => 'sometimes|in:low,normal,high,urgent',
+            'priority' => ['sometimes', Rule::in(Priority::values())],
             'specs' => 'nullable|array',
             'status' => 'sometimes|in:pending,in_progress,asset_submitted,completed',
         ]);
@@ -197,9 +200,10 @@ class CreativeRequestController extends Controller
 
         // Notify on assignment change
         if (isset($validated['assigned_to']) && $validated['assigned_to'] !== $oldAssignee) {
-            $assignee = User::find($validated['assigned_to']);
-            if ($assignee) {
-                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $assignee, $request->user());
+            // Refresh the assignee relationship after update
+            $creativeRequest->load('assignee');
+            if ($creativeRequest->assignee) {
+                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $creativeRequest->assignee, $request->user());
             }
         }
 

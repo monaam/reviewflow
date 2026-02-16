@@ -14,6 +14,9 @@ class Asset extends Model
 {
     use HasFactory, HasUuids;
 
+    public const LOCK_ACTION_LOCKED = 'locked';
+    public const LOCK_ACTION_UNLOCKED = 'unlocked';
+
     protected $fillable = [
         'project_id',
         'uploaded_by',
@@ -112,6 +115,15 @@ class Asset extends Model
         return $query->where('status', '!=', AssetStatus::PUBLISHED->value);
     }
 
+    /**
+     * Scope query to only show assets visible to reviewers
+     * (client_review, approved, revision_requested, published)
+     */
+    public function scopeReviewerVisible($query)
+    {
+        return $query->whereIn('status', AssetStatus::reviewerVisible());
+    }
+
     public function publishedLinks(): HasMany
     {
         return $this->hasMany(AssetPublishedLink::class);
@@ -138,7 +150,7 @@ class Asset extends Model
         VersionLock::create([
             'asset_id' => $this->id,
             'user_id' => $user->id,
-            'action' => 'locked',
+            'action' => self::LOCK_ACTION_LOCKED,
             'reason' => $reason,
         ]);
     }
@@ -154,7 +166,7 @@ class Asset extends Model
         VersionLock::create([
             'asset_id' => $this->id,
             'user_id' => $user->id,
-            'action' => 'unlocked',
+            'action' => self::LOCK_ACTION_UNLOCKED,
             'reason' => $reason,
         ]);
     }

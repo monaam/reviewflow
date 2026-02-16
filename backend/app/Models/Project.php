@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AssetStatus;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -49,6 +50,21 @@ class Project extends Model
     public function isMember(User $user): bool
     {
         return $this->members()->where('users.id', $user->id)->exists();
+    }
+
+    /**
+     * Get project members who should receive notifications
+     * Excludes the actor and reviewers (reviewers only see their own comments)
+     *
+     * @param User $actor The user performing the action (excluded from notifications)
+     * @param string $notificationPref The pivot column to check (notify_on_upload, notify_on_comment, etc.)
+     */
+    public function notifiableMembers(User $actor, string $notificationPref)
+    {
+        return $this->members()
+            ->where('users.id', '!=', $actor->id)
+            ->where('users.role', '!=', UserRole::REVIEWER->value)
+            ->wherePivot($notificationPref, true);
     }
 
     public function assets(): HasMany

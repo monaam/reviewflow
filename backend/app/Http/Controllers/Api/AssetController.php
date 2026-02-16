@@ -44,7 +44,7 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($user->isReviewer()) {
-            $query->whereIn('status', AssetStatus::reviewerVisible());
+            $query->reviewerVisible();
         }
 
         if ($request->has('status')) {
@@ -90,7 +90,7 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($request->user()->isReviewer()) {
-            $query->whereIn('status', AssetStatus::reviewerVisible());
+            $query->reviewerVisible();
         }
 
         if ($request->has('status')) {
