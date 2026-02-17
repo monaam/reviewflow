@@ -30,6 +30,13 @@ export function formatEnumLabelCapitalized(value: string): string {
 }
 
 /**
+ * Shared card link className for list items.
+ * Used across Projects, Requests, and similar list pages.
+ */
+export const cardLinkClass =
+  'block p-5 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors';
+
+/**
  * Check if a deadline has passed and the item is not in a terminal status.
  * Use for creative requests and any deadline-bearing entities.
  */

@@ -5,7 +5,7 @@ import { projectsApi } from '../api/projects';
 import { Project } from '../types';
 import { LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
-import { formatEnumLabel } from '../utils/formatters';
+import { formatEnumLabel, cardLinkClass } from '../utils/formatters';
 import { canCreateProject as canCreateProjectRole } from '../utils/permissions';
 import { useListFilter } from '../hooks/useListFilter';
 
@@ -104,7 +104,7 @@ export function ProjectsPage() {
             <Link
               key={project.id}
               to={`/projects/${project.id}`}
-              className="block p-5 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              className={cardLinkClass}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="min-w-0 flex-1">

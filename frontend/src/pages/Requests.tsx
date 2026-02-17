@@ -8,7 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { formatDistanceToNow } from 'date-fns';
 import { isReviewer as isReviewerRole } from '../utils/permissions';
 import { useListFilter } from '../hooks/useListFilter';
-import { isOverdue } from '../utils/formatters';
+import { isOverdue, cardLinkClass } from '../utils/formatters';
 
 export function RequestsPage() {
   const { user } = useAuthStore();
@@ -155,7 +155,7 @@ export function RequestsPage() {
               <Link
                 key={request.id}
                 to={`/requests/${request.id}`}
-                className="block p-5 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                className={cardLinkClass}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">

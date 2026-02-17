@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/authStore';
 import { formatDistanceToNow } from 'date-fns';
 import { isReviewer as isReviewerRole } from '../utils/permissions';
 import { useListFilter } from '../hooks/useListFilter';
+import { getAssetStatusFilters } from '../config/statusFilters';
 
 export function AssetsPage() {
   const { user } = useAuthStore();
@@ -58,23 +59,7 @@ export function AssetsPage() {
 
   const isReviewer = isReviewerRole(user?.role);
 
-  const statusOptions = isReviewer
-    ? [
-        { value: 'all', label: 'All' },
-        { value: 'client_review', label: 'Client Review' },
-        { value: 'approved', label: 'Approved' },
-        { value: 'revision_requested', label: 'Revision Requested' },
-        { value: 'published', label: 'Published' },
-      ]
-    : [
-        { value: 'all', label: 'All' },
-        { value: 'pending_review', label: 'Pending Review' },
-        { value: 'in_review', label: 'In Review' },
-        { value: 'client_review', label: 'Client Review' },
-        { value: 'approved', label: 'Approved' },
-        { value: 'revision_requested', label: 'Revision Requested' },
-        { value: 'published', label: 'Published' },
-      ];
+  const statusOptions = getAssetStatusFilters(isReviewer);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">

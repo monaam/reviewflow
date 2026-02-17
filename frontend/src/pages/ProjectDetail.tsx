@@ -35,6 +35,7 @@ import {
   isAdmin,
 } from '../utils/permissions';
 import { isOverdue } from '../utils/formatters';
+import { getAssetStatusFilters } from '../config/statusFilters';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -291,18 +292,14 @@ export function ProjectDetailPage() {
           {/* Asset Filters */}
           <div className="mb-6">
             <FilterButtonGroup
-              options={(isReviewer
-                ? ['all', 'client_review', 'approved', 'revision_requested', 'published']
-                : ['all', 'pending_review', 'in_review', 'client_review', 'approved', 'revision_requested', 'published']
-              ).map((status) => {
-                const count = status === 'all'
-                  ? project.assets_count ?? 0
-                  : project.asset_status_counts?.[status] ?? 0;
-                return {
-                  value: status,
-                  label: `${status === 'all' ? 'All' : status.replace(/_/g, ' ')} (${count})`,
-                };
-              })}
+              options={getAssetStatusFilters(isReviewer).map((opt) => ({
+                value: opt.value,
+                label: `${opt.label} (${
+                  opt.value === 'all'
+                    ? project.assets_count ?? 0
+                    : project.asset_status_counts?.[opt.value] ?? 0
+                })`,
+              }))}
               value={filter}
               onChange={setFilter}
               variant="default"
