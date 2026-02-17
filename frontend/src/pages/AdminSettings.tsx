@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Save, Bell } from 'lucide-react';
 import { adminApi } from '../api/admin';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
 
 export function AdminSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -40,7 +41,7 @@ export function AdminSettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }

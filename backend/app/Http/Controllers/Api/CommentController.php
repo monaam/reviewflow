@@ -250,7 +250,7 @@ class CommentController extends Controller
         $memberIds = $asset->project->members()->pluck('users.id');
 
         // Get all admin IDs (admins have access to all projects)
-        $adminIds = User::where('role', 'admin')->pluck('id');
+        $adminIds = User::where('role', UserRole::ADMIN->value)->pluck('id');
 
         // Merge and get unique user IDs
         $userIds = $memberIds->merge($adminIds)->unique();

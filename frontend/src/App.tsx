@@ -15,6 +15,7 @@ import { NotificationsPage } from './pages/Notifications';
 import { AdminUsersPage } from './pages/AdminUsers';
 import { AdminSettingsPage } from './pages/AdminSettings';
 import { ProfileSettingsPage } from './pages/ProfileSettings';
+import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { useAuthStore } from './stores/authStore';
 import { useThemeStore } from './stores/themeStore';
 import './index.css';
@@ -25,7 +26,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -60,7 +61,7 @@ function App() {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>

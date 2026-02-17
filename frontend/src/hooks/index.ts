@@ -1,5 +1,6 @@
 export { useAssetActions } from './useAssetActions';
 export { useTemporalSeek } from './useTemporalSeek';
+export { useListFilter, type UseListFilterOptions } from './useListFilter';
 export {
   useAssetReviewState,
   type ModalType,

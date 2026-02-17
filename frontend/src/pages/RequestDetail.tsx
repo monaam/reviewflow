@@ -17,8 +17,10 @@ import { requestsApi } from '../api/requests';
 import { assetsApi } from '../api/assets';
 import { adminApi } from '../api/admin';
 import { CreativeRequest, Asset, User as UserType } from '../types';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { StatusBadge, LoadingSpinner, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
+import { formatEnumLabel, isOverdue as checkOverdue } from '../utils/formatters';
+import { isReviewer as isReviewerRole, isAdmin } from '../utils/permissions';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -82,15 +84,13 @@ export function RequestDetailPage() {
 
   const isAssignee = user?.id === request?.assigned_to;
   const isCreator = user?.id === request?.created_by;
-  const isReviewer = user?.role === 'reviewer';
-  const canComplete = (isCreator || user?.role === 'admin') && request?.status === 'asset_submitted';
-  const canEdit = isCreator || user?.role === 'admin';
-  const canDelete = isCreator || user?.role === 'admin';
-  const canReassign = (isCreator || user?.role === 'admin') && !['completed', 'cancelled'].includes(request?.status || '');
+  const isReviewer = isReviewerRole(user?.role);
+  const canComplete = (isCreator || isAdmin(user?.role)) && request?.status === 'asset_submitted';
+  const canEdit = isCreator || isAdmin(user?.role);
+  const canDelete = isCreator || isAdmin(user?.role);
+  const canReassign = (isCreator || isAdmin(user?.role)) && !['completed', 'cancelled'].includes(request?.status || '');
 
-  const isOverdue = request &&
-    new Date(request.deadline) < new Date() &&
-    !['completed', 'cancelled'].includes(request.status);
+  const isOverdue = request && checkOverdue(request.deadline, request.status);
 
   const handleDelete = async () => {
     try {
@@ -105,22 +105,15 @@ export function RequestDetailPage() {
   if (isReviewer) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <div className="text-center py-12">
-          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Access Restricted
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            Creative requests are not available for your role.
-          </p>
-          <Link
-            to="/"
-            className="inline-flex items-center mt-4 text-primary-600 hover:text-primary-700"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Dashboard
-          </Link>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="Access Restricted"
+          description="Creative requests are not available for your role."
+          action={{
+            label: 'Back to Dashboard',
+            href: '/',
+          }}
+        />
       </div>
     );
   }
@@ -128,7 +121,7 @@ export function RequestDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -234,7 +227,7 @@ export function RequestDetailPage() {
                 {Object.entries(request.specs).map(([key, value]) => (
                   <div key={key}>
                     <dt className="text-sm font-medium text-gray-500 capitalize">
-                      {key.replace(/_/g, ' ')}
+                      {formatEnumLabel(key)}
                     </dt>
                     <dd className="text-gray-900 dark:text-white">
                       {String(value)}

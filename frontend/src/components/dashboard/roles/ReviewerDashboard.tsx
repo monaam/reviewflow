@@ -9,6 +9,7 @@ import {
 import { DashboardData, Asset } from '../../../types';
 import { getAssetTypeIcon } from '../../../config/assetTypeRegistry';
 import { assetsApi } from '../../../api/assets';
+import { LoadingSpinner } from '../../common/LoadingSpinner';
 import { StatCard } from '../StatCard';
 import { DashboardSection } from '../DashboardSection';
 import { EmptyState } from '../EmptyState';
@@ -124,7 +125,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                 {/* Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {loadingAssetId === asset.id ? (
-                    <div className="w-5 h-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                    <LoadingSpinner size="sm" variant="gray" />
                   ) : (
                     <>
                       <button

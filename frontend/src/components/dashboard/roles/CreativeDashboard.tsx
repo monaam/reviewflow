@@ -17,6 +17,7 @@ import { AlertBanner } from '../AlertBanner';
 import { QuickActionCard } from '../QuickActionCard';
 import { StatusBadge } from '../../common/StatusBadge';
 import { getAssetTypeIcon } from '../../../config/assetTypeRegistry';
+import { isOverdue } from '../../../utils/formatters';
 import { formatDistanceToNow } from 'date-fns';
 
 interface CreativeDashboardProps {
@@ -91,7 +92,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {myQueue.slice(0, 5).map((request: CreativeRequest) => {
-                const isOverdue = new Date(request.deadline) < new Date();
+                const overdue = isOverdue(request.deadline);
                 return (
                   <Link
                     key={request.id}
@@ -108,7 +109,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
                         </span>
                         <span
                           className={`text-sm ${
-                            isOverdue
+                            overdue
                               ? 'text-gray-700 dark:text-gray-300 font-medium'
                               : 'text-gray-500 dark:text-gray-400'
                           }`}

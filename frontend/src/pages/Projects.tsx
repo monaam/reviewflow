@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, FolderKanban, Calendar, Users, Search, X } from 'lucide-react';
+import { Plus, FolderKanban, Calendar, Users } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { Project } from '../types';
+import { LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
+import { formatEnumLabel } from '../utils/formatters';
+import { canCreateProject as canCreateProjectRole } from '../utils/permissions';
+import { useListFilter } from '../hooks/useListFilter';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
@@ -30,14 +34,12 @@ export function ProjectsPage() {
     }
   };
 
-  const canCreateProject = user?.role === 'admin' || user?.role === 'pm';
+  const canCreateProject = canCreateProjectRole(user?.role);
 
-  const filteredProjects = projects.filter((p) => {
-    const matchesSearch = !searchQuery ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.client_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+  const filteredProjects = useListFilter({
+    items: projects,
+    searchQuery,
+    searchFields: (p) => [p.name, p.client_name, p.description],
   });
 
   return (
@@ -65,61 +67,37 @@ export function ProjectsPage() {
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-10 pr-10"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search projects..."
+        />
 
-        <div className="flex gap-1">
-          {['all', 'active', 'on_hold', 'completed', 'archived'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                filter === status
-                  ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              {status === 'all' ? 'All' : status.replace('_', ' ')}
-            </button>
-          ))}
-        </div>
+        <FilterButtonGroup
+          options={['all', 'active', 'on_hold', 'completed', 'archived']}
+          value={filter}
+          onChange={setFilter}
+          variant="default"
+        />
       </div>
 
       {/* Projects */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-gray-100"></div>
+          <LoadingSpinner size="md" variant="gray" />
         </div>
       ) : filteredProjects.length === 0 ? (
-        <div className="text-center py-16">
-          <FolderKanban className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {searchQuery ? 'No matching projects' : 'No projects found'}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            {searchQuery
+        <EmptyState
+          icon={FolderKanban}
+          title={searchQuery ? 'No matching projects' : 'No projects found'}
+          description={
+            searchQuery
               ? 'Try adjusting your search terms.'
               : canCreateProject
               ? 'Create your first project to get started.'
-              : 'You have not been added to any projects yet.'}
-          </p>
-        </div>
+              : 'You have not been added to any projects yet.'
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.map((project) => (
@@ -140,7 +118,7 @@ export function ProjectsPage() {
                   )}
                 </div>
                 <span className="ml-3 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 capitalize">
-                  {project.status.replace('_', ' ')}
+                  {formatEnumLabel(project.status)}
                 </span>
               </div>
 

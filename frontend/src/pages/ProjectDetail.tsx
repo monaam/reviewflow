@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   Upload,
   FileImage,
-  Plus,
   Users,
   Calendar,
   ClipboardList,
@@ -13,8 +12,6 @@ import {
   Trash2,
   UserPlus,
   UserMinus,
-  Search,
-  X,
   Download,
 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
@@ -22,12 +19,22 @@ import { assetsApi } from '../api/assets';
 import { requestsApi } from '../api/requests';
 import { adminApi } from '../api/admin';
 import { Project, Asset, CreativeRequest, User } from '../types';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { UploadProgress } from '../components/common/UploadProgress';
 import { useAuthStore } from '../stores/authStore';
 import { usersApi } from '../api/users';
 import { getAssetTypeIcon, supportsThumbnail } from '../config/assetTypeRegistry';
 import { useUploadProgress } from '../hooks';
+import { useListFilter } from '../hooks/useListFilter';
+import {
+  isReviewer as isReviewerRole,
+  canUpload as canUploadRole,
+  canCreateRequest as canCreateRequestRole,
+  canEditProject as canEditProjectRole,
+  canManageMembers as canManageMembersRole,
+  isAdmin,
+} from '../utils/permissions';
+import { isOverdue } from '../utils/formatters';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -46,7 +53,7 @@ export function ProjectDetailPage() {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const isReviewer = user?.role === 'reviewer';
+  const isReviewer = isReviewerRole(user?.role);
 
   useEffect(() => {
     if (id) {
@@ -89,26 +96,23 @@ export function ProjectDetailPage() {
     }
   };
 
-  const filteredAssets = assets.filter((a) => {
-    const matchesSearch = !searchQuery ||
-      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.uploader?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+  const filteredAssets = useListFilter({
+    items: assets,
+    searchQuery,
+    searchFields: (a) => [a.title, a.uploader?.name],
   });
 
-  const filteredRequests = requests.filter((r) => {
-    const matchesSearch = !searchQuery ||
-      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.assignee?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+  const filteredRequests = useListFilter({
+    items: requests,
+    searchQuery,
+    searchFields: (r) => [r.title, r.description, r.assignee?.name],
   });
 
-  const canUpload = user?.role === 'admin' || user?.role === 'pm' || user?.role === 'creative';
-  const canCreateRequest = user?.role === 'admin' || user?.role === 'pm';
-  const canEditProject = user?.role === 'admin' || user?.role === 'pm';
-  const canDeleteProject = user?.role === 'admin';
-  const canManageMembers = user?.role === 'admin' || user?.role === 'pm';
+  const canUpload = canUploadRole(user?.role);
+  const canCreateRequest = canCreateRequestRole(user?.role);
+  const canEditProject = canEditProjectRole(user?.role);
+  const canDeleteProject = isAdmin(user?.role);
+  const canManageMembers = canManageMembersRole(user?.role);
 
   const handleDeleteProject = async () => {
     try {
@@ -131,7 +135,7 @@ export function ProjectDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-gray-100"></div>
+        <LoadingSpinner size="md" variant="gray" />
       </div>
     );
   }
@@ -272,24 +276,12 @@ export function ProjectDetailPage() {
       {/* Search Bar */}
       {(activeTab === 'assets' || activeTab === 'requests') && (
         <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input pl-10 pr-10"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder={`Search ${activeTab}...`}
+            className="max-w-md"
+          />
         </div>
       )}
 
@@ -297,50 +289,42 @@ export function ProjectDetailPage() {
       {activeTab === 'assets' && (
         <>
           {/* Asset Filters */}
-          <div className="flex gap-1 flex-wrap mb-6">
-            {(isReviewer
-              ? ['all', 'client_review', 'approved', 'revision_requested', 'published']
-              : ['all', 'pending_review', 'in_review', 'client_review', 'approved', 'revision_requested', 'published']
-            ).map((status) => {
-              const count = status === 'all'
-                ? project.assets_count ?? 0
-                : project.asset_status_counts?.[status] ?? 0;
-              return (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    filter === status
-                      ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  {status === 'all' ? 'All' : status.replace(/_/g, ' ')} ({count})
-                </button>
-              );
-            })}
+          <div className="mb-6">
+            <FilterButtonGroup
+              options={(isReviewer
+                ? ['all', 'client_review', 'approved', 'revision_requested', 'published']
+                : ['all', 'pending_review', 'in_review', 'client_review', 'approved', 'revision_requested', 'published']
+              ).map((status) => {
+                const count = status === 'all'
+                  ? project.assets_count ?? 0
+                  : project.asset_status_counts?.[status] ?? 0;
+                return {
+                  value: status,
+                  label: `${status === 'all' ? 'All' : status.replace(/_/g, ' ')} (${count})`,
+                };
+              })}
+              value={filter}
+              onChange={setFilter}
+              variant="default"
+              className="flex-wrap"
+            />
           </div>
 
           {/* Assets Grid */}
           {filteredAssets.length === 0 ? (
-            <div className="text-center py-16">
-              <FileImage className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No assets yet
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
-                Upload your first asset to get started.
-              </p>
-              {canUpload && (
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="btn-primary"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Asset
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon={FileImage}
+              title="No assets yet"
+              description="Upload your first asset to get started."
+              action={
+                canUpload
+                  ? {
+                      label: 'Upload Asset',
+                      onClick: () => setShowUploadModal(true),
+                    }
+                  : undefined
+              }
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {filteredAssets.map((asset) => (
@@ -354,26 +338,23 @@ export function ProjectDetailPage() {
       {activeTab === 'requests' && (
         <>
           {filteredRequests.length === 0 ? (
-            <div className="text-center py-16">
-              <ClipboardList className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {searchQuery ? 'No matching requests' : 'No requests yet'}
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-6">
-                {searchQuery
+            <EmptyState
+              icon={ClipboardList}
+              title={searchQuery ? 'No matching requests' : 'No requests yet'}
+              description={
+                searchQuery
                   ? 'Try adjusting your search terms.'
-                  : 'Create a request to assign work to your creative team.'}
-              </p>
-              {!searchQuery && canCreateRequest && (
-                <button
-                  onClick={() => setShowRequestModal(true)}
-                  className="btn-primary"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Request
-                </button>
-              )}
-            </div>
+                  : 'Create a request to assign work to your creative team.'
+              }
+              action={
+                !searchQuery && canCreateRequest
+                  ? {
+                      label: 'New Request',
+                      onClick: () => setShowRequestModal(true),
+                    }
+                  : undefined
+              }
+            />
           ) : (
             <div className="space-y-3">
               {filteredRequests.map((request) => (
@@ -545,8 +526,7 @@ function AssetCard({ asset }: { asset: Asset }) {
 }
 
 function RequestCard({ request }: { request: CreativeRequest }) {
-  const isOverdue = new Date(request.deadline) < new Date() &&
-    !['completed', 'cancelled'].includes(request.status);
+  const overdue = isOverdue(request.deadline, request.status);
 
   return (
     <Link
@@ -563,7 +543,7 @@ function RequestCard({ request }: { request: CreativeRequest }) {
           </p>
           <div className="flex items-center gap-4 mt-3 text-sm text-gray-400 dark:text-gray-500">
             <span>Assigned to: {request.assignee?.name ?? 'Unassigned'}</span>
-            <span className={isOverdue ? 'text-gray-900 dark:text-white font-medium' : ''}>
+            <span className={overdue ? 'text-gray-900 dark:text-white font-medium' : ''}>
               Due: {new Date(request.deadline).toLocaleDateString()}
             </span>
           </div>

@@ -1,6 +1,7 @@
 import { FC, useEffect, useCallback, useState, useRef, ReactNode } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { AssetRendererProps } from '../../types/assetTypes';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 // Configure the worker from public directory
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
@@ -91,7 +92,7 @@ export const PdfRenderer: FC<PdfRendererProps> = ({
         onLoadSuccess={onDocumentLoadSuccess}
         loading={
           <div className="flex items-center justify-center h-full">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <LoadingSpinner size="lg" />
           </div>
         }
         error={

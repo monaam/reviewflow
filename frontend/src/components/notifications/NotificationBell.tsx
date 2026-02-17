@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, CheckCheck } from 'lucide-react';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 import { NotificationItem } from './NotificationItem';
 
 export function NotificationBell() {
@@ -74,7 +75,7 @@ export function NotificationBell() {
           <div className="max-h-96 overflow-y-auto">
             {isLoading && notifications.length === 0 ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <LoadingSpinner size="sm" variant="blue" />
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 px-4 text-center">

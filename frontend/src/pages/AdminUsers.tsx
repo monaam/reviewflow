@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, UserCheck, UserX } from 'lucide-react';
 import { adminApi } from '../api/admin';
 import { User } from '../types';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
 
 export function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -97,7 +98,7 @@ export function AdminUsersPage() {
             {isLoading ? (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                  <LoadingSpinner size="md" className="mx-auto" />
                 </td>
               </tr>
             ) : users.length === 0 ? (

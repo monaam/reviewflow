@@ -8,6 +8,7 @@ import {
   CreativeDashboard,
   ReviewerDashboard,
 } from '../components/dashboard';
+import { LoadingSpinner } from '../components/common';
 
 export function DashboardPage() {
   const { user } = useAuthStore();
@@ -32,7 +33,7 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 dark:border-gray-300"></div>
+        <LoadingSpinner size="lg" variant="gray" />
       </div>
     );
   }

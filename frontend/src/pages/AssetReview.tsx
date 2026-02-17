@@ -4,6 +4,7 @@ import { ArrowLeft, Lock } from 'lucide-react';
 import { assetsApi } from '../api/assets';
 import { Asset, Comment, TimelineItem, TempCommentImage } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
 import { useAssetActions, useAssetReviewState, useTemporalSeek, ModalType } from '../hooks';
@@ -400,7 +401,7 @@ export function AssetReviewPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
