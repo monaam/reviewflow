@@ -58,15 +58,13 @@ test.describe('Document Review', () => {
     await page.goto(`/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
-    // Select text in the document
+    // Select text in the document using triple-click (selects a paragraph)
     const editor = page.locator('.ProseMirror');
     await editor.waitFor({ state: 'visible' });
 
-    // Use keyboard to select text
-    await editor.click();
-    await page.keyboard.down('Control');
-    await page.keyboard.press('a');
-    await page.keyboard.up('Control');
+    // Triple-click to select a paragraph, which reliably triggers ProseMirror selection
+    const firstParagraph = editor.locator('p').first();
+    await firstParagraph.click({ clickCount: 3 });
 
     // Check for text selected banner
     await expect(page.getByText('Text selected')).toBeVisible({ timeout: 5000 });
@@ -80,13 +78,11 @@ test.describe('Document Review', () => {
     await page.goto(`/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
-    // Select text in the document
+    // Select text in the document using triple-click
     const editor = page.locator('.ProseMirror');
     await editor.waitFor({ state: 'visible' });
-    await editor.click();
-    await page.keyboard.down('Control');
-    await page.keyboard.press('a');
-    await page.keyboard.up('Control');
+    const firstParagraph = editor.locator('p').first();
+    await firstParagraph.click({ clickCount: 3 });
 
     // Type a comment
     const commentInput = page.locator('textarea[placeholder*="comment"]');
@@ -102,35 +98,26 @@ test.describe('Document Review', () => {
     const setup = await createDocumentAsset(page);
     if (!setup) { test.skip(); return; }
 
-    await page.goto(`/assets/${setup.assetId}`);
-    await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
+    // Navigate directly to the new-version editor page
+    await page.goto(`/assets/${setup.assetId}/documents/new-version`);
+    await expect(page.getByRole('heading', { name: 'New Document Version' })).toBeVisible({ timeout: 10000 });
 
-    // Check version is v1
-    await expect(page.getByText('v1')).toBeVisible();
+    const editorArea = page.locator('.ProseMirror');
+    await editorArea.waitFor({ state: 'visible', timeout: 5000 });
 
-    // Click upload version / new version button
-    const uploadVersionButton = page.getByRole('button', { name: /upload|new version|version/i });
-    if (await uploadVersionButton.isVisible()) {
-      await uploadVersionButton.click();
+    // Clear and type new content
+    await editorArea.click();
+    await page.keyboard.down('Control');
+    await page.keyboard.press('a');
+    await page.keyboard.up('Control');
+    await page.keyboard.type('Updated document content for version 2.');
 
-      // The document version modal should show with editor
-      const editorArea = page.locator('.ProseMirror');
-      if (await editorArea.isVisible({ timeout: 3000 })) {
-        // Clear and type new content
-        await editorArea.click();
-        await page.keyboard.down('Control');
-        await page.keyboard.press('a');
-        await page.keyboard.up('Control');
-        await page.keyboard.type('Updated document content for version 2.');
+    // Submit
+    await page.getByRole('button', { name: /submit version/i }).click();
 
-        // Submit
-        const submitBtn = page.getByRole('button', { name: /submit version/i });
-        if (await submitBtn.isVisible()) {
-          await submitBtn.click();
-          await expect(page.getByText('v2')).toBeVisible({ timeout: 10000 });
-        }
-      }
-    }
+    // Should navigate back to asset review page with v2
+    await expect(page).toHaveURL(new RegExp(`/assets/${setup.assetId}$`), { timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'v2' })).toBeVisible({ timeout: 10000 });
   });
 
   test('Clicking a highlighted annotation selects the comment', async ({ page }) => {

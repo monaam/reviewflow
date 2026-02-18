@@ -48,7 +48,7 @@ test.describe('Document Assets', () => {
     ).toBeHidden();
   });
 
-  test('PM can create a document asset via the editor modal', async ({ page }) => {
+  test('PM can create a document asset via the editor page', async ({ page }) => {
     await loginAs(page, 'pm');
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
@@ -58,11 +58,12 @@ test.describe('Document Assets', () => {
 
     await page.getByRole('button', { name: /write document/i }).click();
 
-    // Modal should appear
+    // Should navigate to the document editor page
+    await expect(page).toHaveURL(/\/documents\/new/);
     await expect(page.getByRole('heading', { name: 'Write Document' })).toBeVisible();
 
     // Fill in the title
-    await page.getByLabel('Title').fill('E2E Test Document');
+    await page.getByPlaceholder('Document title...').fill('E2E Test Document');
 
     // Type in the editor
     const editor = page.locator('.ProseMirror');
@@ -72,19 +73,16 @@ test.describe('Document Assets', () => {
     // Submit
     await page.getByRole('button', { name: /create document/i }).click();
 
-    // Wait for modal to close and asset to appear
-    await expect(page.getByRole('heading', { name: 'Write Document' })).toBeHidden({ timeout: 10000 });
+    // Should navigate to the asset review page
+    await expect(page).toHaveURL(/\/assets\//, { timeout: 10000 });
   });
 
-  test('Document editor modal has formatting toolbar', async ({ page }) => {
+  test('Document editor page has formatting toolbar', async ({ page }) => {
     await loginAs(page, 'pm');
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
-    await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
-
-    await page.getByRole('button', { name: /write document/i }).click();
+    await page.goto(`/projects/${projectId}/documents/new`);
 
     // Verify toolbar buttons are present
     await expect(page.getByTitle('Bold')).toBeVisible();
@@ -94,6 +92,8 @@ test.describe('Document Assets', () => {
     await expect(page.getByTitle('Undo')).toBeVisible();
 
     await page.getByRole('button', { name: /cancel/i }).click();
+    // Should navigate back to project
+    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}`), { timeout: 5000 });
   });
 
   test('Document creation requires title and content', async ({ page }) => {
@@ -101,20 +101,14 @@ test.describe('Document Assets', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
-    await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
+    await page.goto(`/projects/${projectId}/documents/new`);
 
-    await page.getByRole('button', { name: /write document/i }).click();
-
-    // Try to submit without title - the title input has required attr
+    // Try to submit without filling anything
     const submitButton = page.getByRole('button', { name: /create document/i });
     await expect(submitButton).toBeVisible();
 
-    // The HTML5 required attribute on title should prevent form submission
-    // We can verify the title field is required
-    const titleInput = page.getByLabel('Title');
-    await expect(titleInput).toHaveAttribute('required', '');
-
-    await page.getByRole('button', { name: /cancel/i }).click();
+    // Click submit without content — should show error
+    await submitButton.click();
+    await expect(page.getByText('Content is required')).toBeVisible();
   });
 });

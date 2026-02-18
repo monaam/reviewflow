@@ -39,7 +39,6 @@ import {
   EditProjectModal,
   DeleteConfirmModal,
   AddMemberModal,
-  DocumentEditorModal,
 } from '../components/modals';
 
 export function ProjectDetailPage() {
@@ -52,7 +51,6 @@ export function ProjectDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'assets' | 'requests' | 'members'>('assets');
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -223,7 +221,7 @@ export function ProjectDetailPage() {
             )}
             {canUpload && (
               <button
-                onClick={() => setShowDocumentModal(true)}
+                onClick={() => navigate(`/projects/${id}/documents/new`)}
                 className="btn-secondary"
               >
                 <FileEdit className="w-4 h-4 mr-2" />
@@ -441,19 +439,6 @@ export function ProjectDetailPage() {
             fetchProject();
             fetchAssets();
             setShowUploadModal(false);
-          }}
-        />
-      )}
-
-      {/* Document Editor Modal */}
-      {showDocumentModal && (
-        <DocumentEditorModal
-          projectId={id!}
-          onClose={() => setShowDocumentModal(false)}
-          onSuccess={() => {
-            fetchProject();
-            fetchAssets();
-            setShowDocumentModal(false);
           }}
         />
       )}

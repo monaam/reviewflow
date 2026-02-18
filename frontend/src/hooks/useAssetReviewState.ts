@@ -11,7 +11,6 @@ export type ModalType =
   | 'delete'
   | 'compare'
   | 'publish'
-  | 'document-version'
   | null;
 
 /**

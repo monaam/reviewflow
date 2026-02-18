@@ -21,7 +21,6 @@ import {
   EditAssetModal,
   DeleteConfirmModal,
   PublishModal,
-  DocumentEditorModal,
 } from '../components/modals';
 import { getPlatformInfo } from '../config/platformIcons';
 
@@ -381,7 +380,13 @@ export function AssetReviewPage() {
     const actions: Record<string, () => void> = {
       'approve': () => openModal('approve'),
       'request-revision': () => openModal('revision'),
-      'upload-version': () => openModal(isContentBasedType(asset?.type || '') ? 'document-version' : 'upload'),
+      'upload-version': () => {
+        if (isContentBasedType(asset?.type || '')) {
+          navigate(`/assets/${id}/documents/new-version`);
+        } else {
+          openModal('upload');
+        }
+      },
       'compare-versions': () => openModal('compare'),
       'view-timeline': toggleTimeline,
       'lock': handleLock,
@@ -613,18 +618,6 @@ export function AssetReviewPage() {
           onPublish={handlePublish}
           versions={asset.versions}
           currentVersion={asset.current_version}
-        />
-      )}
-      {state.activeModal === 'document-version' && asset && (
-        <DocumentEditorModal
-          projectId={asset.project_id}
-          asset={asset}
-          onClose={closeModal}
-          onSuccess={() => {
-            fetchAsset();
-            fetchTimeline();
-            closeModal();
-          }}
         />
       )}
       {state.activeModal === 'compare' && asset.versions && asset.versions.length > 1 && (

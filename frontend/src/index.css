@@ -74,3 +74,17 @@
     @apply badge;
   }
 }
+
+/* Tiptap editor */
+.tiptap {
+  outline: none;
+  caret-color: currentColor;
+}
+
+.tiptap p.is-editor-empty:first-child::before {
+  @apply text-gray-400 dark:text-gray-500;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
