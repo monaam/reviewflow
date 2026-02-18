@@ -291,6 +291,14 @@ export default function VersionComparison({
       );
     }
 
+    if (!version.file_url) {
+      return (
+        <div className="flex items-center justify-center h-full bg-gray-900 rounded">
+          <p className="text-gray-500">No file preview available</p>
+        </div>
+      );
+    }
+
     const mediaUrl = getMediaUrlForType(version.file_url, assetType);
 
     // Video needs special handling for comparison mode sync
@@ -374,7 +382,9 @@ export default function VersionComparison({
     return (
       <div className="mt-2 text-xs text-gray-400 space-y-1">
         <p>Uploaded by: {version.uploader?.name ?? 'Unknown'}</p>
-        <p>Size: {version.file_size_formatted ?? `${Math.round(version.file_size / 1024)} KB`}</p>
+        {version.file_size != null && (
+          <p>Size: {version.file_size_formatted ?? `${Math.round(version.file_size / 1024)} KB`}</p>
+        )}
         <p>Date: {formatRelativeTime(version.created_at)}</p>
         {version.version_notes && (
           <p className="text-gray-300 bg-gray-800 p-2 rounded mt-2">

@@ -161,7 +161,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
         {/* Dynamic renderer from registry */}
         {currentVersionData && handler && (() => {
           const Renderer = handler.Renderer;
-          const mediaUrl = getMediaUrlForType(currentVersionData.file_url, asset.type);
+          const mediaUrl = currentVersionData.file_url ? getMediaUrlForType(currentVersionData.file_url, asset.type) : '';
 
           // Base props for all renderers
           const baseProps: AssetRendererProps = {

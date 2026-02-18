@@ -59,6 +59,11 @@ interface AssetTypeHandlerInterface
     public function supportsTemporalAnnotations(): bool;
 
     /**
+     * Whether this type supports text-selection annotations.
+     */
+    public function supportsTextAnnotations(): bool;
+
+    /**
      * Get allowed MIME types for file validation.
      */
     public function getAllowedMimeTypes(): array;

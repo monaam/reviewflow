@@ -61,4 +61,20 @@ class DocumentHandlerTest extends TestCase
     {
         $this->assertTrue($this->handler->supportsTextAnnotations());
     }
+
+    public function test_sanitize_content_returns_clean_html_and_word_count(): void
+    {
+        $result = $this->handler->sanitizeContent('<p>Hello world</p><script>alert(1)</script>');
+
+        $this->assertStringNotContainsString('<script>', $result['content']);
+        $this->assertStringContainsString('<p>Hello world</p>', $result['content']);
+        $this->assertEquals(2, $result['word_count']);
+    }
+
+    public function test_sanitize_content_strips_javascript_href(): void
+    {
+        $result = $this->handler->sanitizeContent('<a href="javascript:alert(1)">Click</a>');
+
+        $this->assertStringNotContainsString('javascript:', $result['content']);
+    }
 }

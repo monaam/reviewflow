@@ -68,9 +68,9 @@ export interface AssetVersion {
   id: string;
   asset_id: string;
   version_number: number;
-  file_url: string;
-  file_path: string;
-  file_size: number;
+  file_url: string | null;
+  file_path: string | null;
+  file_size: number | null;
   file_size_formatted?: string | null;
   file_meta: Record<string, unknown>;
   content: string | null;

@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useCallback } from 'react';
+import { FC, useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -170,27 +170,6 @@ export const DocumentRenderer: FC<DocumentRendererProps> = ({
   return (
     <div className="document-renderer w-full h-full overflow-y-auto bg-white dark:bg-gray-900 flex justify-center">
       <div className="max-w-3xl w-full px-8 py-12">
-        <style>{`
-          .annotation-pending {
-            background-color: rgba(59, 130, 246, 0.2);
-            border-radius: 2px;
-          }
-          .annotation-unresolved {
-            background-color: rgba(250, 204, 21, 0.3);
-            cursor: pointer;
-            border-radius: 2px;
-          }
-          .annotation-resolved {
-            background-color: rgba(34, 197, 94, 0.2);
-            cursor: pointer;
-            border-radius: 2px;
-          }
-          .annotation-selected {
-            background-color: rgba(59, 130, 246, 0.3);
-            cursor: pointer;
-            border-radius: 2px;
-          }
-        `}</style>
         <EditorContent
           editor={editor}
           className="prose dark:prose-invert max-w-none cursor-text"

@@ -31,7 +31,7 @@ class CommentStoreRequest extends FormRequest
             'page_number' => 'nullable|integer|min:1',
             'text_anchor' => 'nullable|array',
             'text_anchor.from' => 'required_with:text_anchor|integer|min:0',
-            'text_anchor.to' => 'required_with:text_anchor|integer|min:0',
+            'text_anchor.to' => 'required_with:text_anchor|integer|min:0|gt:text_anchor.from',
             'text_anchor.selectedText' => 'required_with:text_anchor|string|max:5000',
             'parent_id' => 'nullable|uuid|exists:comments,id',
             'temp_image_ids' => 'nullable|array|max:10',

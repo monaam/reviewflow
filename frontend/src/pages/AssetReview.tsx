@@ -392,16 +392,27 @@ export function AssetReviewPage() {
       'lock': handleLock,
       'send-to-client': handleSendToClient,
       'publish': () => openModal('publish'),
-      'copy-content': () => {
+      'copy-content': async () => {
         const content = currentVersionData?.content;
-        if (content) {
-          const tmp = document.createElement('div');
-          tmp.innerHTML = content;
+        if (!content) return;
+        try {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(content, 'text/html');
+          const plainText = doc.body.textContent || '';
           const blob = new Blob([content], { type: 'text/html' });
-          const textBlob = new Blob([tmp.textContent || ''], { type: 'text/plain' });
-          navigator.clipboard.write([
+          const textBlob = new Blob([plainText], { type: 'text/plain' });
+          await navigator.clipboard.write([
             new ClipboardItem({ 'text/html': blob, 'text/plain': textBlob }),
           ]);
+        } catch {
+          // Fallback: copy as plain text
+          try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(content, 'text/html');
+            await navigator.clipboard.writeText(doc.body.textContent || '');
+          } catch {
+            console.error('Failed to copy content to clipboard');
+          }
         }
       },
       'download': () => handleDownloadVersion(selectedVersion),
