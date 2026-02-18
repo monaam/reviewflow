@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\AssetStatus;
 use App\Models\Asset;
 use App\Models\User;
 
@@ -15,11 +16,11 @@ class AssetPolicy
 
         // Reviewers can only view assets sent to them (client_review) or already acted upon (approved/revision_requested/published)
         if ($user->isReviewer()) {
-            return in_array($asset->status, ['client_review', 'approved', 'revision_requested', 'published'])
-                && $asset->project->members()->where('users.id', $user->id)->exists();
+            return in_array($asset->status, AssetStatus::reviewerVisible())
+                && $asset->project->isMember($user);
         }
 
-        return $asset->project->members()->where('users.id', $user->id)->exists();
+        return $asset->project->isMember($user);
     }
 
     public function update(User $user, Asset $asset): bool
@@ -29,7 +30,7 @@ class AssetPolicy
         }
 
         if ($user->isPM()) {
-            return $asset->project->members()->where('users.id', $user->id)->exists();
+            return $asset->project->isMember($user);
         }
 
         if ($user->isCreative()) {
@@ -59,7 +60,7 @@ class AssetPolicy
 
     public function uploadVersion(User $user, Asset $asset): bool
     {
-        if ($user->isAdmin() || $user->isPM()) {
+        if ($user->isManagerial()) {
             return $this->view($user, $asset);
         }
 
@@ -80,7 +81,7 @@ class AssetPolicy
             return true;
         }
 
-        return $asset->project->members()->where('users.id', $user->id)->exists();
+        return $asset->project->isMember($user);
     }
 
     public function comment(User $user, Asset $asset): bool
@@ -99,7 +100,7 @@ class AssetPolicy
             return true;
         }
 
-        return $asset->project->members()->where('users.id', $user->id)->exists();
+        return $asset->project->isMember($user);
     }
 
     public function publish(User $user, Asset $asset): bool
@@ -112,7 +113,7 @@ class AssetPolicy
             return true;
         }
 
-        return $asset->project->members()->where('users.id', $user->id)->exists();
+        return $asset->project->isMember($user);
     }
 
     public function download(User $user, Asset $asset): bool

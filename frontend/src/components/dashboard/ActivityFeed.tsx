@@ -7,7 +7,7 @@ import {
   MessageSquare,
   LucideIcon,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeTime } from '../../utils/date';
 
 export interface ActivityItem {
   id: string;
@@ -73,7 +73,7 @@ export function ActivityFeed({ activities, maxItems = 5 }: ActivityFeedProps) {
                   </span>
                 )}
                 <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
+                  {formatRelativeTime(activity.created_at)}
                 </span>
               </div>
             </div>

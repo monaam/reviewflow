@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Asset extends Model
 {
     use HasFactory, HasUuids;
+
+    public const LOCK_ACTION_LOCKED = 'locked';
+    public const LOCK_ACTION_UNLOCKED = 'unlocked';
 
     protected $fillable = [
         'project_id',
@@ -88,27 +92,36 @@ class Asset extends Model
 
     public function scopePendingReview($query)
     {
-        return $query->where('status', 'pending_review');
+        return $query->where('status', AssetStatus::PENDING_REVIEW->value);
     }
 
     public function scopeNeedsRevision($query)
     {
-        return $query->where('status', 'revision_requested');
+        return $query->where('status', AssetStatus::REVISION_REQUESTED->value);
     }
 
     public function scopeApproved($query)
     {
-        return $query->where('status', 'approved');
+        return $query->where('status', AssetStatus::APPROVED->value);
     }
 
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('status', AssetStatus::PUBLISHED->value);
     }
 
     public function scopeExcludePublished($query)
     {
-        return $query->where('status', '!=', 'published');
+        return $query->where('status', '!=', AssetStatus::PUBLISHED->value);
+    }
+
+    /**
+     * Scope query to only show assets visible to reviewers
+     * (client_review, approved, revision_requested, published)
+     */
+    public function scopeReviewerVisible($query)
+    {
+        return $query->whereIn('status', AssetStatus::reviewerVisible());
     }
 
     public function publishedLinks(): HasMany
@@ -137,7 +150,7 @@ class Asset extends Model
         VersionLock::create([
             'asset_id' => $this->id,
             'user_id' => $user->id,
-            'action' => 'locked',
+            'action' => self::LOCK_ACTION_LOCKED,
             'reason' => $reason,
         ]);
     }
@@ -153,7 +166,7 @@ class Asset extends Model
         VersionLock::create([
             'asset_id' => $this->id,
             'user_id' => $user->id,
-            'action' => 'unlocked',
+            'action' => self::LOCK_ACTION_UNLOCKED,
             'reason' => $reason,
         ]);
     }

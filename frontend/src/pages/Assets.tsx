@@ -1,42 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FileImage, Search, X, Eye } from 'lucide-react';
+import { FileImage, Eye } from 'lucide-react';
 import { assetsApi } from '../api/assets';
 import { Asset } from '../types';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { getAssetTypeIcon } from '../config/assetTypeRegistry';
 import { useAuthStore } from '../stores/authStore';
-import { formatDistanceToNow } from 'date-fns';
+import { isReviewer as isReviewerRole } from '../utils/permissions';
+import { useFetch, useListFilter } from '../hooks';
+import { getAssetStatusFilters } from '../config/statusFilters';
+import { formatRelativeTime } from '../utils/date';
 
 export function AssetsPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const statusFilter = searchParams.get('status') || 'all';
   const uploadedByFilter = searchParams.get('uploaded_by') || 'all';
 
-  useEffect(() => {
-    fetchAssets();
-  }, [statusFilter, uploadedByFilter]);
-
-  const fetchAssets = async () => {
-    setIsLoading(true);
-    try {
+  const { data: assets, isLoading } = useFetch({
+    fetcher: () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (uploadedByFilter === 'me') params.uploaded_by = 'me';
-
-      const response = await assetsApi.listAll(params);
-      setAssets(response.data);
-    } catch (error) {
-      console.error('Failed to fetch assets:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return assetsApi.listAll(params).then(r => r.data);
+    },
+    deps: [statusFilter, uploadedByFilter],
+    initial: [] as Asset[],
+  });
 
   const setFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -48,35 +40,15 @@ export function AssetsPage() {
     setSearchParams(newParams);
   };
 
-  const filteredAssets = assets.filter((asset) => {
-    if (!searchQuery) return true;
-    const search = searchQuery.toLowerCase();
-    return (
-      asset.title.toLowerCase().includes(search) ||
-      asset.project?.name?.toLowerCase().includes(search) ||
-      asset.uploader?.name?.toLowerCase().includes(search)
-    );
+  const filteredAssets = useListFilter({
+    items: assets,
+    searchQuery,
+    searchFields: (a) => [a.title, a.project?.name, a.uploader?.name],
   });
 
-  const isReviewer = user?.role === 'reviewer';
+  const isReviewer = isReviewerRole(user?.role);
 
-  const statusOptions = isReviewer
-    ? [
-        { value: 'all', label: 'All' },
-        { value: 'client_review', label: 'Client Review' },
-        { value: 'approved', label: 'Approved' },
-        { value: 'revision_requested', label: 'Revision Requested' },
-        { value: 'published', label: 'Published' },
-      ]
-    : [
-        { value: 'all', label: 'All' },
-        { value: 'pending_review', label: 'Pending Review' },
-        { value: 'in_review', label: 'In Review' },
-        { value: 'client_review', label: 'Client Review' },
-        { value: 'approved', label: 'Approved' },
-        { value: 'revision_requested', label: 'Revision Requested' },
-        { value: 'published', label: 'Published' },
-      ];
+  const statusOptions = getAssetStatusFilters(isReviewer);
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -90,40 +62,19 @@ export function AssetsPage() {
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search assets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-10 pr-10"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search assets..."
+        />
 
-        <div className="flex gap-1 flex-wrap">
-          {statusOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setFilter('status', option.value)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                statusFilter === option.value
-                  ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <FilterButtonGroup
+          options={statusOptions}
+          value={statusFilter}
+          onChange={(value) => setFilter('status', value)}
+          variant="default"
+          className="flex-wrap"
+        />
       </div>
 
       {/* My Assets Toggle for creatives */}
@@ -155,20 +106,18 @@ export function AssetsPage() {
       {/* Assets List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-gray-100"></div>
+          <LoadingSpinner size="md" variant="gray" />
         </div>
       ) : filteredAssets.length === 0 ? (
-        <div className="text-center py-16">
-          <FileImage className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {searchQuery ? 'No matching assets' : 'No assets found'}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            {searchQuery
+        <EmptyState
+          icon={FileImage}
+          title={searchQuery ? 'No matching assets' : 'No assets found'}
+          description={
+            searchQuery
               ? 'Try adjusting your search or filters.'
-              : 'Assets will appear here when uploaded to projects.'}
-          </p>
-        </div>
+              : 'Assets will appear here when uploaded to projects.'
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredAssets.map((asset) => (
@@ -220,7 +169,7 @@ export function AssetsPage() {
                 </p>
                 <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                   <span>{asset.uploader?.name}</span>
-                  <span>{formatDistanceToNow(new Date(asset.created_at), { addSuffix: true })}</span>
+                  <span>{formatRelativeTime(asset.created_at)}</span>
                 </div>
               </div>
             </Link>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,43 +15,39 @@ import {
 } from 'lucide-react';
 import { requestsApi } from '../api/requests';
 import { assetsApi } from '../api/assets';
-import { adminApi } from '../api/admin';
-import { CreativeRequest, Asset, User as UserType } from '../types';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { CreativeRequest, Asset } from '../types';
+import { StatusBadge, LoadingSpinner, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
+import { formatEnumLabel, isOverdue as checkOverdue } from '../utils/formatters';
+import { isReviewer as isReviewerRole, isAdmin } from '../utils/permissions';
+import { useFetch } from '../hooks';
+import { formatRelativeTime } from '../utils/date';
+import {
+  DeleteConfirmModal,
+  EditRequestModal,
+  ReassignModal,
+} from '../components/modals';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [request, setRequest] = useState<CreativeRequest | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchRequest();
-    }
-  }, [id]);
-
-  const fetchRequest = async () => {
-    try {
-      const data = await requestsApi.get(id!);
-      setRequest(data);
-    } catch (error) {
-      console.error('Failed to fetch request:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: request, isLoading, refetch } = useFetch({
+    fetcher: () => requestsApi.get(id!),
+    deps: [id],
+    initial: null as CreativeRequest | null,
+    enabled: !!id,
+  });
 
   const handleStart = async () => {
     try {
       await requestsApi.start(id!);
-      fetchRequest();
+      refetch();
     } catch (error) {
       console.error('Failed to start request:', error);
     }
@@ -60,7 +56,7 @@ export function RequestDetailPage() {
   const handleComplete = async () => {
     try {
       await requestsApi.complete(id!);
-      fetchRequest();
+      refetch();
     } catch (error) {
       console.error('Failed to complete request:', error);
     }
@@ -82,15 +78,13 @@ export function RequestDetailPage() {
 
   const isAssignee = user?.id === request?.assigned_to;
   const isCreator = user?.id === request?.created_by;
-  const isReviewer = user?.role === 'reviewer';
-  const canComplete = (isCreator || user?.role === 'admin') && request?.status === 'asset_submitted';
-  const canEdit = isCreator || user?.role === 'admin';
-  const canDelete = isCreator || user?.role === 'admin';
-  const canReassign = (isCreator || user?.role === 'admin') && !['completed', 'cancelled'].includes(request?.status || '');
+  const isReviewer = isReviewerRole(user?.role);
+  const canComplete = (isCreator || isAdmin(user?.role)) && request?.status === 'asset_submitted';
+  const canEdit = isCreator || isAdmin(user?.role);
+  const canDelete = isCreator || isAdmin(user?.role);
+  const canReassign = (isCreator || isAdmin(user?.role)) && !['completed', 'cancelled'].includes(request?.status || '');
 
-  const isOverdue = request &&
-    new Date(request.deadline) < new Date() &&
-    !['completed', 'cancelled'].includes(request.status);
+  const isOverdue = request && checkOverdue(request.deadline, request.status);
 
   const handleDelete = async () => {
     try {
@@ -105,22 +99,15 @@ export function RequestDetailPage() {
   if (isReviewer) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <div className="text-center py-12">
-          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Access Restricted
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            Creative requests are not available for your role.
-          </p>
-          <Link
-            to="/"
-            className="inline-flex items-center mt-4 text-primary-600 hover:text-primary-700"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Dashboard
-          </Link>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="Access Restricted"
+          description="Creative requests are not available for your role."
+          action={{
+            label: 'Back to Dashboard',
+            href: '/',
+          }}
+        />
       </div>
     );
   }
@@ -128,7 +115,7 @@ export function RequestDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -234,7 +221,7 @@ export function RequestDetailPage() {
                 {Object.entries(request.specs).map(([key, value]) => (
                   <div key={key}>
                     <dt className="text-sm font-medium text-gray-500 capitalize">
-                      {key.replace(/_/g, ' ')}
+                      {formatEnumLabel(key)}
                     </dt>
                     <dd className="text-gray-900 dark:text-white">
                       {String(value)}
@@ -335,7 +322,7 @@ export function RequestDetailPage() {
                 </dt>
                 <dd className={`mt-1 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-900 dark:text-white'}`}>
                   {isOverdue && <AlertTriangle className="w-4 h-4 inline mr-1" />}
-                  {new Date(request.deadline).toLocaleString()}
+                  {formatRelativeTime(request.deadline)}
                 </dd>
               </div>
               <div>
@@ -344,7 +331,7 @@ export function RequestDetailPage() {
                   Created At
                 </dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">
-                  {new Date(request.created_at).toLocaleString()}
+                  {formatRelativeTime(request.created_at)}
                 </dd>
               </div>
             </dl>
@@ -365,8 +352,8 @@ export function RequestDetailPage() {
         <EditRequestModal
           request={request}
           onClose={() => setShowEditModal(false)}
-          onUpdated={(updated) => {
-            setRequest(updated);
+          onUpdated={() => {
+            refetch();
             setShowEditModal(false);
           }}
         />
@@ -387,8 +374,8 @@ export function RequestDetailPage() {
         <ReassignModal
           request={request}
           onClose={() => setShowReassignModal(false)}
-          onReassigned={(updated) => {
-            setRequest(updated);
+          onReassigned={() => {
+            refetch();
             setShowReassignModal(false);
           }}
         />
@@ -467,293 +454,6 @@ function UploadAssetModal({
               className="btn-primary"
             >
               {isLoading ? 'Uploading...' : 'Upload'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function EditRequestModal({
-  request,
-  onClose,
-  onUpdated,
-}: {
-  request: CreativeRequest;
-  onClose: () => void;
-  onUpdated: (request: CreativeRequest) => void;
-}) {
-  const [title, setTitle] = useState(request.title);
-  const [description, setDescription] = useState(request.description);
-  const [deadline, setDeadline] = useState(
-    new Date(request.deadline).toISOString().slice(0, 16)
-  );
-  const [priority, setPriority] = useState(request.priority);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
-    try {
-      const updated = await requestsApi.update(request.id, {
-        title,
-        description,
-        deadline,
-        priority,
-      });
-      onUpdated(updated);
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to update request');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Edit Request
-          </h2>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="edit-title" className="label">
-                Title *
-              </label>
-              <input
-                id="edit-title"
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="input"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="edit-description" className="label">
-                Description *
-              </label>
-              <textarea
-                id="edit-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="input"
-                rows={4}
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="edit-deadline" className="label">
-                  Deadline *
-                </label>
-                <input
-                  id="edit-deadline"
-                  type="datetime-local"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                  className="input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="edit-priority" className="label">
-                  Priority
-                </label>
-                <select
-                  id="edit-priority"
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as typeof priority)}
-                  className="input"
-                >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-secondary"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DeleteConfirmModal({
-  title,
-  message,
-  onClose,
-  onConfirm,
-}: {
-  title: string;
-  message: string;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleConfirm = async () => {
-    setIsLoading(true);
-    await onConfirm();
-    setIsLoading(false);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          {title}
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">{message}</p>
-        <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="btn-secondary" disabled={isLoading}>
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirm}
-            className="btn-primary bg-red-600 hover:bg-red-700"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Deleting...' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ReassignModal({
-  request,
-  onClose,
-  onReassigned,
-}: {
-  request: CreativeRequest;
-  onClose: () => void;
-  onReassigned: (request: CreativeRequest) => void;
-}) {
-  const [users, setUsers] = useState<UserType[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState(request.assigned_to);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await adminApi.getUsers({ role: 'creative', active: true });
-        setUsers(response.data);
-      } catch (error) {
-        console.error('Failed to fetch users:', error);
-      }
-    };
-    fetchUsers();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUserId || selectedUserId === request.assigned_to) {
-      onClose();
-      return;
-    }
-
-    setError('');
-    setIsLoading(true);
-
-    try {
-      const updated = await requestsApi.update(request.id, {
-        assigned_to: selectedUserId,
-      });
-      onReassigned(updated);
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || 'Failed to reassign request');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          Reassign Request
-        </h2>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="reassign-user" className="label">
-              Assign to
-            </label>
-            <select
-              id="reassign-user"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="input"
-              required
-            >
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} {user.id === request.assigned_to ? '(current)' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Reassigning...' : 'Reassign'}
             </button>
           </div>
         </form>

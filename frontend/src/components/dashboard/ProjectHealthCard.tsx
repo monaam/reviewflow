@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ProgressBar } from './ProgressBar';
+import { isOverdue } from '../../utils/formatters';
+import { formatRelativeTime } from '../../utils/date';
 
 interface ProjectHealthCardProps {
   id: string;
@@ -21,7 +23,7 @@ export function ProjectHealthCard({
   deadline,
 }: ProjectHealthCardProps) {
   const progress = totalAssets > 0 ? Math.round((approvedAssets / totalAssets) * 100) : 0;
-  const isOverdue = deadline && new Date(deadline) < new Date();
+  const overdue = deadline && isOverdue(deadline);
 
   return (
     <Link
@@ -36,10 +38,10 @@ export function ProjectHealthCard({
             {deadline && (
               <span
                 className={`text-xs ${
-                  isOverdue ? 'text-gray-700 dark:text-gray-300 font-medium' : 'text-gray-500 dark:text-gray-400'
+                  overdue ? 'text-gray-700 dark:text-gray-300 font-medium' : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
-                Due {new Date(deadline).toLocaleDateString()}
+                Due {formatRelativeTime(deadline)}
               </span>
             )}
           </div>

@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileImage, Film, FileText, Clock, Search, X, CheckCircle } from 'lucide-react';
+import { FileImage, Clock, CheckCircle } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { assetsApi } from '../api/assets';
 import { Project, Asset } from '../types';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
+import { useListFilter } from '../hooks/useListFilter';
+import { getAssetTypeIcon } from '../config/assetTypeRegistry';
+import { formatRelativeTime } from '../utils/date';
 
 export function ReviewQueuePage() {
   const { user } = useAuthStore();
@@ -43,31 +46,18 @@ export function ReviewQueuePage() {
     }
   };
 
-  const filteredAssets = pendingAssets.filter((asset) => {
-    const matchesSearch =
-      !searchQuery ||
-      asset.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      asset.uploader?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === 'all' || asset.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const filteredAssets = useListFilter({
+    items: pendingAssets,
+    searchQuery,
+    searchFields: (a) => [a.title, a.uploader?.name],
+    statusFilter,
+    getStatus: (a) => a.status,
   });
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'video':
-        return Film;
-      case 'pdf':
-        return FileText;
-      default:
-        return FileImage;
-    }
-  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -122,59 +112,35 @@ export function ReviewQueuePage() {
 
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search assets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-10 pr-10"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search assets..."
+        />
 
-        <div className="flex gap-2">
-          {(['all', 'pending_review', 'in_review'] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                statusFilter === status
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              {status === 'all' ? 'All' : status.replace(/_/g, ' ')}
-            </button>
-          ))}
-        </div>
+        <FilterButtonGroup
+          options={['all', 'pending_review', 'in_review']}
+          value={statusFilter}
+          onChange={(value) => setStatusFilter(value as typeof statusFilter)}
+          variant="primary"
+        />
       </div>
 
       {/* Assets List */}
       {filteredAssets.length === 0 ? (
-        <div className="text-center py-12 card">
-          <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {searchQuery ? 'No matching assets' : 'All caught up!'}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            {searchQuery
+        <EmptyState
+          icon={CheckCircle}
+          title={searchQuery ? 'No matching assets' : 'All caught up!'}
+          description={
+            searchQuery
               ? 'Try adjusting your search terms.'
-              : 'No assets are waiting for review right now.'}
-          </p>
-        </div>
+              : 'No assets are waiting for review right now.'
+          }
+        />
       ) : (
         <div className="space-y-4">
           {filteredAssets.map((asset) => {
-            const Icon = getIcon(asset.type);
+            const Icon = getAssetTypeIcon(asset.type);
             const project = projects.find((p) => p.id === asset.project_id);
 
             return (
@@ -199,7 +165,7 @@ export function ReviewQueuePage() {
                     {asset.uploader?.name}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(asset.created_at).toLocaleString()}
+                    {formatRelativeTime(asset.created_at)}
                   </p>
                 </div>
 

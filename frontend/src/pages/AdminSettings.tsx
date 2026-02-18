@@ -1,27 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Save, Bell } from 'lucide-react';
 import { adminApi } from '../api/admin';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { useFetch } from '../hooks';
 
 export function AdminSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState('');
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
-    try {
+  const { isLoading } = useFetch({
+    fetcher: async () => {
       const data = await adminApi.getSettings();
       setSettings(data);
-    } catch (error) {
-      console.error('Failed to fetch settings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return data;
+    },
+    initial: null as Record<string, string> | null,
+  });
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -40,7 +35,7 @@ export function AdminSettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <LoadingSpinner size="lg" />
       </div>
     );
   }

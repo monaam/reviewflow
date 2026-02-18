@@ -2,7 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssetApproveRequest;
+use App\Http\Requests\AssetLinkRequestRequest;
+use App\Http\Requests\AssetLockRequest;
+use App\Http\Requests\AssetPublishRequest;
+use App\Http\Requests\AssetRequestRevisionRequest;
+use App\Http\Requests\AssetStoreRequest;
+use App\Http\Requests\AssetUpdateRequest;
+use App\Http\Requests\AssetUploadVersionRequest;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
 use App\Models\AssetPublishedLink;
@@ -43,7 +52,7 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($user->isReviewer()) {
-            $query->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']);
+            $query->reviewerVisible();
         }
 
         if ($request->has('status')) {
@@ -89,7 +98,7 @@ class AssetController extends Controller
 
         // Reviewers can only see assets sent to them or already acted upon
         if ($request->user()->isReviewer()) {
-            $query->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']);
+            $query->reviewerVisible();
         }
 
         if ($request->has('status')) {
@@ -112,17 +121,11 @@ class AssetController extends Controller
         return response()->json($assets);
     }
 
-    public function store(Request $request, Project $project): JsonResponse
+    public function store(AssetStoreRequest $request, Project $project): JsonResponse
     {
         $this->authorize('uploadAsset', $project);
 
-        $validated = $request->validate([
-            'file' => 'required|file|max:512000',
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'request_id' => 'nullable|uuid|exists:creative_requests,id',
-        ]);
-
+        $validated = $request->validated();
         $file = $request->file('file');
         $type = $this->assetTypeRegistry->determineType($file);
 
@@ -138,8 +141,8 @@ class AssetController extends Controller
         // Create asset
         // Admin/PM uploads go directly to in_review (they don't need to wait for PM review)
         $initialStatus = $request->user()->isAdmin() || $request->user()->isPM()
-            ? 'in_review'
-            : 'pending_review';
+            ? AssetStatus::IN_REVIEW->value
+            : AssetStatus::PENDING_REVIEW->value;
 
         $asset = Asset::create([
             'project_id' => $project->id,
@@ -219,24 +222,19 @@ class AssetController extends Controller
             ]);
 
             // Mark as in_review if PM is viewing and asset is pending
-            if ($user->canApprove() && $asset->status === 'pending_review') {
-                $asset->update(['status' => 'in_review']);
+            if ($user->canApprove() && $asset->status === AssetStatus::PENDING_REVIEW->value) {
+                $asset->update(['status' => AssetStatus::IN_REVIEW->value]);
             }
         }
 
         return response()->json($asset);
     }
 
-    public function update(Request $request, Asset $asset): JsonResponse
+    public function update(AssetUpdateRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('update', $asset);
 
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'deadline' => 'nullable|date',
-        ]);
-
+        $validated = $request->validated();
         $asset->update($validated);
 
         return response()->json($asset->fresh(['uploader', 'latest_version']));
@@ -256,7 +254,7 @@ class AssetController extends Controller
         return response()->json(['message' => 'Asset deleted successfully']);
     }
 
-    public function uploadVersion(Request $request, Asset $asset): JsonResponse
+    public function uploadVersion(AssetUploadVersionRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('uploadVersion', $asset);
 
@@ -269,10 +267,7 @@ class AssetController extends Controller
             ], 403);
         }
 
-        $validated = $request->validate([
-            'file' => 'required|file|max:512000',
-            'version_notes' => 'nullable|string|max:1000',
-        ]);
+        $validated = $request->validated();
 
         $file = $request->file('file');
         $newVersion = $asset->current_version + 1;
@@ -305,8 +300,8 @@ class AssetController extends Controller
         // Update asset
         // Admin/PM uploads go directly to in_review
         $newStatus = $request->user()->isAdmin() || $request->user()->isPM()
-            ? 'in_review'
-            : 'pending_review';
+            ? AssetStatus::IN_REVIEW->value
+            : AssetStatus::PENDING_REVIEW->value;
 
         $asset->update([
             'current_version' => $newVersion,
@@ -342,21 +337,19 @@ class AssetController extends Controller
         return response()->json($versions);
     }
 
-    public function approve(Request $request, Asset $asset): JsonResponse
+    public function approve(AssetApproveRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('approve', $asset);
 
-        $validated = $request->validate([
-            'comment' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
-        $asset->update(['status' => 'approved']);
+        $asset->update(['status' => AssetStatus::APPROVED->value]);
 
         ApprovalLog::create([
             'asset_id' => $asset->id,
             'asset_version' => $asset->current_version,
             'user_id' => $request->user()->id,
-            'action' => 'approved',
+            'action' => AssetStatus::APPROVED->value,
             'comment' => $validated['comment'] ?? null,
         ]);
 
@@ -376,25 +369,19 @@ class AssetController extends Controller
         return response()->json($asset->fresh(['approvalLogs.user', 'creativeRequests']));
     }
 
-    public function requestRevision(Request $request, Asset $asset): JsonResponse
+    public function requestRevision(AssetRequestRevisionRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('approve', $asset);
 
-        $hasComments = Comment::where('asset_id', $asset->id)
-            ->where('asset_version', $asset->current_version)
-            ->exists();
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'comment' => [$hasComments ? 'nullable' : 'required', 'string'],
-        ]);
-
-        $asset->update(['status' => 'revision_requested']);
+        $asset->update(['status' => AssetStatus::REVISION_REQUESTED->value]);
 
         ApprovalLog::create([
             'asset_id' => $asset->id,
             'asset_version' => $asset->current_version,
             'user_id' => $request->user()->id,
-            'action' => 'revision_requested',
+            'action' => AssetStatus::REVISION_REQUESTED->value,
             'comment' => $validated['comment'] ?? null,
         ]);
 
@@ -416,7 +403,7 @@ class AssetController extends Controller
             abort(403, 'Only PM or Admin can send assets to client review.');
         }
 
-        $asset->update(['status' => 'client_review']);
+        $asset->update(['status' => AssetStatus::CLIENT_REVIEW->value]);
 
         // Notify reviewer members that asset is ready for review
         $this->notificationDispatcher->notifySentToClient($asset, $request->user());
@@ -424,19 +411,15 @@ class AssetController extends Controller
         return response()->json($asset->load(['uploader', 'project']));
     }
 
-    public function publish(Request $request, Asset $asset): JsonResponse
+    public function publish(AssetPublishRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('publish', $asset);
 
-        $validated = $request->validate([
-            'links' => 'required|array|min:1',
-            'links.*.url' => 'required|url',
-            'version' => 'nullable|integer|min:1',
-        ]);
+        $validated = $request->validated();
 
         $version = $validated['version'] ?? $asset->current_version;
 
-        $asset->update(['status' => 'published']);
+        $asset->update(['status' => AssetStatus::PUBLISHED->value]);
 
         foreach ($validated['links'] as $link) {
             AssetPublishedLink::create([
@@ -452,20 +435,18 @@ class AssetController extends Controller
             'asset_id' => $asset->id,
             'asset_version' => $version,
             'user_id' => $request->user()->id,
-            'action' => 'published',
+            'action' => AssetStatus::PUBLISHED->value,
             'comment' => null,
         ]);
 
         return response()->json($asset->fresh(['publishedLinks.publisher', 'approvalLogs.user']));
     }
 
-    public function linkRequest(Request $request, Asset $asset): JsonResponse
+    public function linkRequest(AssetLinkRequestRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('update', $asset);
 
-        $validated = $request->validate([
-            'request_id' => 'required|uuid|exists:creative_requests,id',
-        ]);
+        $validated = $request->validated();
 
         $asset->creativeRequests()->syncWithoutDetaching([$validated['request_id']]);
 
@@ -492,7 +473,7 @@ class AssetController extends Controller
         return response()->json($asset->fresh('creativeRequests'));
     }
 
-    public function lock(Request $request, Asset $asset): JsonResponse
+    public function lock(AssetLockRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('lock', $asset);
 
@@ -502,16 +483,14 @@ class AssetController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $asset->lock($request->user(), $validated['reason'] ?? null);
 
         return response()->json($asset->fresh(['locker', 'versionLocks.user']));
     }
 
-    public function unlock(Request $request, Asset $asset): JsonResponse
+    public function unlock(AssetLockRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('lock', $asset);
 
@@ -521,9 +500,7 @@ class AssetController extends Controller
             ], 422);
         }
 
-        $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
-        ]);
+        $validated = $request->validated();
 
         $asset->unlock($request->user(), $validated['reason'] ?? null);
 

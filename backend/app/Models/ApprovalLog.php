@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -38,11 +39,11 @@ class ApprovalLog extends Model
 
     public function isApproval(): bool
     {
-        return $this->action === 'approved';
+        return $this->action === AssetStatus::APPROVED->value;
     }
 
     public function isRevisionRequest(): bool
     {
-        return $this->action === 'revision_requested';
+        return $this->action === AssetStatus::REVISION_REQUESTED->value;
     }
 }

@@ -19,6 +19,7 @@ import { MentionInput } from '../common/MentionInput';
 import { MentionText } from '../common/MentionText';
 import { CommentImageUpload } from '../common/CommentImageUpload';
 import { CommentImages } from '../common/CommentImages';
+import { formatRelativeTime } from '../../utils/date';
 
 interface ActivityPanelProps {
   timeline: TimelineItem[];
@@ -317,7 +318,7 @@ const VersionItem: FC<VersionItemProps> = ({ version, createdAt }) => (
       </span>
     </div>
     <p className="text-xs text-blue-600 dark:text-blue-400">
-      by {version.uploader?.name} · {new Date(createdAt).toLocaleString()}
+      by {version.uploader?.name} · {formatRelativeTime(createdAt)}
     </p>
     {version.version_notes && (
       <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
@@ -373,7 +374,7 @@ const ApprovalItem: FC<ApprovalItemProps> = ({ approval, createdAt }) => {
         </span>
       </div>
       <p className={`text-xs ${subTextClass}`}>
-        by {approval.user?.name} · {new Date(createdAt).toLocaleString()}
+        by {approval.user?.name} · {formatRelativeTime(createdAt)}
       </p>
       {approval.comment && (
         <p className={`text-sm mt-2 ${textClass}`}>"{approval.comment}"</p>
@@ -517,7 +518,7 @@ const CommentItem: FC<CommentItemProps> = ({
             Annotation
           </span>
         )}
-        <span>{new Date(comment.created_at).toLocaleString()}</span>
+        <span>{formatRelativeTime(comment.created_at)}</span>
       </div>
     </div>
   );

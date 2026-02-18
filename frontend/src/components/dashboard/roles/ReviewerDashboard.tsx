@@ -9,12 +9,13 @@ import {
 import { DashboardData, Asset } from '../../../types';
 import { getAssetTypeIcon } from '../../../config/assetTypeRegistry';
 import { assetsApi } from '../../../api/assets';
+import { LoadingSpinner } from '../../common/LoadingSpinner';
 import { StatCard } from '../StatCard';
 import { DashboardSection } from '../DashboardSection';
 import { EmptyState } from '../EmptyState';
 import { QuickActionCard } from '../QuickActionCard';
 import { StatusBadge } from '../../common/StatusBadge';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeTime } from '../../../utils/date';
 
 interface ReviewerDashboardProps {
   data: DashboardData;
@@ -116,7 +117,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                     <span>{asset.uploader?.name}</span>
                     <span>·</span>
                     <span>
-                      {formatDistanceToNow(new Date(asset.created_at), { addSuffix: true })}
+                      {formatRelativeTime(asset.created_at)}
                     </span>
                   </div>
                 </div>
@@ -124,7 +125,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                 {/* Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {loadingAssetId === asset.id ? (
-                    <div className="w-5 h-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                    <LoadingSpinner size="sm" variant="gray" />
                   ) : (
                     <>
                       <button

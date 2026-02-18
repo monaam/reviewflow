@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +44,29 @@ class Project extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Check if a user is a member of this project
+     */
+    public function isMember(User $user): bool
+    {
+        return $this->members()->where('users.id', $user->id)->exists();
+    }
+
+    /**
+     * Get project members who should receive notifications
+     * Excludes the actor and reviewers (reviewers only see their own comments)
+     *
+     * @param User $actor The user performing the action (excluded from notifications)
+     * @param string $notificationPref The pivot column to check (notify_on_upload, notify_on_comment, etc.)
+     */
+    public function notifiableMembers(User $actor, string $notificationPref)
+    {
+        return $this->members()
+            ->where('users.id', '!=', $actor->id)
+            ->where('users.role', '!=', UserRole::REVIEWER->value)
+            ->wherePivot($notificationPref, true);
+    }
+
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class);
@@ -57,13 +82,13 @@ class Project extends Model
         $total = $this->assets()->count();
         if ($total === 0) return 0;
 
-        $approved = $this->assets()->where('status', 'approved')->count();
+        $approved = $this->assets()->where('status', AssetStatus::APPROVED->value)->count();
         return round(($approved / $total) * 100, 1);
     }
 
     public function getPendingAssetsCountAttribute(): int
     {
-        return $this->assets()->where('status', 'pending_review')->count();
+        return $this->assets()->where('status', AssetStatus::PENDING_REVIEW->value)->count();
     }
 
     public function scopeActive($query)

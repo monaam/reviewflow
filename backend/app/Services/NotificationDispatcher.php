@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
 use App\Models\Asset;
 use App\Models\Comment;
 use App\Models\CreativeRequest;
@@ -33,15 +34,11 @@ class NotificationDispatcher
 
         // Get project members with notify_on_comment enabled (excluding actor and reviewers)
         // Reviewers only see their own comments, so they shouldn't get new comment notifications
-        $recipients = $project->members()
-            ->where('users.id', '!=', $actor->id)
-            ->where('users.role', '!=', 'reviewer')
-            ->wherePivot('notify_on_comment', true)
-            ->get();
+        $recipients = $project->notifiableMembers($actor, 'notify_on_comment')->get();
 
         // Also notify asset uploader if not actor and not already in recipients
         if ($asset->uploaded_by !== $actor->id) {
-            $uploader = User::find($asset->uploaded_by);
+            $uploader = $asset->uploader;
             if ($uploader && !$uploader->isReviewer() && !$recipients->contains('id', $uploader->id)) {
                 $recipients->push($uploader);
             }
@@ -69,11 +66,7 @@ class NotificationDispatcher
         $project = $asset->project;
 
         // Exclude reviewers - they only see assets when sent to client review
-        $recipients = $project->members()
-            ->where('users.id', '!=', $uploader->id)
-            ->where('users.role', '!=', 'reviewer')
-            ->wherePivot('notify_on_upload', true)
-            ->get();
+        $recipients = $project->notifiableMembers($uploader, 'notify_on_upload')->get();
 
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new AssetUploadedNotification($asset, $uploader));
@@ -85,11 +78,7 @@ class NotificationDispatcher
         $project = $asset->project;
 
         // Exclude reviewers - they only see the current version when asset is in client review
-        $recipients = $project->members()
-            ->where('users.id', '!=', $uploader->id)
-            ->where('users.role', '!=', 'reviewer')
-            ->wherePivot('notify_on_upload', true)
-            ->get();
+        $recipients = $project->notifiableMembers($uploader, 'notify_on_upload')->get();
 
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new NewVersionNotification($asset, $uploader));
@@ -101,15 +90,11 @@ class NotificationDispatcher
         $project = $asset->project;
 
         // Exclude reviewers from approval notifications (internal workflow)
-        $recipients = $project->members()
-            ->where('users.id', '!=', $approver->id)
-            ->where('users.role', '!=', 'reviewer')
-            ->wherePivot('notify_on_approval', true)
-            ->get();
+        $recipients = $project->notifiableMembers($approver, 'notify_on_approval')->get();
 
         // Always notify uploader (if not a reviewer)
         if ($asset->uploaded_by !== $approver->id) {
-            $uploader = User::find($asset->uploaded_by);
+            $uploader = $asset->uploader;
             if ($uploader && !$uploader->isReviewer() && !$recipients->contains('id', $uploader->id)) {
                 $recipients->push($uploader);
             }
@@ -127,7 +112,7 @@ class NotificationDispatcher
             return;
         }
 
-        $uploader = User::find($asset->uploaded_by);
+        $uploader = $asset->uploader;
         $uploader?->notify(new RevisionRequestedNotification($asset, $reviewer, $feedback));
     }
 
@@ -160,7 +145,7 @@ class NotificationDispatcher
 
         // Notify assignee if not actor
         if ($request->assigned_to && $request->assigned_to !== $actor->id) {
-            $assignee = User::find($request->assigned_to);
+            $assignee = $request->assignee;
             if ($assignee) {
                 $recipients->push($assignee);
             }
@@ -168,7 +153,7 @@ class NotificationDispatcher
 
         // Notify creator if not actor
         if ($request->created_by !== $actor->id) {
-            $creator = User::find($request->created_by);
+            $creator = $request->creator;
             if ($creator && !$recipients->contains('id', $creator->id)) {
                 $recipients->push($creator);
             }

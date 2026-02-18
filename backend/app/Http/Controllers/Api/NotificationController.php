@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RegisterPushSubscriptionRequest;
+use App\Http\Requests\UpdatePushPreferencesRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -62,9 +64,9 @@ class NotificationController extends Controller
         return response()->json(['message' => 'Notification deleted']);
     }
 
-    public function registerPushSubscription(Request $request): JsonResponse
+    public function registerPushSubscription(RegisterPushSubscriptionRequest $request): JsonResponse
     {
-        $request->validate(['player_id' => 'required|string']);
+        $request->validated();
 
         $request->user()->update([
             'onesignal_player_id' => $request->player_id,
@@ -73,9 +75,9 @@ class NotificationController extends Controller
         return response()->json(['message' => 'Push subscription registered']);
     }
 
-    public function updatePushPreferences(Request $request): JsonResponse
+    public function updatePushPreferences(UpdatePushPreferencesRequest $request): JsonResponse
     {
-        $request->validate(['enabled' => 'required|boolean']);
+        $request->validated();
 
         $request->user()->update([
             'push_notifications_enabled' => $request->enabled,

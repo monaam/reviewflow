@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Priority;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreativeRequestAddAttachmentRequest;
+use App\Http\Requests\CreativeRequestStoreRequest;
+use App\Http\Requests\CreativeRequestUpdateRequest;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\RequestAttachment;
@@ -12,6 +16,7 @@ use App\Services\FileUploadService;
 use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CreativeRequestController extends Controller
 {
@@ -114,7 +119,7 @@ class CreativeRequestController extends Controller
                 $q->where('assigned_to', $request->user()->id)
                   ->orWhereNull('assigned_to');
             })
-            ->whereNotIn('status', ['completed', 'cancelled']);
+            ->active();
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -125,18 +130,11 @@ class CreativeRequestController extends Controller
         return response()->json($requests);
     }
 
-    public function store(Request $request, Project $project): JsonResponse
+    public function store(CreativeRequestStoreRequest $request, Project $project): JsonResponse
     {
         $this->authorize('createRequest', $project);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'assigned_to' => 'nullable|uuid|exists:users,id',
-            'deadline' => 'required|date|after:now',
-            'priority' => 'sometimes|in:low,normal,high,urgent',
-            'specs' => 'nullable|array',
-        ]);
+        $validated = $request->validated();
 
         $creativeRequest = CreativeRequest::create([
             'project_id' => $project->id,
@@ -151,9 +149,10 @@ class CreativeRequestController extends Controller
 
         // Send in-app notification if assigned
         if ($creativeRequest->assigned_to) {
-            $assignee = User::find($creativeRequest->assigned_to);
-            if ($assignee) {
-                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $assignee, $request->user());
+            // Load assignee relationship if not already loaded
+            $creativeRequest->load('assignee');
+            if ($creativeRequest->assignee) {
+                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $creativeRequest->assignee, $request->user());
             }
         }
 
@@ -176,19 +175,11 @@ class CreativeRequestController extends Controller
         return response()->json($creativeRequest);
     }
 
-    public function update(Request $request, CreativeRequest $creativeRequest): JsonResponse
+    public function update(CreativeRequestUpdateRequest $request, CreativeRequest $creativeRequest): JsonResponse
     {
         $this->authorize('update', $creativeRequest);
 
-        $validated = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'assigned_to' => 'sometimes|uuid|exists:users,id',
-            'deadline' => 'sometimes|date',
-            'priority' => 'sometimes|in:low,normal,high,urgent',
-            'specs' => 'nullable|array',
-            'status' => 'sometimes|in:pending,in_progress,asset_submitted,completed',
-        ]);
+        $validated = $request->validated();
 
         $oldStatus = $creativeRequest->status;
         $oldAssignee = $creativeRequest->assigned_to;
@@ -197,9 +188,10 @@ class CreativeRequestController extends Controller
 
         // Notify on assignment change
         if (isset($validated['assigned_to']) && $validated['assigned_to'] !== $oldAssignee) {
-            $assignee = User::find($validated['assigned_to']);
-            if ($assignee) {
-                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $assignee, $request->user());
+            // Refresh the assignee relationship after update
+            $creativeRequest->load('assignee');
+            if ($creativeRequest->assignee) {
+                $this->notificationDispatcher->notifyRequestAssigned($creativeRequest, $creativeRequest->assignee, $request->user());
             }
         }
 
@@ -240,7 +232,7 @@ class CreativeRequestController extends Controller
 
         // Add user as project member if not already
         $project = $creativeRequest->project;
-        if (!$project->members()->where('users.id', $user->id)->exists()) {
+        if (!$project->isMember($user)) {
             $project->members()->attach($user->id, [
                 'id' => \Illuminate\Support\Str::uuid(),
                 'role_in_project' => 'member',
@@ -268,13 +260,11 @@ class CreativeRequestController extends Controller
         return response()->json($creativeRequest->fresh(['creator', 'assignee']));
     }
 
-    public function addAttachment(Request $request, CreativeRequest $creativeRequest): JsonResponse
+    public function addAttachment(CreativeRequestAddAttachmentRequest $request, CreativeRequest $creativeRequest): JsonResponse
     {
         $this->authorize('update', $creativeRequest);
 
-        $request->validate([
-            'file' => 'required|file|max:51200',
-        ]);
+        $request->validated();
 
         $file = $request->file('file');
         $uploadResult = $this->uploadService->upload($file, "requests/{$creativeRequest->id}");

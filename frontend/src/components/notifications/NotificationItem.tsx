@@ -1,5 +1,5 @@
-import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { formatRelativeTime } from '../../utils/date';
 import {
   MessageSquare,
   Reply,
@@ -120,7 +120,7 @@ export function NotificationItem({
               {data.message}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              {formatDistanceToNow(new Date(created_at), { addSuffix: true })}
+              {formatRelativeTime(created_at)}
             </p>
           </div>
 

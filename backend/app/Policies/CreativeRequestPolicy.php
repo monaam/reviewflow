@@ -27,7 +27,7 @@ class CreativeRequestPolicy
             return true;
         }
 
-        return $request->project->members()->where('users.id', $user->id)->exists();
+        return $request->project->isMember($user);
     }
 
     public function update(User $user, CreativeRequest $request): bool

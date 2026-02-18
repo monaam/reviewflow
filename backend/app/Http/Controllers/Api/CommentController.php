@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Api\CommentImageController;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CommentStoreRequest;
+use App\Http\Requests\CommentUpdateRequest;
 use App\Models\Asset;
 use App\Models\Comment;
 use App\Models\User;
@@ -117,23 +120,11 @@ class CommentController extends Controller
         return response()->json($timeline);
     }
 
-    public function store(Request $request, Asset $asset): JsonResponse
+    public function store(CommentStoreRequest $request, Asset $asset): JsonResponse
     {
         $this->authorize('comment', $asset);
 
-        $validated = $request->validate([
-            'content' => 'required|string|max:5000',
-            'rectangle' => 'nullable|array',
-            'rectangle.x' => 'required_with:rectangle|numeric|min:0|max:1',
-            'rectangle.y' => 'required_with:rectangle|numeric|min:0|max:1',
-            'rectangle.width' => 'required_with:rectangle|numeric|min:0|max:1',
-            'rectangle.height' => 'required_with:rectangle|numeric|min:0|max:1',
-            'video_timestamp' => 'nullable|numeric|min:0',
-            'page_number' => 'nullable|integer|min:1',
-            'parent_id' => 'nullable|uuid|exists:comments,id',
-            'temp_image_ids' => 'nullable|array|max:10',
-            'temp_image_ids.*' => 'uuid',
-        ]);
+        $validated = $request->validated();
 
         // If replying to a comment, validate the parent
         $parentComment = null;
@@ -177,7 +168,7 @@ class CommentController extends Controller
         if (!empty($mentionedUserIds)) {
             // Get valid users who have access to this project (members + admins)
             $projectMemberIds = $asset->project->members()->pluck('users.id');
-            $adminIds = User::where('role', 'admin')->pluck('id');
+            $adminIds = User::where('role', UserRole::ADMIN->value)->pluck('id');
             $validUserIds = $projectMemberIds->merge($adminIds)->unique()->toArray();
 
             $validMentionIds = array_intersect($mentionedUserIds, $validUserIds);
@@ -211,13 +202,11 @@ class CommentController extends Controller
         return response()->json($comment->load(['user', 'mentions', 'media']), 201);
     }
 
-    public function update(Request $request, Comment $comment): JsonResponse
+    public function update(CommentUpdateRequest $request, Comment $comment): JsonResponse
     {
         $this->authorize('update', $comment);
 
-        $validated = $request->validate([
-            'content' => 'required|string|max:5000',
-        ]);
+        $validated = $request->validated();
 
         $comment->update([
             'content' => $validated['content'],
@@ -261,7 +250,7 @@ class CommentController extends Controller
         $memberIds = $asset->project->members()->pluck('users.id');
 
         // Get all admin IDs (admins have access to all projects)
-        $adminIds = User::where('role', 'admin')->pluck('id');
+        $adminIds = User::where('role', UserRole::ADMIN->value)->pluck('id');
 
         // Merge and get unique user IDs
         $userIds = $memberIds->merge($adminIds)->unique();

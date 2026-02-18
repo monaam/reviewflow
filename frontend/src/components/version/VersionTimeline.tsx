@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Clock, Upload, CheckCircle, XCircle, Globe, Lock, Unlock, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { assetsApi } from '../../api/assets';
 import { TimelineEvent, VersionHistoryResponse, User } from '../../types';
+import { formatRelativeTime } from '../../utils/date';
 
 interface VersionTimelineProps {
   assetId: string;
@@ -28,17 +29,6 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const getEventIcon = (event: TimelineEvent) => {
@@ -149,7 +139,7 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
               <Lock className="w-4 h-4 text-red-400" />
               <span className="text-red-300 text-sm">
                 Asset locked by {history.locked_by?.name}
-                {history.locked_at && ` on ${formatDate(history.locked_at)}`}
+                {history.locked_at && ` on ${formatRelativeTime(history.locked_at)}`}
               </span>
             </div>
           )}
@@ -198,7 +188,7 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
                           )}
                         </div>
                         <span className="text-xs text-gray-500">
-                          {formatDate(event.created_at)}
+                          {formatRelativeTime(event.created_at)}
                         </span>
                       </div>
 

@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AssetStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProjectAddMemberRequest;
+use App\Http\Requests\ProjectStoreRequest;
+use App\Http\Requests\ProjectUpdateRequest;
 use App\Models\Project;
 use App\Models\ProjectMember;
 use App\Models\User;
@@ -20,7 +24,7 @@ class ProjectController extends Controller
             $query = Project::with(['creator'])
                 ->forUser($user)
                 ->withCount([
-                    'assets' => fn($q) => $q->whereIn('status', ['client_review', 'approved', 'revision_requested', 'published']),
+                    'assets' => fn($q) => $q->whereIn('status', AssetStatus::reviewerVisible()),
                 ]);
         } else {
             $query = Project::with(['creator', 'members'])
@@ -37,17 +41,11 @@ class ProjectController extends Controller
         return response()->json($projects);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(ProjectStoreRequest $request): JsonResponse
     {
         $this->authorize('create', Project::class);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'client_name' => 'nullable|string|max:255',
-            'deadline' => 'nullable|date',
-            'cover_image' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $project = Project::create([
             ...$validated,
@@ -72,7 +70,7 @@ class ProjectController extends Controller
         $user = $request->user();
 
         // Reviewers have restricted view - no members, no requests, filtered assets
-        $reviewerStatuses = ['client_review', 'approved', 'revision_requested', 'published'];
+        $reviewerStatuses = AssetStatus::reviewerVisible();
 
         if ($user->isReviewer()) {
             $project->load([
@@ -119,18 +117,11 @@ class ProjectController extends Controller
         return response()->json($response);
     }
 
-    public function update(Request $request, Project $project): JsonResponse
+    public function update(ProjectUpdateRequest $request, Project $project): JsonResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'description' => 'nullable|string',
-            'client_name' => 'nullable|string|max:255',
-            'deadline' => 'nullable|date',
-            'cover_image' => 'nullable|string',
-            'status' => 'sometimes|in:active,on_hold,completed,archived',
-        ]);
+        $validated = $request->validated();
 
         $project->update($validated);
 
@@ -146,14 +137,11 @@ class ProjectController extends Controller
         return response()->json(['message' => 'Project deleted successfully']);
     }
 
-    public function addMember(Request $request, Project $project): JsonResponse
+    public function addMember(ProjectAddMemberRequest $request, Project $project): JsonResponse
     {
         $this->authorize('update', $project);
 
-        $validated = $request->validate([
-            'user_id' => 'required|uuid|exists:users,id',
-            'role_in_project' => 'sometimes|in:owner,member',
-        ]);
+        $validated = $request->validated();
 
         $member = ProjectMember::updateOrCreate(
             [

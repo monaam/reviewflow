@@ -1,47 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ClipboardList, Search, X, Calendar, AlertTriangle } from 'lucide-react';
+import { ClipboardList, Calendar, AlertTriangle } from 'lucide-react';
 import { requestsApi } from '../api/requests';
 import { CreativeRequest } from '../types';
-import { StatusBadge } from '../components/common/StatusBadge';
+import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
-import { formatDistanceToNow } from 'date-fns';
+import { isReviewer as isReviewerRole } from '../utils/permissions';
+import { useFetch, useListFilter } from '../hooks';
+import { isOverdue, cardLinkClass } from '../utils/formatters';
+import { formatRelativeTime } from '../utils/date';
 
 export function RequestsPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [requests, setRequests] = useState<CreativeRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const isReviewer = user?.role === 'reviewer';
+  const isReviewer = isReviewerRole(user?.role);
   const statusFilter = searchParams.get('status') || 'all';
   const filterType = searchParams.get('filter') || '';
 
-  useEffect(() => {
-    // Reviewers cannot access requests
-    if (!isReviewer) {
-      fetchRequests();
-    } else {
-      setIsLoading(false);
-    }
-  }, [statusFilter, filterType, isReviewer]);
-
-  const fetchRequests = async () => {
-    setIsLoading(true);
-    try {
+  const { data: requests, isLoading } = useFetch({
+    fetcher: () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (filterType) params.filter = filterType;
-
-      const response = await requestsApi.listAll(params);
-      setRequests(response.data);
-    } catch (error) {
-      console.error('Failed to fetch requests:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return requestsApi.listAll(params).then(r => r.data);
+    },
+    deps: [statusFilter, filterType],
+    initial: [] as CreativeRequest[],
+    enabled: !isReviewer,
+  });
 
   const setFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -61,15 +49,10 @@ export function RequestsPage() {
     setSearchParams(newParams);
   };
 
-  const filteredRequests = requests.filter((request) => {
-    if (!searchQuery) return true;
-    const search = searchQuery.toLowerCase();
-    return (
-      request.title.toLowerCase().includes(search) ||
-      request.description?.toLowerCase().includes(search) ||
-      request.project?.name?.toLowerCase().includes(search) ||
-      request.assignee?.name?.toLowerCase().includes(search)
-    );
+  const filteredRequests = useListFilter({
+    items: requests,
+    searchQuery,
+    searchFields: (r) => [r.title, r.description, r.project?.name, r.assignee?.name],
   });
 
   const statusOptions = [
@@ -80,23 +63,15 @@ export function RequestsPage() {
     { value: 'completed', label: 'Completed' },
   ];
 
-  const isOverdue = (deadline: string) => {
-    return new Date(deadline) < new Date();
-  };
-
   // Reviewers don't have access to requests
   if (isReviewer) {
     return (
       <div className="p-8 max-w-7xl mx-auto">
-        <div className="text-center py-12">
-          <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Access Restricted
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            Creative requests are not available for your role.
-          </p>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title="Access Restricted"
+          description="Creative requests are not available for your role."
+        />
       </div>
     );
   }
@@ -113,39 +88,19 @@ export function RequestsPage() {
 
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search requests..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input pl-10 pr-10"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search requests..."
+        />
 
         <div className="flex gap-1 flex-wrap">
-          {statusOptions.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setFilter('status', option.value)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                statusFilter === option.value && !filterType
-                  ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+          <FilterButtonGroup
+            options={statusOptions}
+            value={statusFilter}
+            onChange={(value) => setFilter('status', value)}
+            variant="default"
+          />
           <button
             onClick={() => setFilter('filter', filterType === 'overdue' ? '' : 'overdue')}
             className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
@@ -163,22 +118,20 @@ export function RequestsPage() {
       {/* Requests List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-gray-100"></div>
+          <LoadingSpinner size="md" variant="gray" />
         </div>
       ) : filteredRequests.length === 0 ? (
-        <div className="text-center py-16">
-          <ClipboardList className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {searchQuery ? 'No matching requests' : 'No requests found'}
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            {searchQuery
+        <EmptyState
+          icon={ClipboardList}
+          title={searchQuery ? 'No matching requests' : 'No requests found'}
+          description={
+            searchQuery
               ? 'Try adjusting your search or filters.'
               : filterType === 'overdue'
               ? 'No overdue requests. Great job!'
-              : 'Requests will appear here when created in projects.'}
-          </p>
-        </div>
+              : 'Requests will appear here when created in projects.'
+          }
+        />
       ) : (
         <div className="space-y-3">
           {filteredRequests.map((request) => {
@@ -187,7 +140,7 @@ export function RequestsPage() {
               <Link
                 key={request.id}
                 to={`/requests/${request.id}`}
-                className="block p-5 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                className={cardLinkClass}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -224,7 +177,7 @@ export function RequestsPage() {
                       <Calendar className="w-4 h-4" />
                       <span>
                         {overdue && request.status !== 'completed' ? 'Overdue · ' : ''}
-                        {formatDistanceToNow(new Date(request.deadline), { addSuffix: true })}
+                        {formatRelativeTime(request.deadline)}
                       </span>
                     </div>
                     {request.assets && request.assets.length > 0 && (

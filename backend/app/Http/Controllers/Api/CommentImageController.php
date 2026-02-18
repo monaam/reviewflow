@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UploadTempCommentImageRequest;
 use App\Models\Comment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,11 +16,9 @@ class CommentImageController extends Controller
     /**
      * Upload a temporary image before comment submission.
      */
-    public function uploadTemp(Request $request): JsonResponse
+    public function uploadTemp(UploadTempCommentImageRequest $request): JsonResponse
     {
-        $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,gif,webp|max:10240', // 10MB max
-        ]);
+        $request->validated();
 
         $file = $request->file('image');
         $tempId = Str::uuid()->toString();

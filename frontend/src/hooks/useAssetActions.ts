@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Asset, Comment, User } from '../types';
 import { ActionContext, ActionDefinition, ComputedAction } from '../types/actions';
 import { assetActions, getLockIcon } from '../config/assetActions';
+import { canDeleteAnyComment } from '../utils/permissions';
 
 interface UseAssetActionsOptions {
   asset: Asset | null;
@@ -145,8 +146,7 @@ export function useAssetActions({
     () => (comment: Comment) => {
       // Admin/PM can delete any comment, or the comment author can delete their own
       const canDelete =
-        user?.role === 'admin' ||
-        user?.role === 'pm' ||
+        canDeleteAnyComment(user?.role) ||
         comment.user_id === user?.id;
 
       // Anyone can resolve/unresolve comments
