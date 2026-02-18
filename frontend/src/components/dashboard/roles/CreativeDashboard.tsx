@@ -18,7 +18,7 @@ import { QuickActionCard } from '../QuickActionCard';
 import { StatusBadge } from '../../common/StatusBadge';
 import { getAssetTypeIcon } from '../../../config/assetTypeRegistry';
 import { isOverdue } from '../../../utils/formatters';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeTime } from '../../../utils/date';
 
 interface CreativeDashboardProps {
   data: DashboardData;
@@ -114,7 +114,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
                               : 'text-gray-500 dark:text-gray-400'
                           }`}
                         >
-                          Due {formatDistanceToNow(new Date(request.deadline), { addSuffix: true })}
+                          Due {formatRelativeTime(request.deadline)}
                         </span>
                       </div>
                     </div>

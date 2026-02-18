@@ -17,7 +17,7 @@ import { AlertBanner } from '../AlertBanner';
 import { QuickActionCard } from '../QuickActionCard';
 import { ProjectHealthCard } from '../ProjectHealthCard';
 import { StatusBadge } from '../../common/StatusBadge';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeTime } from '../../../utils/date';
 
 interface PMDashboardProps {
   data: DashboardData;
@@ -188,7 +188,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
                   </div>
                   <div className="flex items-center gap-2 ml-4">
                     <span className="text-xs text-gray-600 dark:text-gray-400">
-                      Due {formatDistanceToNow(new Date(request.deadline), { addSuffix: true })}
+                      Due {formatRelativeTime(request.deadline)}
                     </span>
                     <StatusBadge status={request.priority} type="priority" />
                   </div>

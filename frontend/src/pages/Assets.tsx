@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { FileImage, Eye } from 'lucide-react';
 import { assetsApi } from '../api/assets';
@@ -6,40 +6,29 @@ import { Asset } from '../types';
 import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { getAssetTypeIcon } from '../config/assetTypeRegistry';
 import { useAuthStore } from '../stores/authStore';
-import { formatDistanceToNow } from 'date-fns';
 import { isReviewer as isReviewerRole } from '../utils/permissions';
-import { useListFilter } from '../hooks/useListFilter';
+import { useFetch, useListFilter } from '../hooks';
 import { getAssetStatusFilters } from '../config/statusFilters';
+import { formatRelativeTime } from '../utils/date';
 
 export function AssetsPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const statusFilter = searchParams.get('status') || 'all';
   const uploadedByFilter = searchParams.get('uploaded_by') || 'all';
 
-  useEffect(() => {
-    fetchAssets();
-  }, [statusFilter, uploadedByFilter]);
-
-  const fetchAssets = async () => {
-    setIsLoading(true);
-    try {
+  const { data: assets, isLoading } = useFetch({
+    fetcher: () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (uploadedByFilter === 'me') params.uploaded_by = 'me';
-
-      const response = await assetsApi.listAll(params);
-      setAssets(response.data);
-    } catch (error) {
-      console.error('Failed to fetch assets:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return assetsApi.listAll(params).then(r => r.data);
+    },
+    deps: [statusFilter, uploadedByFilter],
+    initial: [] as Asset[],
+  });
 
   const setFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -180,7 +169,7 @@ export function AssetsPage() {
                 </p>
                 <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                   <span>{asset.uploader?.name}</span>
-                  <span>{formatDistanceToNow(new Date(asset.created_at), { addSuffix: true })}</span>
+                  <span>{formatRelativeTime(asset.created_at)}</span>
                 </div>
               </div>
             </Link>

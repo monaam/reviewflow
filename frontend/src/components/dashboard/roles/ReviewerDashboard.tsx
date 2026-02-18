@@ -15,7 +15,7 @@ import { DashboardSection } from '../DashboardSection';
 import { EmptyState } from '../EmptyState';
 import { QuickActionCard } from '../QuickActionCard';
 import { StatusBadge } from '../../common/StatusBadge';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeTime } from '../../../utils/date';
 
 interface ReviewerDashboardProps {
   data: DashboardData;
@@ -117,7 +117,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                     <span>{asset.uploader?.name}</span>
                     <span>·</span>
                     <span>
-                      {formatDistanceToNow(new Date(asset.created_at), { addSuffix: true })}
+                      {formatRelativeTime(asset.created_at)}
                     </span>
                   </div>
                 </div>

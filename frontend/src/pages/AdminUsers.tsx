@@ -1,38 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Pencil, UserCheck, UserX } from 'lucide-react';
 import { adminApi } from '../api/admin';
 import { User } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { useFetch } from '../hooks';
+import { formatRelativeTime } from '../utils/date';
 
 export function AdminUsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [filter, setFilter] = useState('all');
 
-  useEffect(() => {
-    fetchUsers();
-  }, [filter]);
-
-  const fetchUsers = async () => {
-    try {
+  const { data: users, isLoading, refetch } = useFetch({
+    fetcher: () => {
       const params = filter !== 'all' ? { role: filter } : {};
-      const response = await adminApi.getUsers(params);
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return adminApi.getUsers(params).then(r => r.data);
+    },
+    deps: [filter],
+    initial: [] as User[],
+  });
 
   const handleToggleActive = async (user: User) => {
     const action = user.is_active ? 'deactivate' : 'reactivate';
     if (user.is_active && !confirm(`Are you sure you want to deactivate ${user.name}? They will lose access immediately but all their data (assets, comments, projects) will be preserved.`)) return;
     try {
       await adminApi.updateUser(user.id, { is_active: !user.is_active });
-      fetchUsers();
+      refetch();
     } catch (error) {
       console.error(`Failed to ${action} user:`, error);
     }
@@ -140,7 +133,7 @@ export function AdminUsersPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {formatRelativeTime(user.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <div className="flex justify-end gap-2">
@@ -175,7 +168,7 @@ export function AdminUsersPage() {
         <UserModal
           onClose={() => setShowCreateModal(false)}
           onSaved={() => {
-            fetchUsers();
+            refetch();
             setShowCreateModal(false);
           }}
         />
@@ -187,7 +180,7 @@ export function AdminUsersPage() {
           user={editUser}
           onClose={() => setEditUser(null)}
           onSaved={() => {
-            fetchUsers();
+            refetch();
             setEditUser(null);
           }}
         />

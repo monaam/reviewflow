@@ -36,6 +36,7 @@ import {
 } from '../utils/permissions';
 import { isOverdue } from '../utils/formatters';
 import { getAssetStatusFilters } from '../config/statusFilters';
+import { formatRelativeTime } from '../utils/date';
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -175,7 +176,7 @@ export function ProjectDetailPage() {
               {project.deadline && (
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  Due {new Date(project.deadline).toLocaleDateString()}
+                  Due {formatRelativeTime(project.deadline)}
                 </span>
               )}
               {!isReviewer && (
@@ -541,7 +542,7 @@ function RequestCard({ request }: { request: CreativeRequest }) {
           <div className="flex items-center gap-4 mt-3 text-sm text-gray-400 dark:text-gray-500">
             <span>Assigned to: {request.assignee?.name ?? 'Unassigned'}</span>
             <span className={overdue ? 'text-gray-900 dark:text-white font-medium' : ''}>
-              Due: {new Date(request.deadline).toLocaleDateString()}
+              Due: {formatRelativeTime(request.deadline)}
             </span>
           </div>
         </div>

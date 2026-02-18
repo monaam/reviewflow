@@ -1,50 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ClipboardList, Calendar, AlertTriangle } from 'lucide-react';
 import { requestsApi } from '../api/requests';
 import { CreativeRequest } from '../types';
 import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
-import { formatDistanceToNow } from 'date-fns';
 import { isReviewer as isReviewerRole } from '../utils/permissions';
-import { useListFilter } from '../hooks/useListFilter';
+import { useFetch, useListFilter } from '../hooks';
 import { isOverdue, cardLinkClass } from '../utils/formatters';
+import { formatRelativeTime } from '../utils/date';
 
 export function RequestsPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [requests, setRequests] = useState<CreativeRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const isReviewer = isReviewerRole(user?.role);
   const statusFilter = searchParams.get('status') || 'all';
   const filterType = searchParams.get('filter') || '';
 
-  useEffect(() => {
-    // Reviewers cannot access requests
-    if (!isReviewer) {
-      fetchRequests();
-    } else {
-      setIsLoading(false);
-    }
-  }, [statusFilter, filterType, isReviewer]);
-
-  const fetchRequests = async () => {
-    setIsLoading(true);
-    try {
+  const { data: requests, isLoading } = useFetch({
+    fetcher: () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (filterType) params.filter = filterType;
-
-      const response = await requestsApi.listAll(params);
-      setRequests(response.data);
-    } catch (error) {
-      console.error('Failed to fetch requests:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return requestsApi.listAll(params).then(r => r.data);
+    },
+    deps: [statusFilter, filterType],
+    initial: [] as CreativeRequest[],
+    enabled: !isReviewer,
+  });
 
   const setFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -192,7 +177,7 @@ export function RequestsPage() {
                       <Calendar className="w-4 h-4" />
                       <span>
                         {overdue && request.status !== 'completed' ? 'Overdue · ' : ''}
-                        {formatDistanceToNow(new Date(request.deadline), { addSuffix: true })}
+                        {formatRelativeTime(request.deadline)}
                       </span>
                     </div>
                     {request.assets && request.assets.length > 0 && (

@@ -8,6 +8,7 @@ import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState
 import { useAuthStore } from '../stores/authStore';
 import { useListFilter } from '../hooks/useListFilter';
 import { getAssetTypeIcon } from '../config/assetTypeRegistry';
+import { formatRelativeTime } from '../utils/date';
 
 export function ReviewQueuePage() {
   const { user } = useAuthStore();
@@ -164,7 +165,7 @@ export function ReviewQueuePage() {
                     {asset.uploader?.name}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {new Date(asset.created_at).toLocaleString()}
+                    {formatRelativeTime(asset.created_at)}
                   </p>
                 </div>
 

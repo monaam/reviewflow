@@ -21,39 +21,29 @@ import { StatusBadge, LoadingSpinner, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
 import { formatEnumLabel, isOverdue as checkOverdue } from '../utils/formatters';
 import { isReviewer as isReviewerRole, isAdmin } from '../utils/permissions';
+import { useFetch } from '../hooks';
+import { formatRelativeTime } from '../utils/date';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [request, setRequest] = useState<CreativeRequest | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchRequest();
-    }
-  }, [id]);
-
-  const fetchRequest = async () => {
-    try {
-      const data = await requestsApi.get(id!);
-      setRequest(data);
-    } catch (error) {
-      console.error('Failed to fetch request:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { data: request, isLoading, refetch } = useFetch({
+    fetcher: () => requestsApi.get(id!),
+    deps: [id],
+    initial: null as CreativeRequest | null,
+    enabled: !!id,
+  });
 
   const handleStart = async () => {
     try {
       await requestsApi.start(id!);
-      fetchRequest();
+      refetch();
     } catch (error) {
       console.error('Failed to start request:', error);
     }
@@ -62,7 +52,7 @@ export function RequestDetailPage() {
   const handleComplete = async () => {
     try {
       await requestsApi.complete(id!);
-      fetchRequest();
+      refetch();
     } catch (error) {
       console.error('Failed to complete request:', error);
     }
@@ -328,7 +318,7 @@ export function RequestDetailPage() {
                 </dt>
                 <dd className={`mt-1 ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-900 dark:text-white'}`}>
                   {isOverdue && <AlertTriangle className="w-4 h-4 inline mr-1" />}
-                  {new Date(request.deadline).toLocaleString()}
+                  {formatRelativeTime(request.deadline)}
                 </dd>
               </div>
               <div>
@@ -337,7 +327,7 @@ export function RequestDetailPage() {
                   Created At
                 </dt>
                 <dd className="mt-1 text-gray-900 dark:text-white">
-                  {new Date(request.created_at).toLocaleString()}
+                  {formatRelativeTime(request.created_at)}
                 </dd>
               </div>
             </dl>
@@ -358,8 +348,8 @@ export function RequestDetailPage() {
         <EditRequestModal
           request={request}
           onClose={() => setShowEditModal(false)}
-          onUpdated={(updated) => {
-            setRequest(updated);
+          onUpdated={() => {
+            refetch();
             setShowEditModal(false);
           }}
         />
@@ -380,8 +370,8 @@ export function RequestDetailPage() {
         <ReassignModal
           request={request}
           onClose={() => setShowReassignModal(false)}
-          onReassigned={(updated) => {
-            setRequest(updated);
+          onReassigned={() => {
+            refetch();
             setShowReassignModal(false);
           }}
         />
@@ -475,7 +465,7 @@ function EditRequestModal({
 }: {
   request: CreativeRequest;
   onClose: () => void;
-  onUpdated: (request: CreativeRequest) => void;
+  onUpdated: () => void;
 }) {
   const [title, setTitle] = useState(request.title);
   const [description, setDescription] = useState(request.description);
@@ -492,13 +482,13 @@ function EditRequestModal({
     setIsLoading(true);
 
     try {
-      const updated = await requestsApi.update(request.id, {
+      await requestsApi.update(request.id, {
         title,
         description,
         deadline,
         priority,
       });
-      onUpdated(updated);
+      onUpdated();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || 'Failed to update request');
@@ -657,7 +647,7 @@ function ReassignModal({
 }: {
   request: CreativeRequest;
   onClose: () => void;
-  onReassigned: (request: CreativeRequest) => void;
+  onReassigned: () => void;
 }) {
   const [users, setUsers] = useState<UserType[]>([]);
   const [selectedUserId, setSelectedUserId] = useState(request.assigned_to);
@@ -687,10 +677,10 @@ function ReassignModal({
     setIsLoading(true);
 
     try {
-      const updated = await requestsApi.update(request.id, {
+      await requestsApi.update(request.id, {
         assigned_to: selectedUserId,
       });
-      onReassigned(updated);
+      onReassigned();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       setError(error.response?.data?.message || 'Failed to reassign request');

@@ -1,38 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClipboardList, Clock, AlertTriangle, PlayCircle } from 'lucide-react';
 import { requestsApi } from '../api/requests';
 import { CreativeRequest } from '../types';
 import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
-import { useListFilter } from '../hooks/useListFilter';
+import { useFetch, useListFilter } from '../hooks';
 import { isOverdue } from '../utils/formatters';
+import { formatRelativeTime } from '../utils/date';
 
 export function CreativeQueuePage() {
-  const [requests, setRequests] = useState<CreativeRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchQueue();
-  }, [filter]);
-
-  const fetchQueue = async () => {
-    try {
+  const { data: requests, isLoading, refetch } = useFetch({
+    fetcher: () => {
       const params = filter !== 'all' ? { status: filter } : {};
-      const response = await requestsApi.myQueue(params);
-      setRequests(response.data);
-    } catch (error) {
-      console.error('Failed to fetch queue:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return requestsApi.myQueue(params).then(r => r.data);
+    },
+    deps: [filter],
+    initial: [] as CreativeRequest[],
+  });
 
   const handleStart = async (id: string) => {
     try {
       await requestsApi.start(id);
-      fetchQueue();
+      refetch();
     } catch (error) {
       console.error('Failed to start request:', error);
     }
@@ -128,10 +120,10 @@ export function CreativeQueuePage() {
                       {isOverdue(request.deadline, request.status) ? (
                         <span className="text-red-500 font-medium flex items-center">
                           <AlertTriangle className="w-4 h-4 mr-1" />
-                          Overdue: {new Date(request.deadline).toLocaleDateString()}
+                          Overdue: {formatRelativeTime(request.deadline)}
                         </span>
                       ) : (
-                        <>Due: {new Date(request.deadline).toLocaleDateString()}</>
+                        <>Due: {formatRelativeTime(request.deadline)}</>
                       )}
                     </span>
                   </div>

@@ -1,4 +1,3 @@
-import { useEffect, useState, useCallback } from 'react';
 import { dashboardApi } from '../api/dashboard';
 import { DashboardData } from '../types';
 import { useAuthStore } from '../stores/authStore';
@@ -9,26 +8,14 @@ import {
   ReviewerDashboard,
 } from '../components/dashboard';
 import { LoadingSpinner } from '../components/common';
+import { useFetch } from '../hooks';
 
 export function DashboardPage() {
   const { user } = useAuthStore();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const fetchDashboard = useCallback(async () => {
-    try {
-      const response = await dashboardApi.get();
-      setData(response);
-    } catch (error) {
-      console.error('Failed to fetch dashboard:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+  const { data, isLoading, refetch } = useFetch({
+    fetcher: () => dashboardApi.get(),
+    initial: null as DashboardData | null,
+  });
 
   if (isLoading) {
     return (
@@ -43,13 +30,13 @@ export function DashboardPage() {
   const renderDashboard = () => {
     switch (user?.role) {
       case 'admin':
-        return <AdminDashboard data={data} onRefresh={fetchDashboard} />;
+        return <AdminDashboard data={data} onRefresh={refetch} />;
       case 'pm':
-        return <PMDashboard data={data} onRefresh={fetchDashboard} />;
+        return <PMDashboard data={data} onRefresh={refetch} />;
       case 'creative':
-        return <CreativeDashboard data={data} onRefresh={fetchDashboard} />;
+        return <CreativeDashboard data={data} onRefresh={refetch} />;
       case 'reviewer':
-        return <ReviewerDashboard data={data} onRefresh={fetchDashboard} />;
+        return <ReviewerDashboard data={data} onRefresh={refetch} />;
       default:
         return null;
     }

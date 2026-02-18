@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, FolderKanban, Calendar, Users } from 'lucide-react';
 import { projectsApi } from '../api/projects';
@@ -7,32 +7,24 @@ import { LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../c
 import { useAuthStore } from '../stores/authStore';
 import { formatEnumLabel, cardLinkClass } from '../utils/formatters';
 import { canCreateProject as canCreateProjectRole } from '../utils/permissions';
-import { useListFilter } from '../hooks/useListFilter';
+import { useFetch, useListFilter } from '../hooks';
+import { formatRelativeTime } from '../utils/date';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  useEffect(() => {
-    fetchProjects();
-  }, [filter]);
-
-  const fetchProjects = async () => {
-    try {
+  const { data: projects, isLoading, refetch } = useFetch({
+    fetcher: () => {
       const params = filter !== 'all' ? { status: filter } : {};
-      const response = await projectsApi.list(params);
-      setProjects(response.data);
-    } catch (error) {
-      console.error('Failed to fetch projects:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return projectsApi.list(params).then(r => r.data);
+    },
+    deps: [filter],
+    initial: [] as Project[],
+  });
 
   const canCreateProject = canCreateProjectRole(user?.role);
 
@@ -140,7 +132,7 @@ export function ProjectsPage() {
                 {project.deadline && (
                   <span className="flex items-center gap-1 ml-auto">
                     <Calendar className="w-3.5 h-3.5" />
-                    {new Date(project.deadline).toLocaleDateString()}
+                    {formatRelativeTime(project.deadline)}
                   </span>
                 )}
               </div>
@@ -154,7 +146,6 @@ export function ProjectsPage() {
         <CreateProjectModal
           onClose={() => setShowCreateModal(false)}
           onCreated={(project) => {
-            setProjects([project, ...projects]);
             setShowCreateModal(false);
             navigate(`/projects/${project.id}`);
           }}

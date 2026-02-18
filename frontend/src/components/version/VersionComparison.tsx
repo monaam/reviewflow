@@ -8,6 +8,7 @@ import {
 } from '../../config/assetTypeRegistry';
 import { PdfRenderer } from '../assetRenderers';
 import { PdfControls } from '../assetRenderers';
+import { formatRelativeTime } from '../../utils/date';
 
 // Sync tolerance in seconds - videos will sync if they drift more than this
 const SYNC_TOLERANCE = 0.1;
@@ -374,7 +375,7 @@ export default function VersionComparison({
       <div className="mt-2 text-xs text-gray-400 space-y-1">
         <p>Uploaded by: {version.uploader?.name ?? 'Unknown'}</p>
         <p>Size: {version.file_size_formatted ?? `${Math.round(version.file_size / 1024)} KB`}</p>
-        <p>Date: {new Date(version.created_at).toLocaleDateString()}</p>
+        <p>Date: {formatRelativeTime(version.created_at)}</p>
         {version.version_notes && (
           <p className="text-gray-300 bg-gray-800 p-2 rounded mt-2">
             Notes: {version.version_notes}
