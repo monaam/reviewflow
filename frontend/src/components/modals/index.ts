@@ -11,3 +11,4 @@ export { EditProjectModal } from './EditProjectModal';
 export { AddMemberModal } from './AddMemberModal';
 export { EditRequestModal } from './EditRequestModal';
 export { ReassignModal } from './ReassignModal';
+export { DocumentEditorModal } from './DocumentEditorModal';

@@ -11,6 +11,7 @@ export type ModalType =
   | 'delete'
   | 'compare'
   | 'publish'
+  | 'document-version'
   | null;
 
 /**
@@ -40,6 +41,7 @@ export interface AssetReviewState {
   currentRect: Rectangle | null;
   selectedRect: Rectangle | null;
   selectedCommentId: string | null;
+  selectedTextAnchor: { from: number; to: number; selectedText: string } | null;
 
   // Video playback state
   isPlaying: boolean;
@@ -80,6 +82,7 @@ type AssetReviewAction =
   | { type: 'SET_ZOOM_LEVEL'; zoomLevel: number }
   | { type: 'SET_PDF_FIT_MODE'; fitMode: 'width' | 'height' | 'none' }
   | { type: 'SET_IS_LOCKING'; isLocking: boolean }
+  | { type: 'SET_TEXT_ANCHOR'; anchor: { from: number; to: number; selectedText: string } | null }
   | { type: 'RESET_ANNOTATION' };
 
 const initialState: AssetReviewState = {
@@ -91,6 +94,7 @@ const initialState: AssetReviewState = {
   currentRect: null,
   selectedRect: null,
   selectedCommentId: null,
+  selectedTextAnchor: null,
   isPlaying: false,
   currentTime: 0,
   duration: 0,
@@ -173,11 +177,15 @@ function reducer(state: AssetReviewState, action: AssetReviewAction): AssetRevie
     case 'SET_IS_LOCKING':
       return { ...state, isLocking: action.isLocking };
 
+    case 'SET_TEXT_ANCHOR':
+      return { ...state, selectedTextAnchor: action.anchor };
+
     case 'RESET_ANNOTATION':
       return {
         ...state,
         selectedRect: null,
         selectedCommentId: null,
+        selectedTextAnchor: null,
       };
 
     default:
@@ -243,6 +251,10 @@ export function useAssetReviewState() {
     dispatch({ type: 'SET_SELECTED_COMMENT', commentId });
   }, []);
 
+  const setSelectedTextAnchor = useCallback((anchor: { from: number; to: number; selectedText: string } | null) => {
+    dispatch({ type: 'SET_TEXT_ANCHOR', anchor });
+  }, []);
+
   const resetAnnotation = useCallback(() => {
     dispatch({ type: 'RESET_ANNOTATION' });
   }, []);
@@ -299,6 +311,7 @@ export function useAssetReviewState() {
     cancelDrawing,
     setSelectedRect,
     setSelectedCommentId,
+    setSelectedTextAnchor,
     resetAnnotation,
     // Playback
     setIsPlaying,

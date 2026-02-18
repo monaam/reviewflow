@@ -11,7 +11,7 @@ import {
   Reply,
   Globe,
 } from 'lucide-react';
-import { TimelineItem, Comment, AssetVersion, ApprovalLog, TempCommentImage } from '../../types';
+import { TimelineItem, Comment, AssetVersion, ApprovalLog, TempCommentImage, TextAnchor } from '../../types';
 import { supportsTemporalAnnotations } from '../../config/assetTypeRegistry';
 import { formatTime } from '../../utils/time';
 import { Rectangle } from '../../hooks/useAssetReviewState';
@@ -28,6 +28,7 @@ interface ActivityPanelProps {
   assetId: string;
   selectedCommentId: string | null;
   selectedRect: Rectangle | null;
+  selectedTextAnchor?: TextAnchor | null;
   newComment: string;
   showAllVersionsComments: boolean;
   pendingImages: TempCommentImage[];
@@ -58,6 +59,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   assetId,
   selectedCommentId,
   selectedRect,
+  selectedTextAnchor,
   newComment,
   showAllVersionsComments,
   pendingImages,
@@ -268,6 +270,11 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
             Annotation selected. Your comment will be linked to this area.
           </div>
         )}
+        {selectedTextAnchor && (
+          <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-blue-700 dark:text-blue-300">
+            Text selected: &ldquo;{selectedTextAnchor.selectedText.length > 80 ? selectedTextAnchor.selectedText.slice(0, 80) + '...' : selectedTextAnchor.selectedText}&rdquo;
+          </div>
+        )}
         <MentionInput
           value={newComment}
           onChange={onCommentChange}
@@ -284,9 +291,9 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
           formContainerRef={mainCommentFormRef}
         />
         <div className="flex justify-between mt-2">
-          {selectedRect && (
+          {(selectedRect || selectedTextAnchor) && (
             <button onClick={onClearAnnotation} className="btn-secondary text-sm">
-              Clear Annotation
+              {selectedTextAnchor ? 'Clear Selection' : 'Clear Annotation'}
             </button>
           )}
           <button
@@ -516,6 +523,11 @@ const CommentItem: FC<CommentItemProps> = ({
         {comment.rectangle && (
           <span className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
             Annotation
+          </span>
+        )}
+        {comment.text_anchor && (
+          <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-1.5 py-0.5 rounded truncate max-w-[150px]" title={comment.text_anchor.selectedText}>
+            &ldquo;{comment.text_anchor.selectedText.length > 30 ? comment.text_anchor.selectedText.slice(0, 30) + '...' : comment.text_anchor.selectedText}&rdquo;
           </span>
         )}
         <span>{formatRelativeTime(comment.created_at)}</span>

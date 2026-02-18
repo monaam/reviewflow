@@ -3,6 +3,7 @@ export { ImageRenderer } from './ImageRenderer';
 export { VideoRenderer } from './VideoRenderer';
 export { PdfRenderer } from './PdfRenderer';
 export { DesignRenderer } from './DesignRenderer';
+export { DocumentRenderer } from './DocumentRenderer';
 
 // Shared Components
 export { VideoControls } from './VideoControls';

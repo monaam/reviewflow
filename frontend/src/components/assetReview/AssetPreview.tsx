@@ -1,11 +1,12 @@
 import { FC, RefObject } from 'react';
-import { Asset, AssetVersion, Comment } from '../../types';
+import { Asset, AssetVersion, Comment, TextAnchor } from '../../types';
 import {
   getAssetTypeHandler,
   supportsSpatialAnnotations,
+  supportsTextAnnotations,
   getMediaUrlForType,
 } from '../../config/assetTypeRegistry';
-import { AnnotationOverlay, PdfControls } from '../assetRenderers';
+import { AnnotationOverlay, PdfControls, DocumentRenderer } from '../assetRenderers';
 import { Rectangle } from '../../hooks/useAssetReviewState';
 import { VersionSelector } from './VersionSelector';
 import { AssetRendererProps } from '../../types/assetTypes';
@@ -53,6 +54,9 @@ interface AssetPreviewProps {
   // Comments for annotation display
   comments: Comment[];
 
+  // Document text selection
+  onTextSelection?: (anchor: TextAnchor | null) => void;
+
   // Video control refs
   isScrubbingRef: React.MutableRefObject<boolean>;
   scrubTimeRef: React.MutableRefObject<number>;
@@ -97,6 +101,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
   onFitModeChange,
   onCommentClick,
   comments,
+  onTextSelection,
   isScrubbingRef,
   scrubTimeRef,
   onVersionSelect,
@@ -112,6 +117,33 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
     is_resolved: comment.is_resolved,
     asset_version: comment.asset_version,
   }));
+
+  // Document type gets a special renderer with text annotation support
+  if (asset.type === 'document' && currentVersionData?.content) {
+    return (
+      <div className="flex-1 flex flex-col bg-gray-900 relative">
+        <div ref={containerRef} className="flex-1 relative cursor-text overflow-hidden">
+          <DocumentRenderer
+            content={currentVersionData.content}
+            comments={comments}
+            selectedCommentId={selectedCommentId}
+            onTextSelection={onTextSelection}
+            onAnnotationClick={(commentId) => onCommentClick(commentId, null, null)}
+          />
+        </div>
+
+        {/* Version Selector */}
+        {asset.versions && asset.versions.length > 1 && (
+          <VersionSelector
+            versions={asset.versions}
+            selectedVersion={selectedVersion}
+            currentVersion={asset.current_version}
+            onVersionSelect={onVersionSelect}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-gray-900 relative">

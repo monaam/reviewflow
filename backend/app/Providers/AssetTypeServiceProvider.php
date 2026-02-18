@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\AssetTypes\AssetTypeRegistry;
 use App\Services\AssetTypes\DesignHandler;
+use App\Services\AssetTypes\DocumentHandler;
 use App\Services\AssetTypes\ImageHandler;
 use App\Services\AssetTypes\PdfHandler;
 use App\Services\AssetTypes\VideoHandler;
@@ -24,6 +25,7 @@ class AssetTypeServiceProvider extends ServiceProvider
             $registry->register(new VideoHandler());
             $registry->register(new PdfHandler());
             $registry->register(new DesignHandler());
+            $registry->register(new DocumentHandler());
 
             return $registry;
         });

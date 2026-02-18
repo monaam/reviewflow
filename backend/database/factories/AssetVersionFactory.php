@@ -32,4 +32,15 @@ class AssetVersionFactory extends Factory
             'uploaded_by' => User::factory(),
         ];
     }
+
+    public function document(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'content' => '<p>Sample document content for testing.</p>',
+            'file_url' => null,
+            'file_path' => null,
+            'file_size' => null,
+            'file_meta' => ['word_count' => 5],
+        ]);
+    }
 }

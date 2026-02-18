@@ -647,4 +647,140 @@ class CommentControllerTest extends TestCase
         $this->assertCount(2, $versions);
         $this->assertCount(2, $approvals);
     }
+
+    // TEXT ANCHOR TESTS
+
+    public function test_can_add_comment_with_text_anchor(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'This text needs work.',
+            'text_anchor' => [
+                'from' => 10,
+                'to' => 25,
+                'selectedText' => 'some text here',
+            ],
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('text_anchor.from', 10)
+            ->assertJsonPath('text_anchor.to', 25)
+            ->assertJsonPath('text_anchor.selectedText', 'some text here');
+
+        $this->assertDatabaseHas('comments', [
+            'id' => $response->json('id'),
+        ]);
+        $comment = \App\Models\Comment::find($response->json('id'));
+        $this->assertEquals(10, $comment->text_anchor['from']);
+    }
+
+    public function test_text_anchor_requires_all_fields(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Missing fields.',
+            'text_anchor' => [
+                'from' => 10,
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['text_anchor.to', 'text_anchor.selectedText']);
+    }
+
+    public function test_text_anchor_from_must_be_non_negative(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Negative from.',
+            'text_anchor' => [
+                'from' => -1,
+                'to' => 25,
+                'selectedText' => 'text',
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['text_anchor.from']);
+    }
+
+    public function test_text_anchor_selected_text_max_length(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Too long text.',
+            'text_anchor' => [
+                'from' => 0,
+                'to' => 100,
+                'selectedText' => str_repeat('a', 5001),
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['text_anchor.selectedText']);
+    }
+
+    public function test_reply_strips_text_anchor(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        // Create a parent comment
+        $this->actingAsPM();
+        $parentResponse = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Parent comment.',
+        ]);
+        $parentId = $parentResponse->json('id');
+
+        // Reply with text_anchor — should be stripped
+        $response = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Reply with anchor.',
+            'parent_id' => $parentId,
+            'text_anchor' => [
+                'from' => 10,
+                'to' => 25,
+                'selectedText' => 'some text',
+            ],
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertNull($response->json('text_anchor'));
+    }
+
+    public function test_comment_with_text_anchor_appears_in_timeline(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        $this->actingAsPM();
+        $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Timeline comment.',
+            'text_anchor' => [
+                'from' => 5,
+                'to' => 20,
+                'selectedText' => 'selected passage',
+            ],
+        ]);
+
+        $response = $this->getJson("/api/assets/{$asset->id}/comments?timeline=true");
+
+        $response->assertOk();
+        $comments = collect($response->json())->where('type', 'comment');
+        $this->assertCount(1, $comments);
+        $commentData = $comments->first()['data'];
+        $this->assertNotNull($commentData['text_anchor']);
+        $this->assertEquals('selected passage', $commentData['text_anchor']['selectedText']);
+    }
 }

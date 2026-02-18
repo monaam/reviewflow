@@ -56,4 +56,15 @@ class CommentFactory extends Factory
             'video_timestamp' => fake()->randomFloat(2, 0, 300),
         ]);
     }
+
+    public function withTextAnchor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'text_anchor' => [
+                'from' => 10,
+                'to' => 25,
+                'selectedText' => 'sample text',
+            ],
+        ]);
+    }
 }

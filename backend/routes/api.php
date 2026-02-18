@@ -52,10 +52,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/assets', [AssetController::class, 'listAll']);
     Route::get('/projects/{project}/assets', [AssetController::class, 'index']);
     Route::post('/projects/{project}/assets', [AssetController::class, 'store']);
+    Route::post('/projects/{project}/assets/document', [AssetController::class, 'storeDocument']);
     Route::get('/assets/{asset}', [AssetController::class, 'show']);
     Route::patch('/assets/{asset}', [AssetController::class, 'update']);
     Route::delete('/assets/{asset}', [AssetController::class, 'destroy']);
     Route::post('/assets/{asset}/versions', [AssetController::class, 'uploadVersion']);
+    Route::post('/assets/{asset}/document-versions', [AssetController::class, 'uploadDocumentVersion']);
     Route::get('/assets/{asset}/versions', [AssetController::class, 'versions']);
     Route::post('/assets/{asset}/approve', [AssetController::class, 'approve']);
     Route::post('/assets/{asset}/request-revision', [AssetController::class, 'requestRevision']);

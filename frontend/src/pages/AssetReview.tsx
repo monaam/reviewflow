@@ -8,7 +8,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
 import { useAssetActions, useAssetReviewState, useTemporalSeek, ModalType } from '../hooks';
-import { supportsTemporalAnnotations } from '../config/assetTypeRegistry';
+import { supportsTemporalAnnotations, supportsTextAnnotations, isContentBasedType } from '../config/assetTypeRegistry';
 import {
   AssetPreview,
   ActivityPanel,
@@ -21,6 +21,7 @@ import {
   EditAssetModal,
   DeleteConfirmModal,
   PublishModal,
+  DocumentEditorModal,
 } from '../components/modals';
 import { getPlatformInfo } from '../config/platformIcons';
 
@@ -56,6 +57,7 @@ export function AssetReviewPage() {
     cancelDrawing,
     setSelectedRect,
     setSelectedCommentId,
+    setSelectedTextAnchor,
     resetAnnotation,
     setIsPlaying,
     setCurrentTime,
@@ -188,6 +190,7 @@ export function AssetReviewPage() {
         rectangle: state.selectedRect || undefined,
         video_timestamp: supportsTemporalAnnotations(asset.type) ? state.currentTime : undefined,
         page_number: asset.type === 'pdf' ? state.currentPage : undefined,
+        text_anchor: supportsTextAnnotations(asset.type) && state.selectedTextAnchor ? state.selectedTextAnchor : undefined,
         temp_image_ids: tempImageIds.length > 0 ? tempImageIds : undefined,
       });
       const newItem: TimelineItem = {
@@ -378,7 +381,7 @@ export function AssetReviewPage() {
     const actions: Record<string, () => void> = {
       'approve': () => openModal('approve'),
       'request-revision': () => openModal('revision'),
-      'upload-version': () => openModal('upload'),
+      'upload-version': () => openModal(isContentBasedType(asset?.type || '') ? 'document-version' : 'upload'),
       'compare-versions': () => openModal('compare'),
       'view-timeline': toggleTimeline,
       'lock': handleLock,
@@ -526,6 +529,7 @@ export function AssetReviewPage() {
             }
           }}
           comments={comments}
+          onTextSelection={setSelectedTextAnchor}
           isScrubbingRef={isScrubbingRef}
           scrubTimeRef={scrubTimeRef}
           onVersionSelect={setSelectedVersion}
@@ -550,6 +554,7 @@ export function AssetReviewPage() {
           assetId={asset.id}
           selectedCommentId={state.selectedCommentId}
           selectedRect={state.selectedRect}
+          selectedTextAnchor={state.selectedTextAnchor}
           newComment={newComment}
           showAllVersionsComments={state.showAllVersionsComments}
           pendingImages={pendingImages}
@@ -608,6 +613,18 @@ export function AssetReviewPage() {
           onPublish={handlePublish}
           versions={asset.versions}
           currentVersion={asset.current_version}
+        />
+      )}
+      {state.activeModal === 'document-version' && asset && (
+        <DocumentEditorModal
+          projectId={asset.project_id}
+          asset={asset}
+          onClose={closeModal}
+          onSuccess={() => {
+            fetchAsset();
+            fetchTimeline();
+            closeModal();
+          }}
         />
       )}
       {state.activeModal === 'compare' && asset.versions && asset.versions.length > 1 && (

@@ -1,10 +1,11 @@
-import { FileImage, Film, FileText, FileQuestion } from 'lucide-react';
+import { FileImage, Film, FileText, FileQuestion, FileEdit } from 'lucide-react';
 import { AssetTypeHandler } from '../types/assetTypes';
 import {
   ImageRenderer,
   VideoRenderer,
   PdfRenderer,
   DesignRenderer,
+  DocumentRenderer,
   VideoControls,
   PdfControls,
 } from '../components/assetRenderers';
@@ -61,6 +62,22 @@ export const assetTypeRegistry: Record<string, AssetTypeHandler> = {
     supportsThumbnail: true,
   },
 
+  document: {
+    type: 'document',
+    displayName: 'Document',
+    icon: FileEdit,
+    mimePatterns: [],
+    extensions: [],
+    annotations: {
+      supportsSpatialAnnotations: false,
+      supportsTemporalAnnotations: false,
+      supportsTextAnnotations: true,
+    },
+    Renderer: DocumentRenderer as unknown as AssetTypeHandler['Renderer'],
+    supportsThumbnail: false,
+    isContentBased: true,
+  },
+
   design: {
     type: 'design',
     displayName: 'Design File',
@@ -108,10 +125,26 @@ export function supportsTemporalAnnotations(type: string): boolean {
 }
 
 /**
+ * Check if an asset type supports text annotations.
+ */
+export function supportsTextAnnotations(type: string): boolean {
+  const handler = getAssetTypeHandler(type);
+  return handler?.annotations.supportsTextAnnotations ?? false;
+}
+
+/**
+ * Check if an asset type is content-based (in-app authoring, no file upload).
+ */
+export function isContentBasedType(type: string): boolean {
+  const handler = getAssetTypeHandler(type);
+  return handler?.isContentBased ?? false;
+}
+
+/**
  * Check if an asset type supports any kind of annotation.
  */
 export function supportsAnnotations(type: string): boolean {
-  return supportsSpatialAnnotations(type) || supportsTemporalAnnotations(type);
+  return supportsSpatialAnnotations(type) || supportsTemporalAnnotations(type) || supportsTextAnnotations(type);
 }
 
 /**

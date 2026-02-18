@@ -13,6 +13,18 @@ export interface UploadOptions {
   onUploadProgress?: (event: AxiosProgressEvent) => void;
 }
 
+export interface CreateDocumentAssetRequest {
+  title: string;
+  description?: string;
+  content: string;
+  request_id?: string;
+}
+
+export interface SubmitDocumentVersionRequest {
+  content: string;
+  version_notes?: string;
+}
+
 export interface CreateCommentRequest {
   content: string;
   rectangle?: {
@@ -23,6 +35,11 @@ export interface CreateCommentRequest {
   };
   video_timestamp?: number;
   page_number?: number;
+  text_anchor?: {
+    from: number;
+    to: number;
+    selectedText: string;
+  };
   parent_id?: string;
   temp_image_ids?: string[];
 }
@@ -54,6 +71,16 @@ export const assetsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: options?.onUploadProgress,
     });
+    return response.data;
+  },
+
+  createDocument: async (projectId: string, data: CreateDocumentAssetRequest): Promise<Asset> => {
+    const response = await apiClient.post(`/projects/${projectId}/assets/document`, data);
+    return response.data;
+  },
+
+  submitDocumentVersion: async (id: string, data: SubmitDocumentVersionRequest): Promise<Asset> => {
+    const response = await apiClient.post(`/assets/${id}/document-versions`, data);
     return response.data;
   },
 

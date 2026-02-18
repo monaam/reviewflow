@@ -178,6 +178,20 @@ class AssetTypeRegistry
     }
 
     /**
+     * Check if a type supports text annotations.
+     */
+    public function supportsTextAnnotations(string $type): bool
+    {
+        $handler = $this->get($type);
+
+        if ($handler && method_exists($handler, 'supportsTextAnnotations')) {
+            return $handler->supportsTextAnnotations();
+        }
+
+        return false;
+    }
+
+    /**
      * Get all allowed MIME types across all handlers.
      */
     public function getAllAllowedMimeTypes(): array

@@ -21,6 +21,7 @@ class AssetVersion extends Model
         'file_path',
         'file_size',
         'file_meta',
+        'content',
         'thumbnail_url',
         'thumbnail_path',
         'version_notes',
@@ -52,9 +53,12 @@ class AssetVersion extends Model
             ->where('asset_version', $this->version_number);
     }
 
-    public function getFileSizeFormattedAttribute(): string
+    public function getFileSizeFormattedAttribute(): ?string
     {
         $bytes = $this->file_size;
+        if ($bytes === null) {
+            return null;
+        }
         $units = ['B', 'KB', 'MB', 'GB'];
         $index = 0;
 
