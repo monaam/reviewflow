@@ -713,6 +713,44 @@ class CommentControllerTest extends TestCase
             ->assertJsonValidationErrors(['text_anchor.from']);
     }
 
+    public function test_text_anchor_to_must_be_greater_than_from(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Invalid range.',
+            'text_anchor' => [
+                'from' => 25,
+                'to' => 10,
+                'selectedText' => 'text',
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['text_anchor.to']);
+    }
+
+    public function test_text_anchor_to_cannot_equal_from(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative);
+
+        $this->actingAsPM();
+        $response = $this->postJson("/api/assets/{$asset->id}/comments", [
+            'content' => 'Zero range.',
+            'text_anchor' => [
+                'from' => 10,
+                'to' => 10,
+                'selectedText' => 'text',
+            ],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['text_anchor.to']);
+    }
+
     public function test_text_anchor_selected_text_max_length(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);

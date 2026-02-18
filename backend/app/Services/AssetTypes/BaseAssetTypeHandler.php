@@ -100,6 +100,14 @@ abstract class BaseAssetTypeHandler implements AssetTypeHandlerInterface
     /**
      * {@inheritdoc}
      */
+    public function supportsTextAnnotations(): bool
+    {
+        return false;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function getAllowedMimeTypes(): array
     {
         $mimes = [];

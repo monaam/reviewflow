@@ -184,11 +184,7 @@ class AssetTypeRegistry
     {
         $handler = $this->get($type);
 
-        if ($handler && method_exists($handler, 'supportsTextAnnotations')) {
-            return $handler->supportsTextAnnotations();
-        }
-
-        return false;
+        return $handler?->supportsTextAnnotations() ?? false;
     }
 
     /**

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -21,10 +21,11 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 export function DocumentEditorPage() {
   const params = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const id = params.id!;
 
   // Determine mode from the current path
-  const isNewVersion = location.pathname.includes('/documents/new-version');
+  const isNewVersion = pathname.includes('/documents/new-version');
 
   const [asset, setAsset] = useState<Asset | null>(null);
   const [title, setTitle] = useState('');
@@ -33,6 +34,9 @@ export function DocumentEditorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(isNewVersion);
   const [error, setError] = useState('');
+
+  // Store fetched content so it can be set once editor is ready
+  const pendingContentRef = useRef<string | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -49,31 +53,44 @@ export function DocumentEditorPage() {
 
   // Fetch asset data when editing a new version
   useEffect(() => {
-    if (isNewVersion) {
-      assetsApi
-        .get(id)
-        .then((data) => {
-          setAsset(data);
-          const currentContent = data.versions?.find(
-            (v) => v.version_number === data.current_version,
-          )?.content;
-          if (currentContent && editor) {
+    if (!isNewVersion) return;
+
+    assetsApi
+      .get(id)
+      .then((data) => {
+        setAsset(data);
+        const currentContent = data.versions?.find(
+          (v) => v.version_number === data.current_version,
+        )?.content;
+        if (currentContent) {
+          if (editor && !editor.isDestroyed) {
             editor.commands.setContent(currentContent);
+          } else {
+            pendingContentRef.current = currentContent;
           }
-        })
-        .catch(() => setError('Failed to load asset'))
-        .finally(() => setIsFetching(false));
+        }
+      })
+      .catch(() => setError('Failed to load asset'))
+      .finally(() => setIsFetching(false));
+  }, [id, isNewVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Set pending content once editor becomes available
+  useEffect(() => {
+    if (editor && !editor.isDestroyed && pendingContentRef.current) {
+      editor.commands.setContent(pendingContentRef.current);
+      pendingContentRef.current = null;
     }
-  }, [id, isNewVersion, editor]);
+  }, [editor]);
 
   const handleSubmit = async () => {
     if (!editor) return;
 
-    const htmlContent = editor.getHTML();
-    if (!htmlContent || htmlContent === '<p></p>') {
+    if (editor.isEmpty) {
       setError('Content is required.');
       return;
     }
+
+    const htmlContent = editor.getHTML();
 
     setError('');
     setIsLoading(true);

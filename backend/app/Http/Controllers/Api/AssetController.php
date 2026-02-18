@@ -24,6 +24,7 @@ use App\Models\Project;
 use App\Models\VersionLock;
 use App\Jobs\GenerateThumbnailJob;
 use App\Services\AssetTypes\AssetTypeRegistry;
+use App\Services\AssetTypes\DocumentHandler;
 use App\Services\DiscordNotificationService;
 use App\Services\FileUploadService;
 use App\Services\NotificationDispatcher;
@@ -203,13 +204,9 @@ class AssetController extends Controller
 
         $validated = $request->validated();
 
-        // Sanitize HTML content
-        $allowedTags = '<p><h1><h2><h3><h4><h5><h6><strong><em><u><s><ul><ol><li><blockquote><code><pre><a><br>';
-        $sanitizedContent = strip_tags($validated['content'], $allowedTags);
-
-        // Count words from plain text
-        $plainText = strip_tags($sanitizedContent);
-        $wordCount = str_word_count($plainText);
+        /** @var DocumentHandler $documentHandler */
+        $documentHandler = $this->assetTypeRegistry->get('document');
+        $sanitized = $documentHandler->sanitizeContent($validated['content']);
 
         // Admin/PM uploads go directly to in_review
         $initialStatus = $request->user()->isAdmin() || $request->user()->isPM()
@@ -232,8 +229,8 @@ class AssetController extends Controller
             'file_url' => null,
             'file_path' => null,
             'file_size' => null,
-            'file_meta' => ['word_count' => $wordCount],
-            'content' => $sanitizedContent,
+            'file_meta' => ['word_count' => $sanitized['word_count']],
+            'content' => $sanitized['content'],
             'uploaded_by' => $request->user()->id,
         ]);
 
@@ -278,12 +275,9 @@ class AssetController extends Controller
 
         $validated = $request->validated();
 
-        // Sanitize HTML content
-        $allowedTags = '<p><h1><h2><h3><h4><h5><h6><strong><em><u><s><ul><ol><li><blockquote><code><pre><a><br>';
-        $sanitizedContent = strip_tags($validated['content'], $allowedTags);
-
-        $plainText = strip_tags($sanitizedContent);
-        $wordCount = str_word_count($plainText);
+        /** @var DocumentHandler $documentHandler */
+        $documentHandler = $this->assetTypeRegistry->get('document');
+        $sanitized = $documentHandler->sanitizeContent($validated['content']);
 
         $newVersion = $asset->current_version + 1;
 
@@ -293,8 +287,8 @@ class AssetController extends Controller
             'file_url' => null,
             'file_path' => null,
             'file_size' => null,
-            'file_meta' => ['word_count' => $wordCount],
-            'content' => $sanitizedContent,
+            'file_meta' => ['word_count' => $sanitized['word_count']],
+            'content' => $sanitized['content'],
             'version_notes' => $validated['version_notes'] ?? null,
             'uploaded_by' => $request->user()->id,
         ]);
@@ -367,9 +361,11 @@ class AssetController extends Controller
     {
         $this->authorize('delete', $asset);
 
-        // Delete all version files
+        // Delete all version files (documents have no file)
         foreach ($asset->versions as $version) {
-            $this->uploadService->delete($version->file_path);
+            if ($version->file_path !== null) {
+                $this->uploadService->delete($version->file_path);
+            }
         }
 
         $asset->delete();

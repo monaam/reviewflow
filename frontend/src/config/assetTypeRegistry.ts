@@ -5,7 +5,6 @@ import {
   VideoRenderer,
   PdfRenderer,
   DesignRenderer,
-  DocumentRenderer,
   VideoControls,
   PdfControls,
 } from '../components/assetRenderers';
@@ -73,7 +72,8 @@ export const assetTypeRegistry: Record<string, AssetTypeHandler> = {
       supportsTemporalAnnotations: false,
       supportsTextAnnotations: true,
     },
-    Renderer: DocumentRenderer as unknown as AssetTypeHandler['Renderer'],
+    // Documents use a dedicated rendering path in AssetPreview, not the generic Renderer
+    Renderer: DesignRenderer,
     supportsThumbnail: false,
     isContentBased: true,
   },
