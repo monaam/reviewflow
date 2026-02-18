@@ -27,7 +27,7 @@ export const DocumentToolbar: FC<DocumentToolbarProps> = ({ editor }) => {
   const btnClass = (active: boolean) =>
     `p-1.5 rounded transition-colors ${
       active
-        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600'
+        ? 'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-white'
         : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300'
     }`;
 

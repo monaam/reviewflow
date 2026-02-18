@@ -5,6 +5,7 @@ import {
   Lock,
   Unlock,
   Download,
+  Copy,
   Edit2,
   Trash2,
   Layers,
@@ -13,6 +14,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { ActionDefinition, ActionContext } from '../types/actions';
+import { isContentBasedType } from './assetTypeRegistry';
 
 // Reusable condition functions
 const conditions = {
@@ -54,6 +56,16 @@ const conditions = {
   /** Check if asset has multiple versions */
   hasMultipleVersions: (ctx: ActionContext): boolean => {
     return (ctx.asset.versions?.length ?? 0) > 1;
+  },
+
+  /** Check if asset has a downloadable file (not content-based) */
+  hasFile: (ctx: ActionContext): boolean => {
+    return !isContentBasedType(ctx.asset.type);
+  },
+
+  /** Check if asset is content-based (e.g. document) */
+  isContentBased: (ctx: ActionContext): boolean => {
+    return isContentBasedType(ctx.asset.type);
   },
 
   /** Check if user is admin or PM */
@@ -166,10 +178,21 @@ export const assetActions: ActionDefinition[] = [
   },
 
   {
+    id: 'copy-content',
+    label: 'Copy Content',
+    icon: Copy,
+    roles: 'all',
+    conditions: [conditions.isContentBased],
+    variant: 'secondary',
+    showInDropdown: true,
+  },
+
+  {
     id: 'download',
     label: 'Download',
     icon: Download,
     roles: 'all',
+    conditions: [conditions.hasFile],
     variant: 'secondary',
     showInDropdown: true,
   },
@@ -179,7 +202,7 @@ export const assetActions: ActionDefinition[] = [
     label: 'Download All Versions',
     icon: Download,
     roles: 'all',
-    conditions: [conditions.hasMultipleVersions],
+    conditions: [conditions.hasMultipleVersions, conditions.hasFile],
     variant: 'secondary',
     showInDropdown: true,
   },

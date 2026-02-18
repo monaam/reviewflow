@@ -55,6 +55,7 @@ interface AssetPreviewProps {
   comments: Comment[];
 
   // Document text selection
+  selectedTextAnchor?: TextAnchor | null;
   onTextSelection?: (anchor: TextAnchor | null) => void;
 
   // Video control refs
@@ -101,6 +102,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
   onFitModeChange,
   onCommentClick,
   comments,
+  selectedTextAnchor,
   onTextSelection,
   isScrubbingRef,
   scrubTimeRef,
@@ -127,6 +129,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
             content={currentVersionData.content}
             comments={comments}
             selectedCommentId={selectedCommentId}
+            pendingSelection={selectedTextAnchor}
             onTextSelection={onTextSelection}
             onAnnotationClick={(commentId) => onCommentClick(commentId, null, null)}
           />

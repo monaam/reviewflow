@@ -392,6 +392,18 @@ export function AssetReviewPage() {
       'lock': handleLock,
       'send-to-client': handleSendToClient,
       'publish': () => openModal('publish'),
+      'copy-content': () => {
+        const content = currentVersionData?.content;
+        if (content) {
+          const tmp = document.createElement('div');
+          tmp.innerHTML = content;
+          const blob = new Blob([content], { type: 'text/html' });
+          const textBlob = new Blob([tmp.textContent || ''], { type: 'text/plain' });
+          navigator.clipboard.write([
+            new ClipboardItem({ 'text/html': blob, 'text/plain': textBlob }),
+          ]);
+        }
+      },
       'download': () => handleDownloadVersion(selectedVersion),
       'download-all': () => asset?.versions?.forEach((v) => handleDownloadVersion(v.version_number)),
       'edit': () => openModal('edit'),
@@ -534,6 +546,7 @@ export function AssetReviewPage() {
             }
           }}
           comments={comments}
+          selectedTextAnchor={state.selectedTextAnchor}
           onTextSelection={setSelectedTextAnchor}
           isScrubbingRef={isScrubbingRef}
           scrubTimeRef={scrubTimeRef}
