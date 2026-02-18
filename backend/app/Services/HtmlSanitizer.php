@@ -36,11 +36,15 @@ class HtmlSanitizer
             return '';
         }
 
-        // First pass: strip disallowed tags
+        // First pass: remove tags that should be stripped with their content
+        $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
+        $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
+
+        // Second pass: strip remaining disallowed tags (keeps their text content)
         $allowedTagString = '<' . implode('><', self::ALLOWED_TAGS) . '>';
         $html = strip_tags($html, $allowedTagString);
 
-        // Second pass: parse with DOMDocument to strip dangerous attributes
+        // Third pass: parse with DOMDocument to strip dangerous attributes
         $dom = new \DOMDocument();
         // Suppress warnings from malformed HTML; wrap in UTF-8 envelope
         @$dom->loadHTML(
