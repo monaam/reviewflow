@@ -25,6 +25,7 @@ class Comment extends Model implements HasMedia
         'rectangle',
         'video_timestamp',
         'page_number',
+        'text_anchor',
         'is_resolved',
         'resolved_by',
         'resolved_at',
@@ -37,6 +38,7 @@ class Comment extends Model implements HasMedia
             'rectangle' => 'array',
             'video_timestamp' => 'float',
             'page_number' => 'integer',
+            'text_anchor' => 'array',
             'is_resolved' => 'boolean',
             'resolved_at' => 'datetime',
         ];
@@ -96,6 +98,11 @@ class Comment extends Model implements HasMedia
     public function hasPageNumber(): bool
     {
         return $this->page_number !== null;
+    }
+
+    public function hasTextAnchor(): bool
+    {
+        return $this->text_anchor !== null;
     }
 
     public function getFormattedTimestampAttribute(): ?string

@@ -71,8 +71,9 @@ export interface AssetVersion {
   file_url: string;
   file_path: string;
   file_size: number;
-  file_size_formatted?: string;
+  file_size_formatted?: string | null;
   file_meta: Record<string, unknown>;
+  content: string | null;
   thumbnail_url?: string | null;
   display_thumbnail_url?: string | null;
   version_notes: string | null;
@@ -110,6 +111,12 @@ export interface TempCommentImage {
   error?: string;
 }
 
+export interface TextAnchor {
+  from: number;
+  to: number;
+  selectedText: string;
+}
+
 export interface Comment {
   id: string;
   asset_id: string;
@@ -125,6 +132,7 @@ export interface Comment {
   } | null;
   video_timestamp: number | null;
   page_number: number | null;
+  text_anchor: TextAnchor | null;
   is_resolved: boolean;
   resolved_by: string | null;
   resolved_at: string | null;

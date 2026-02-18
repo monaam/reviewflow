@@ -83,4 +83,11 @@ class AssetFactory extends Factory
             'type' => 'pdf',
         ]);
     }
+
+    public function document(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => 'document',
+        ]);
+    }
 }

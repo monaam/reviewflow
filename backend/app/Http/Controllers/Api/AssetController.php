@@ -9,8 +9,10 @@ use App\Http\Requests\AssetLinkRequestRequest;
 use App\Http\Requests\AssetLockRequest;
 use App\Http\Requests\AssetPublishRequest;
 use App\Http\Requests\AssetRequestRevisionRequest;
+use App\Http\Requests\AssetCreateDocumentRequest;
 use App\Http\Requests\AssetStoreRequest;
 use App\Http\Requests\AssetUpdateRequest;
+use App\Http\Requests\AssetUploadDocumentVersionRequest;
 use App\Http\Requests\AssetUploadVersionRequest;
 use App\Models\ApprovalLog;
 use App\Models\Asset;
@@ -193,6 +195,127 @@ class AssetController extends Controller
         $this->notificationDispatcher->notifyAssetUploaded($asset, $request->user());
 
         return response()->json($asset->load(['uploader', 'latest_version', 'project']), 201);
+    }
+
+    public function storeDocument(AssetCreateDocumentRequest $request, Project $project): JsonResponse
+    {
+        $this->authorize('uploadAsset', $project);
+
+        $validated = $request->validated();
+
+        // Sanitize HTML content
+        $allowedTags = '<p><h1><h2><h3><h4><h5><h6><strong><em><u><s><ul><ol><li><blockquote><code><pre><a><br>';
+        $sanitizedContent = strip_tags($validated['content'], $allowedTags);
+
+        // Count words from plain text
+        $plainText = strip_tags($sanitizedContent);
+        $wordCount = str_word_count($plainText);
+
+        // Admin/PM uploads go directly to in_review
+        $initialStatus = $request->user()->isAdmin() || $request->user()->isPM()
+            ? AssetStatus::IN_REVIEW->value
+            : AssetStatus::PENDING_REVIEW->value;
+
+        $asset = Asset::create([
+            'project_id' => $project->id,
+            'uploaded_by' => $request->user()->id,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
+            'type' => 'document',
+            'status' => $initialStatus,
+            'current_version' => 1,
+        ]);
+
+        AssetVersion::create([
+            'asset_id' => $asset->id,
+            'version_number' => 1,
+            'file_url' => null,
+            'file_path' => null,
+            'file_size' => null,
+            'file_meta' => ['word_count' => $wordCount],
+            'content' => $sanitizedContent,
+            'uploaded_by' => $request->user()->id,
+        ]);
+
+        // Link to request if provided
+        if (isset($validated['request_id'])) {
+            $asset->creativeRequests()->attach($validated['request_id']);
+
+            $creativeRequest = CreativeRequest::find($validated['request_id']);
+            if ($creativeRequest && $creativeRequest->assigned_to === null) {
+                $creativeRequest->update(['assigned_to' => $request->user()->id]);
+            }
+        }
+
+        // Send Discord notification
+        $this->discord->notifyNewUpload($asset);
+
+        // Send in-app notification
+        $this->notificationDispatcher->notifyAssetUploaded($asset, $request->user());
+
+        return response()->json($asset->load(['uploader', 'latest_version', 'project']), 201);
+    }
+
+    public function uploadDocumentVersion(AssetUploadDocumentVersionRequest $request, Asset $asset): JsonResponse
+    {
+        $this->authorize('uploadVersion', $asset);
+
+        // Must be a document asset
+        if ($asset->type !== 'document') {
+            return response()->json([
+                'message' => 'This endpoint is only for document assets.',
+            ], 422);
+        }
+
+        // Check if asset is locked
+        if ($asset->is_locked) {
+            return response()->json([
+                'message' => 'Cannot upload new version. Asset is locked.',
+                'locked_by' => $asset->locker?->name,
+                'locked_at' => $asset->locked_at?->toIso8601String(),
+            ], 403);
+        }
+
+        $validated = $request->validated();
+
+        // Sanitize HTML content
+        $allowedTags = '<p><h1><h2><h3><h4><h5><h6><strong><em><u><s><ul><ol><li><blockquote><code><pre><a><br>';
+        $sanitizedContent = strip_tags($validated['content'], $allowedTags);
+
+        $plainText = strip_tags($sanitizedContent);
+        $wordCount = str_word_count($plainText);
+
+        $newVersion = $asset->current_version + 1;
+
+        AssetVersion::create([
+            'asset_id' => $asset->id,
+            'version_number' => $newVersion,
+            'file_url' => null,
+            'file_path' => null,
+            'file_size' => null,
+            'file_meta' => ['word_count' => $wordCount],
+            'content' => $sanitizedContent,
+            'version_notes' => $validated['version_notes'] ?? null,
+            'uploaded_by' => $request->user()->id,
+        ]);
+
+        // Update asset
+        $newStatus = $request->user()->isAdmin() || $request->user()->isPM()
+            ? AssetStatus::IN_REVIEW->value
+            : AssetStatus::PENDING_REVIEW->value;
+
+        $asset->update([
+            'current_version' => $newVersion,
+            'status' => $newStatus,
+        ]);
+
+        // Send Discord notification
+        $this->discord->notifyNewVersion($asset);
+
+        // Send in-app notification
+        $this->notificationDispatcher->notifyNewVersion($asset, $request->user());
+
+        return response()->json($asset->fresh(['uploader', 'versions', 'latest_version']), 201);
     }
 
     public function show(Request $request, Asset $asset): JsonResponse

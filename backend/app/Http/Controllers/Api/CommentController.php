@@ -159,6 +159,7 @@ class CommentController extends Controller
             'rectangle' => $isReply ? null : ($validated['rectangle'] ?? null),
             'video_timestamp' => $isReply ? null : ($validated['video_timestamp'] ?? null),
             'page_number' => $isReply ? null : ($validated['page_number'] ?? null),
+            'text_anchor' => $isReply ? null : ($validated['text_anchor'] ?? null),
         ]);
 
         // Parse mentions from content and create mention records

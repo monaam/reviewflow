@@ -55,6 +55,8 @@ export interface AnnotationCapabilities {
   supportsSpatialAnnotations: boolean;
   /** Whether this type supports time-based annotations */
   supportsTemporalAnnotations: boolean;
+  /** Whether this type supports text-selection annotations */
+  supportsTextAnnotations?: boolean;
 }
 
 /**
@@ -81,6 +83,8 @@ export interface AssetTypeHandler {
   getMediaUrl?: (storageUrl: string) => string;
   /** Whether this type supports thumbnail preview */
   supportsThumbnail: boolean;
+  /** Whether this type stores content in-app rather than as an uploaded file */
+  isContentBased?: boolean;
 }
 
 /**

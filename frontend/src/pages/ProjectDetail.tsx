@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Upload,
   FileImage,
+  FileEdit,
   Users,
   Calendar,
   ClipboardList,
@@ -216,6 +217,15 @@ export function ProjectDetailPage() {
               >
                 <ClipboardList className="w-4 h-4 mr-2" />
                 New Request
+              </button>
+            )}
+            {canUpload && (
+              <button
+                onClick={() => navigate(`/projects/${id}/documents/new`)}
+                className="btn-secondary"
+              >
+                <FileEdit className="w-4 h-4 mr-2" />
+                Write Document
               </button>
             )}
             {canUpload && (

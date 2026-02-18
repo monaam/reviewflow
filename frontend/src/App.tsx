@@ -11,6 +11,7 @@ import { RequestsPage } from './pages/Requests';
 import { CreativeQueuePage } from './pages/CreativeQueue';
 import { ReviewQueuePage } from './pages/ReviewQueue';
 import { RequestDetailPage } from './pages/RequestDetail';
+import { DocumentEditorPage } from './pages/DocumentEditor';
 import { NotificationsPage } from './pages/Notifications';
 import { AdminUsersPage } from './pages/AdminUsers';
 import { AdminSettingsPage } from './pages/AdminSettings';
@@ -84,8 +85,10 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
+          <Route path="projects/:id/documents/new" element={<DocumentEditorPage />} />
           <Route path="assets" element={<AssetsPage />} />
           <Route path="assets/:id" element={<AssetReviewPage />} />
+          <Route path="assets/:id/documents/new-version" element={<DocumentEditorPage />} />
           <Route path="requests" element={<RequestsPage />} />
           <Route path="requests/:id" element={<RequestDetailPage />} />
           <Route path="queue" element={<CreativeQueuePage />} />
