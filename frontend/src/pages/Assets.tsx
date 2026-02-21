@@ -10,6 +10,7 @@ import { isReviewer as isReviewerRole } from '../utils/permissions';
 import { useFetch, useListFilter } from '../hooks';
 import { getAssetStatusFilters } from '../config/statusFilters';
 import { formatRelativeTime } from '../utils/date';
+import { routes } from '../utils/routes';
 
 export function AssetsPage() {
   const { user } = useAuthStore();
@@ -123,7 +124,7 @@ export function AssetsPage() {
           {filteredAssets.map((asset) => (
             <Link
               key={asset.id}
-              to={`/assets/${asset.id}`}
+              to={routes.studio.asset(asset.id)}
               className="group block rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 overflow-hidden transition-colors"
             >
               {/* Thumbnail */}

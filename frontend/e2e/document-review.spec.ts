@@ -41,7 +41,7 @@ test.describe('Document Review', () => {
     const setup = await createDocumentAsset(page);
     if (!setup) { test.skip(); return; }
 
-    await page.goto(`/assets/${setup.assetId}`);
+    await page.goto(`/studio/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     // Document content should be visible
@@ -55,7 +55,7 @@ test.describe('Document Review', () => {
     const setup = await createDocumentAsset(page);
     if (!setup) { test.skip(); return; }
 
-    await page.goto(`/assets/${setup.assetId}`);
+    await page.goto(`/studio/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     // Select text in the document using triple-click (selects a paragraph)
@@ -75,7 +75,7 @@ test.describe('Document Review', () => {
     const setup = await createDocumentAsset(page);
     if (!setup) { test.skip(); return; }
 
-    await page.goto(`/assets/${setup.assetId}`);
+    await page.goto(`/studio/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     // Select text in the document using triple-click
@@ -99,7 +99,7 @@ test.describe('Document Review', () => {
     if (!setup) { test.skip(); return; }
 
     // Navigate directly to the new-version editor page
-    await page.goto(`/assets/${setup.assetId}/documents/new-version`);
+    await page.goto(`/studio/assets/${setup.assetId}/documents/new-version`);
     await expect(page.getByRole('heading', { name: 'New Document Version' })).toBeVisible({ timeout: 10000 });
 
     const editorArea = page.locator('.ProseMirror');
@@ -135,7 +135,7 @@ test.describe('Document Review', () => {
       },
     });
 
-    await page.goto(`/assets/${setup.assetId}`);
+    await page.goto(`/studio/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     // Check comment appears in sidebar
@@ -167,7 +167,7 @@ test.describe('Document Review', () => {
     });
     const comment = await commentResponse.json();
 
-    await page.goto(`/assets/${setup.assetId}`);
+    await page.goto(`/studio/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     // Verify unresolved highlight exists
@@ -177,7 +177,7 @@ test.describe('Document Review', () => {
     await page.request.post(`${API_URL}/comments/${comment.id}/resolve`, { headers });
 
     // Reload and check for resolved highlight
-    await page.goto(`/assets/${setup.assetId}`);
+    await page.goto(`/studio/assets/${setup.assetId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.locator('.annotation-resolved')).toBeVisible({ timeout: 5000 });
   });

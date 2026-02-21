@@ -16,6 +16,7 @@ import { EmptyState } from '../EmptyState';
 import { QuickActionCard } from '../QuickActionCard';
 import { StatusBadge } from '../../common/StatusBadge';
 import { formatRelativeTime } from '../../../utils/date';
+import { routes } from '../../../utils/routes';
 
 interface ReviewerDashboardProps {
   data: DashboardData;
@@ -48,20 +49,20 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
           title="Accessible Projects"
           value={data.stats.accessible_projects || 0}
           icon={FolderKanban}
-          href="/projects"
+          href={routes.studio.projects()}
         />
         <StatCard
           title="Pending Review"
           value={pendingReviewCount}
           icon={Eye}
-          href="/assets?status=pending_review"
+          href={`${routes.studio.assets()}?status=pending_review`}
         />
       </div>
 
       {/* Review Queue */}
       <DashboardSection
         title="Review Queue"
-        viewAllHref="/assets?status=pending_review"
+        viewAllHref={`${routes.studio.assets()}?status=pending_review`}
       >
         {pendingReview.length === 0 ? (
           <EmptyState
@@ -106,7 +107,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/assets/${asset.id}`}
+                    to={routes.studio.asset(asset.id)}
                     className="font-medium text-gray-900 dark:text-white hover:underline truncate block"
                   >
                     {asset.title}
@@ -135,7 +136,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                         Approve
                       </button>
                       <Link
-                        to={`/assets/${asset.id}`}
+                        to={routes.studio.asset(asset.id)}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200 rounded-lg transition-colors"
                       >
                         Review

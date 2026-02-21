@@ -32,6 +32,7 @@ import {
 } from '../utils/permissions';
 import { isOverdue } from '../utils/formatters';
 import { getAssetStatusFilters } from '../config/statusFilters';
+import { routes } from '../utils/routes';
 import { formatRelativeTime } from '../utils/date';
 import {
   UploadAssetModal,
@@ -122,7 +123,7 @@ export function ProjectDetailPage() {
   const handleDeleteProject = async () => {
     try {
       await projectsApi.delete(id!);
-      navigate('/projects');
+      navigate(routes.studio.projects());
     } catch (error) {
       console.error('Failed to delete project:', error);
     }
@@ -160,7 +161,7 @@ export function ProjectDetailPage() {
       {/* Header */}
       <div className="mb-8">
         <Link
-          to="/projects"
+          to={routes.studio.projects()}
           className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
@@ -221,7 +222,7 @@ export function ProjectDetailPage() {
             )}
             {canUpload && (
               <button
-                onClick={() => navigate(`/projects/${id}/documents/new`)}
+                onClick={() => navigate(routes.studio.projectDocumentNew(id!))}
                 className="btn-secondary"
               >
                 <FileEdit className="w-4 h-4 mr-2" />
@@ -500,7 +501,7 @@ function AssetCard({ asset }: { asset: Asset }) {
 
   return (
     <Link
-      to={`/assets/${asset.id}`}
+      to={routes.studio.asset(asset.id)}
       className="block rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors overflow-hidden"
     >
       <div className="aspect-video bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
@@ -540,7 +541,7 @@ function RequestCard({ request }: { request: CreativeRequest }) {
 
   return (
     <Link
-      to={`/requests/${request.id}`}
+      to={routes.studio.request(request.id)}
       className="block p-4 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
     >
       <div className="flex items-start justify-between">

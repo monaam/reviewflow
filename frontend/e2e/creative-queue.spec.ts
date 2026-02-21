@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 test.describe('Creative Queue Page', () => {
   test('creative sees their queue', async ({ page }) => {
     await loginAs(page, 'creative');
-    await page.goto('/queue');
+    await page.goto('/studio/queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.getByRole('heading', { name: 'My Queue' })).toBeVisible();
@@ -12,7 +12,7 @@ test.describe('Creative Queue Page', () => {
 
   test('search filters items', async ({ page }) => {
     await loginAs(page, 'creative');
-    await page.goto('/queue');
+    await page.goto('/studio/queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -28,7 +28,7 @@ test.describe('Creative Queue Page', () => {
 
   test('empty state for non-creative role', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/queue');
+    await page.goto('/studio/queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -39,7 +39,7 @@ test.describe('Creative Queue Page', () => {
 
   test('loading spinner visible during fetch', async ({ page }) => {
     await loginAs(page, 'creative');
-    await page.goto('/queue');
+    await page.goto('/studio/queue');
 
     await expect(page.locator('.animate-spin')).toBeVisible({ timeout: 3000 }).catch(() => {
       // Data may load fast

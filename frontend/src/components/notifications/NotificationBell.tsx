@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, CheckCheck } from 'lucide-react';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { routes } from '../../utils/routes';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { NotificationItem } from './NotificationItem';
 
@@ -105,7 +106,7 @@ export function NotificationBell() {
           {notifications.length > 0 && (
             <div className="border-t border-gray-200 dark:border-gray-700">
               <Link
-                to="/notifications"
+                to={routes.studio.notifications()}
                 onClick={() => setIsOpen(false)}
                 className="block px-4 py-3 text-sm text-center text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
               >

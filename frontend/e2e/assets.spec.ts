@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 test.describe('Assets Page', () => {
   test('list loads with assets', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/assets');
+    await page.goto('/studio/assets');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.getByText('Assets').first()).toBeVisible();
@@ -12,7 +12,7 @@ test.describe('Assets Page', () => {
 
   test('search filters by title', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/assets');
+    await page.goto('/studio/assets');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -26,7 +26,7 @@ test.describe('Assets Page', () => {
 
   test('status filter works', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/assets');
+    await page.goto('/studio/assets');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -38,7 +38,7 @@ test.describe('Assets Page', () => {
 
   test('reviewer sees only client-facing status filters', async ({ page }) => {
     await loginAs(page, 'reviewer');
-    await page.goto('/assets');
+    await page.goto('/studio/assets');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -49,7 +49,7 @@ test.describe('Assets Page', () => {
 
   test('empty state on no search results', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/assets');
+    await page.goto('/studio/assets');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -63,7 +63,7 @@ test.describe('Assets Page', () => {
 
   test('loading spinner visible during fetch', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/assets');
+    await page.goto('/studio/assets');
 
     // Spinner should appear briefly during loading
     await expect(page.locator('.animate-spin')).toBeVisible({ timeout: 3000 }).catch(() => {

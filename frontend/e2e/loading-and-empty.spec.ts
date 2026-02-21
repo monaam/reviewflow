@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 test.describe('Loading and Empty States', () => {
   test('dashboard loading spinner', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/');
+    await page.goto('/studio');
 
     // Spinner should appear briefly during loading
     await expect(page.locator('.animate-spin')).toBeVisible({ timeout: 3000 }).catch(() => {
@@ -17,7 +17,7 @@ test.describe('Loading and Empty States', () => {
 
   test('projects empty state on search', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/projects');
+    await page.goto('/studio/projects');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -31,7 +31,7 @@ test.describe('Loading and Empty States', () => {
 
   test('assets empty state on search', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/assets');
+    await page.goto('/studio/assets');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -45,7 +45,7 @@ test.describe('Loading and Empty States', () => {
 
   test('creative queue empty state for PM', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/queue');
+    await page.goto('/studio/queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 

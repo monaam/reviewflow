@@ -23,6 +23,7 @@ import {
   PublishModal,
 } from '../components/modals';
 import { getPlatformInfo } from '../config/platformIcons';
+import { routes } from '../utils/routes';
 
 /**
  * Asset review page - main component for reviewing and annotating assets.
@@ -369,7 +370,7 @@ export function AssetReviewPage() {
   const handleDelete = async () => {
     try {
       await assetsApi.delete(id!);
-      navigate(`/projects/${asset?.project_id}`);
+      navigate(routes.studio.project(asset?.project_id!));
     } catch (error) {
       console.error('Failed to delete asset:', error);
     }
@@ -382,7 +383,7 @@ export function AssetReviewPage() {
       'request-revision': () => openModal('revision'),
       'upload-version': () => {
         if (isContentBasedType(asset?.type || '')) {
-          navigate(`/assets/${id}/documents/new-version`);
+          navigate(routes.studio.assetDocumentNewVersion(id!));
         } else {
           openModal('upload');
         }
@@ -454,7 +455,7 @@ export function AssetReviewPage() {
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="flex items-center gap-4">
           <Link
-            to={`/projects/${asset.project_id}`}
+            to={routes.studio.project(asset.project_id)}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
           >
             <ArrowLeft className="w-5 h-5" />

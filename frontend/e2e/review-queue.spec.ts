@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 test.describe('Review Queue Page', () => {
   test('page loads with heading', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/review-queue');
+    await page.goto('/studio/review-queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.getByRole('heading', { name: 'Review Queue' })).toBeVisible();
@@ -12,7 +12,7 @@ test.describe('Review Queue Page', () => {
 
   test('loading spinner during fetch', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/review-queue');
+    await page.goto('/studio/review-queue');
 
     await expect(page.locator('.animate-spin')).toBeVisible({ timeout: 3000 }).catch(() => {
       // Data may load fast
@@ -21,7 +21,7 @@ test.describe('Review Queue Page', () => {
 
   test('filter buttons work', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/review-queue');
+    await page.goto('/studio/review-queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -38,7 +38,7 @@ test.describe('Review Queue Page', () => {
 
   test('empty state when no pending assets', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/review-queue');
+    await page.goto('/studio/review-queue');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 

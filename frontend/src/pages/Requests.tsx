@@ -9,6 +9,7 @@ import { isReviewer as isReviewerRole } from '../utils/permissions';
 import { useFetch, useListFilter } from '../hooks';
 import { isOverdue, cardLinkClass } from '../utils/formatters';
 import { formatRelativeTime } from '../utils/date';
+import { routes } from '../utils/routes';
 
 export function RequestsPage() {
   const { user } = useAuthStore();
@@ -139,7 +140,7 @@ export function RequestsPage() {
             return (
               <Link
                 key={request.id}
-                to={`/requests/${request.id}`}
+                to={routes.studio.request(request.id)}
                 className={cardLinkClass}
               >
                 <div className="flex items-start justify-between gap-4">

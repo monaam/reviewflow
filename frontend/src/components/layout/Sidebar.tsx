@@ -11,18 +11,19 @@ import {
   Bell,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import { routes } from '../../utils/routes';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Projects', href: '/projects', icon: FolderKanban },
-  { name: 'My Queue', href: '/queue', icon: ClipboardList, roles: ['creative'] },
-  { name: 'Review Queue', href: '/review-queue', icon: CheckSquare, roles: ['reviewer', 'pm', 'admin'] },
-  { name: 'Notifications', href: '/notifications', icon: Bell },
+  { name: 'Dashboard', href: routes.studio.dashboard(), icon: LayoutDashboard },
+  { name: 'Projects', href: routes.studio.projects(), icon: FolderKanban },
+  { name: 'My Queue', href: routes.studio.queue(), icon: ClipboardList, roles: ['creative'] },
+  { name: 'Review Queue', href: routes.studio.reviewQueue(), icon: CheckSquare, roles: ['reviewer', 'pm', 'admin'] },
+  { name: 'Notifications', href: routes.studio.notifications(), icon: Bell },
 ];
 
 const adminNavigation = [
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+  { name: 'Users', href: routes.studio.adminUsers(), icon: Users },
+  { name: 'Settings', href: routes.studio.adminSettings(), icon: Settings },
 ];
 
 export function Sidebar() {
@@ -94,7 +95,7 @@ export function Sidebar() {
           </div>
         </div>
         <NavLink
-          to="/profile"
+          to={routes.studio.profile()}
           className={({ isActive }) =>
             `flex items-center w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               isActive
