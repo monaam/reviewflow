@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 test.describe('Requests Page', () => {
   test('pm sees requests list', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/requests');
+    await page.goto('/studio/requests');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(
@@ -14,7 +14,7 @@ test.describe('Requests Page', () => {
 
   test('status filter works', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/requests');
+    await page.goto('/studio/requests');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -31,7 +31,7 @@ test.describe('Requests Page', () => {
 
   test('reviewer sees access denied', async ({ page }) => {
     await loginAs(page, 'reviewer');
-    await page.goto('/requests');
+    await page.goto('/studio/requests');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(
@@ -41,7 +41,7 @@ test.describe('Requests Page', () => {
 
   test('loading spinner during fetch', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/requests');
+    await page.goto('/studio/requests');
 
     await expect(page.locator('.animate-spin')).toBeVisible({ timeout: 3000 }).catch(() => {
       // Data may load fast

@@ -19,6 +19,7 @@ import { StatusBadge } from '../../common/StatusBadge';
 import { getAssetTypeIcon } from '../../../config/assetTypeRegistry';
 import { isOverdue } from '../../../utils/formatters';
 import { formatRelativeTime } from '../../../utils/date';
+import { routes } from '../../../utils/routes';
 
 interface CreativeDashboardProps {
   data: DashboardData;
@@ -41,7 +42,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         <AlertBanner
           message={`${revisionCount} asset${revisionCount > 1 ? 's' : ''} need${revisionCount === 1 ? 's' : ''} revision`}
           variant="warning"
-          href="/assets?status=revision_requested"
+          href={`${routes.studio.assets()}?status=revision_requested`}
           linkText="View all"
           onDismiss={() => setDismissedAlert(true)}
         />
@@ -53,26 +54,26 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
           title="Assigned Requests"
           value={data.stats.assigned_requests || 0}
           icon={ClipboardList}
-          href="/requests"
+          href={routes.studio.requests()}
         />
         <StatCard
           title="Pending Requests"
           value={data.stats.pending_requests || 0}
           icon={Clock}
-          href="/requests?status=pending"
+          href={`${routes.studio.requests()}?status=pending`}
         />
         <StatCard
           title="My Assets"
           value={data.stats.my_assets || 0}
           icon={FileImage}
-          href="/assets"
+          href={routes.studio.assets()}
         />
         <StatCard
           title="Revisions Needed"
           value={revisionCount}
           icon={AlertTriangle}
           variant={revisionCount > 0 ? 'alert' : 'default'}
-          href="/assets?status=revision_requested"
+          href={`${routes.studio.assets()}?status=revision_requested`}
         />
       </div>
 
@@ -81,7 +82,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* My Queue */}
         <DashboardSection
           title="My Queue"
-          viewAllHref="/requests"
+          viewAllHref={routes.studio.requests()}
         >
           {myQueue.length === 0 ? (
             <EmptyState
@@ -132,7 +133,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* Revisions Needed */}
         <DashboardSection
           title="Revisions Needed"
-          viewAllHref="/assets?status=revision_requested"
+          viewAllHref={`${routes.studio.assets()}?status=revision_requested`}
         >
           {revisionNeeded.length === 0 ? (
             <EmptyState
@@ -168,7 +169,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* Recent Uploads */}
         <DashboardSection
           title="Recent Uploads"
-          viewAllHref="/assets"
+          viewAllHref={routes.studio.assets()}
         >
           {recentUploads.length === 0 ? (
             <EmptyState
@@ -227,7 +228,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* My Projects */}
         <DashboardSection
           title="My Projects"
-          viewAllHref="/projects"
+          viewAllHref={routes.studio.projects()}
         >
           {myProjects.length === 0 ? (
             <EmptyState

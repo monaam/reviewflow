@@ -27,7 +27,7 @@ test.describe('Document Assets', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(
@@ -40,7 +40,7 @@ test.describe('Document Assets', () => {
     const projectId = await getFirstProjectId(page, 'reviewer');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(
@@ -53,7 +53,7 @@ test.describe('Document Assets', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await page.getByRole('button', { name: /write document/i }).click();
@@ -82,7 +82,7 @@ test.describe('Document Assets', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}/documents/new`);
+    await page.goto(`/studio/projects/${projectId}/documents/new`);
 
     // Verify toolbar buttons are present
     await expect(page.getByTitle('Bold')).toBeVisible();
@@ -101,7 +101,7 @@ test.describe('Document Assets', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}/documents/new`);
+    await page.goto(`/studio/projects/${projectId}/documents/new`);
 
     // Try to submit without filling anything
     const submitButton = page.getByRole('button', { name: /create document/i });

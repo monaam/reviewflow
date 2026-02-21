@@ -4,7 +4,7 @@ import { loginAs } from './helpers/auth';
 test.describe('Projects Page', () => {
   test('list loads with project cards', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/projects');
+    await page.goto('/studio/projects');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.getByText('Projects').first()).toBeVisible();
@@ -12,7 +12,7 @@ test.describe('Projects Page', () => {
 
   test('search filters by name', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/projects');
+    await page.goto('/studio/projects');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -26,7 +26,7 @@ test.describe('Projects Page', () => {
 
   test('status filter works', async ({ page }) => {
     await loginAs(page, 'admin');
-    await page.goto('/projects');
+    await page.goto('/studio/projects');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
@@ -38,7 +38,7 @@ test.describe('Projects Page', () => {
 
   test('admin sees New Project button', async ({ page }) => {
     await loginAs(page, 'admin');
-    await page.goto('/projects');
+    await page.goto('/studio/projects');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.getByText('New Project')).toBeVisible();
@@ -46,7 +46,7 @@ test.describe('Projects Page', () => {
 
   test('pm sees New Project button', async ({ page }) => {
     await loginAs(page, 'pm');
-    await page.goto('/projects');
+    await page.goto('/studio/projects');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.getByText('New Project')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Projects Page', () => {
 
   test('creative does not see New Project button', async ({ page }) => {
     await loginAs(page, 'creative');
-    await page.goto('/projects');
+    await page.goto('/studio/projects');
 
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
     await expect(page.getByText('New Project')).toBeHidden();

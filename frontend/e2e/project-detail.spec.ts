@@ -27,7 +27,7 @@ test.describe('Project Detail Page', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(
@@ -40,7 +40,7 @@ test.describe('Project Detail Page', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(page.getByRole('button', { name: /requests/i })).toBeVisible();
@@ -52,7 +52,7 @@ test.describe('Project Detail Page', () => {
     const projectId = await getFirstProjectId(page, 'reviewer');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(page.getByRole('button', { name: /requests/i })).toBeHidden();
@@ -64,7 +64,7 @@ test.describe('Project Detail Page', () => {
     const projectId = await getFirstProjectId(page, 'pm');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(
@@ -77,7 +77,7 @@ test.describe('Project Detail Page', () => {
     const projectId = await getFirstProjectId(page, 'reviewer');
     if (!projectId) { test.skip(); return; }
 
-    await page.goto(`/projects/${projectId}`);
+    await page.goto(`/studio/projects/${projectId}`);
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(

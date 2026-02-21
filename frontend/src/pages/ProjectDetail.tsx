@@ -32,6 +32,7 @@ import {
 } from '../utils/permissions';
 import { isOverdue } from '../utils/formatters';
 import { getAssetStatusFilters } from '../config/statusFilters';
+import { routes } from '../utils/routes';
 import { formatRelativeTime } from '../utils/date';
 import {
   UploadAssetModal,
@@ -122,7 +123,7 @@ export function ProjectDetailPage() {
   const handleDeleteProject = async () => {
     try {
       await projectsApi.delete(id!);
-      navigate('/projects');
+      navigate(routes.studio.projects());
     } catch (error) {
       console.error('Failed to delete project:', error);
     }
@@ -160,7 +161,7 @@ export function ProjectDetailPage() {
       {/* Header */}
       <div className="mb-8">
         <Link
-          to="/projects"
+          to={routes.studio.projects()}
           className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />

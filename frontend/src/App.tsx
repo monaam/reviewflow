@@ -19,6 +19,7 @@ import { ProfileSettingsPage } from './pages/ProfileSettings';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { useAuthStore } from './stores/authStore';
 import { useThemeStore } from './stores/themeStore';
+import { routes } from './utils/routes';
 import './index.css';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -33,7 +34,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={routes.login()} replace />;
   }
 
   return <>{children}</>;
@@ -43,7 +44,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
 
   if (user?.role !== 'admin') {
-    return <Navigate to="/" replace />;
+    return <Navigate to={routes.studio.dashboard()} replace />;
   }
 
   return <>{children}</>;
@@ -75,7 +76,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
 
         <Route
-          path="/"
+          path="/studio"
           element={
             <ProtectedRoute>
               <Layout />
@@ -115,7 +116,17 @@ function App() {
           />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Legacy redirects: old routes → /studio/ */}
+        <Route path="/projects/*" element={<Navigate to={routes.studio.projects()} replace />} />
+        <Route path="/assets/*" element={<Navigate to={routes.studio.assets()} replace />} />
+        <Route path="/requests/*" element={<Navigate to={routes.studio.requests()} replace />} />
+        <Route path="/queue" element={<Navigate to={routes.studio.queue()} replace />} />
+        <Route path="/review-queue" element={<Navigate to={routes.studio.reviewQueue()} replace />} />
+        <Route path="/notifications" element={<Navigate to={routes.studio.notifications()} replace />} />
+        <Route path="/profile" element={<Navigate to={routes.studio.profile()} replace />} />
+        <Route path="/admin/*" element={<Navigate to={routes.studio.adminUsers()} replace />} />
+
+        <Route path="*" element={<Navigate to={routes.studio.dashboard()} replace />} />
       </Routes>
     </BrowserRouter>
   );

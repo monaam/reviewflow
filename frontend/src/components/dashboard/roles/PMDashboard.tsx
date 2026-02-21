@@ -18,6 +18,7 @@ import { QuickActionCard } from '../QuickActionCard';
 import { ProjectHealthCard } from '../ProjectHealthCard';
 import { StatusBadge } from '../../common/StatusBadge';
 import { formatRelativeTime } from '../../../utils/date';
+import { routes } from '../../../utils/routes';
 
 interface PMDashboardProps {
   data: DashboardData;
@@ -53,7 +54,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
         <AlertBanner
           message={`${pendingCount} asset${pendingCount > 1 ? 's' : ''} awaiting your approval`}
           variant="info"
-          href="/assets?status=pending_review"
+          href={`${routes.studio.assets()}?status=pending_review`}
           linkText="Review now"
           onDismiss={() => setDismissedAlert(true)}
         />
@@ -65,26 +66,26 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
           title="My Projects"
           value={data.stats.my_projects || 0}
           icon={FolderKanban}
-          href="/projects"
+          href={routes.studio.projects()}
         />
         <StatCard
           title="Pending Approval"
           value={pendingCount}
           icon={Clock}
-          href="/assets?status=pending_review"
+          href={`${routes.studio.assets()}?status=pending_review`}
         />
         <StatCard
           title="Requests Created"
           value={data.stats.requests_created || 0}
           icon={ClipboardList}
-          href="/requests"
+          href={routes.studio.requests()}
         />
         <StatCard
           title="Overdue Requests"
           value={overdueCount}
           icon={AlertTriangle}
           variant={overdueCount > 0 ? 'alert' : 'default'}
-          href="/requests?filter=overdue"
+          href={`${routes.studio.requests()}?filter=overdue`}
         />
       </div>
 
@@ -92,7 +93,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
       {myProjects.length > 0 && (
         <DashboardSection
           title="My Projects Health"
-          viewAllHref="/projects"
+          viewAllHref={routes.studio.projects()}
         >
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {myProjects.map((project: Project) => (
@@ -116,7 +117,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
         {/* Pending Approvals */}
         <DashboardSection
           title="Pending My Approval"
-          viewAllHref="/assets?status=pending_review"
+          viewAllHref={`${routes.studio.assets()}?status=pending_review`}
         >
           {pendingAssets.length === 0 ? (
             <EmptyState
@@ -155,7 +156,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
         {/* Overdue Requests */}
         <DashboardSection
           title="Overdue Requests"
-          viewAllHref="/requests?filter=overdue"
+          viewAllHref={`${routes.studio.requests()}?filter=overdue`}
         >
           {overdueRequests.length === 0 ? (
             <EmptyState

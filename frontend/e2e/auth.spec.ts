@@ -3,7 +3,7 @@ import { loginAs, getCredentials, type Role } from './helpers/auth';
 
 test.describe('Authentication', () => {
   test('unauthenticated user is redirected to login', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/studio');
     await expect(page).toHaveURL(/\/login/);
   });
 

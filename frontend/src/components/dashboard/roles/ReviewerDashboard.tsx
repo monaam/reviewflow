@@ -16,6 +16,7 @@ import { EmptyState } from '../EmptyState';
 import { QuickActionCard } from '../QuickActionCard';
 import { StatusBadge } from '../../common/StatusBadge';
 import { formatRelativeTime } from '../../../utils/date';
+import { routes } from '../../../utils/routes';
 
 interface ReviewerDashboardProps {
   data: DashboardData;
@@ -48,20 +49,20 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
           title="Accessible Projects"
           value={data.stats.accessible_projects || 0}
           icon={FolderKanban}
-          href="/projects"
+          href={routes.studio.projects()}
         />
         <StatCard
           title="Pending Review"
           value={pendingReviewCount}
           icon={Eye}
-          href="/assets?status=pending_review"
+          href={`${routes.studio.assets()}?status=pending_review`}
         />
       </div>
 
       {/* Review Queue */}
       <DashboardSection
         title="Review Queue"
-        viewAllHref="/assets?status=pending_review"
+        viewAllHref={`${routes.studio.assets()}?status=pending_review`}
       >
         {pendingReview.length === 0 ? (
           <EmptyState
