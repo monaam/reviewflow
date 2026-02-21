@@ -41,7 +41,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         <AlertBanner
           message={`${revisionCount} asset${revisionCount > 1 ? 's' : ''} need${revisionCount === 1 ? 's' : ''} revision`}
           variant="warning"
-          href="/assets?status=revision_requested"
+          href="/studio/assets?status=revision_requested"
           linkText="View all"
           onDismiss={() => setDismissedAlert(true)}
         />
@@ -53,26 +53,26 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
           title="Assigned Requests"
           value={data.stats.assigned_requests || 0}
           icon={ClipboardList}
-          href="/requests"
+          href="/studio/requests"
         />
         <StatCard
           title="Pending Requests"
           value={data.stats.pending_requests || 0}
           icon={Clock}
-          href="/requests?status=pending"
+          href="/studio/requests?status=pending"
         />
         <StatCard
           title="My Assets"
           value={data.stats.my_assets || 0}
           icon={FileImage}
-          href="/assets"
+          href="/studio/assets"
         />
         <StatCard
           title="Revisions Needed"
           value={revisionCount}
           icon={AlertTriangle}
           variant={revisionCount > 0 ? 'alert' : 'default'}
-          href="/assets?status=revision_requested"
+          href="/studio/assets?status=revision_requested"
         />
       </div>
 
@@ -81,7 +81,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* My Queue */}
         <DashboardSection
           title="My Queue"
-          viewAllHref="/requests"
+          viewAllHref="/studio/requests"
         >
           {myQueue.length === 0 ? (
             <EmptyState
@@ -96,7 +96,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
                 return (
                   <Link
                     key={request.id}
-                    to={`/requests/${request.id}`}
+                    to={`/studio/requests/${request.id}`}
                     className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="min-w-0 flex-1">
@@ -132,7 +132,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* Revisions Needed */}
         <DashboardSection
           title="Revisions Needed"
-          viewAllHref="/assets?status=revision_requested"
+          viewAllHref="/studio/assets?status=revision_requested"
         >
           {revisionNeeded.length === 0 ? (
             <EmptyState
@@ -148,11 +148,11 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
                   id={asset.id}
                   title={asset.title}
                   subtitle={asset.project?.name}
-                  href={`/assets/${asset.id}`}
+                  href={`/studio/assets/${asset.id}`}
                   actions={[
                     {
                       label: 'Upload Revision',
-                      onClick: () => window.location.href = `/assets/${asset.id}`,
+                      onClick: () => window.location.href = `/studio/assets/${asset.id}`,
                       variant: 'primary',
                     },
                   ]}
@@ -168,7 +168,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* Recent Uploads */}
         <DashboardSection
           title="Recent Uploads"
-          viewAllHref="/assets"
+          viewAllHref="/studio/assets"
         >
           {recentUploads.length === 0 ? (
             <EmptyState
@@ -181,7 +181,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
               {recentUploads.slice(0, 5).map((asset: Asset) => (
                 <Link
                   key={asset.id}
-                  to={`/assets/${asset.id}`}
+                  to={`/studio/assets/${asset.id}`}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -227,7 +227,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
         {/* My Projects */}
         <DashboardSection
           title="My Projects"
-          viewAllHref="/projects"
+          viewAllHref="/studio/projects"
         >
           {myProjects.length === 0 ? (
             <EmptyState
@@ -240,7 +240,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
               {myProjects.slice(0, 5).map((project: Project) => (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}`}
+                  to={`/studio/projects/${project.id}`}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="min-w-0 flex-1">

@@ -70,7 +70,7 @@ export function RequestDetailPage() {
         request_id: id,
       });
       setShowUploadModal(false);
-      navigate(`/assets/${asset.id}`);
+      navigate(`/studio/assets/${asset.id}`);
     } catch (error) {
       console.error('Failed to upload asset:', error);
     }
@@ -89,7 +89,7 @@ export function RequestDetailPage() {
   const handleDelete = async () => {
     try {
       await requestsApi.delete(id!);
-      navigate(`/projects/${request?.project_id}`);
+      navigate(`/studio/projects/${request?.project_id}`);
     } catch (error) {
       console.error('Failed to delete request:', error);
     }
@@ -105,7 +105,7 @@ export function RequestDetailPage() {
           description="Creative requests are not available for your role."
           action={{
             label: 'Back to Dashboard',
-            href: '/',
+            href: '/studio',
           }}
         />
       </div>
@@ -135,7 +135,7 @@ export function RequestDetailPage() {
       {/* Header */}
       <div className="mb-6">
         <Link
-          to={`/projects/${request.project_id}`}
+          to={`/studio/projects/${request.project_id}`}
           className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
@@ -267,7 +267,7 @@ export function RequestDetailPage() {
                 {request.assets.map((asset) => (
                   <Link
                     key={asset.id}
-                    to={`/assets/${asset.id}`}
+                    to={`/studio/assets/${asset.id}`}
                     className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"
                   >
                     <div className="flex items-center">

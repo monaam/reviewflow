@@ -95,7 +95,7 @@ export function ProjectsPage() {
           {filteredProjects.map((project) => (
             <Link
               key={project.id}
-              to={`/projects/${project.id}`}
+              to={`/studio/projects/${project.id}`}
               className={cardLinkClass}
             >
               <div className="flex items-start justify-between mb-3">
@@ -147,7 +147,7 @@ export function ProjectsPage() {
           onClose={() => setShowCreateModal(false)}
           onCreated={(project) => {
             setShowCreateModal(false);
-            navigate(`/projects/${project.id}`);
+            navigate(`/studio/projects/${project.id}`);
           }}
         />
       )}

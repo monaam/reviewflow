@@ -57,8 +57,8 @@ export function AdminDashboard({ data, onRefresh }: AdminDashboardProps) {
       title: activityData?.title || 'Unknown',
       description: activityData?.project?.name,
       href: activity.type === 'asset_uploaded'
-        ? `/assets/${activityData?.id}`
-        : `/requests/${activityData?.id}`,
+        ? `/studio/assets/${activityData?.id}`
+        : `/studio/requests/${activityData?.id}`,
       user: activityData?.uploader || activityData?.creator,
       created_at: activity.created_at,
     };
@@ -75,7 +75,7 @@ export function AdminDashboard({ data, onRefresh }: AdminDashboardProps) {
         <AlertBanner
           message={`${overdueCount} overdue request${overdueCount > 1 ? 's' : ''} need${overdueCount === 1 ? 's' : ''} attention`}
           variant="warning"
-          href="/requests?filter=overdue"
+          href="/studio/requests?filter=overdue"
           linkText="View all"
           onDismiss={() => setDismissedAlert(true)}
         />
@@ -87,26 +87,26 @@ export function AdminDashboard({ data, onRefresh }: AdminDashboardProps) {
           title="Total Projects"
           value={data.stats.total_projects || 0}
           icon={FolderKanban}
-          href="/projects"
+          href="/studio/projects"
         />
         <StatCard
           title="Active Projects"
           value={data.stats.active_projects || 0}
           icon={FolderKanban}
-          href="/projects?status=active"
+          href="/studio/projects?status=active"
         />
         <StatCard
           title="Pending Assets"
           value={data.stats.pending_assets || 0}
           icon={FileImage}
-          href="/assets?status=pending_review"
+          href="/studio/assets?status=pending_review"
         />
         <StatCard
           title="Overdue Requests"
           value={overdueCount}
           icon={AlertTriangle}
           variant={overdueCount > 0 ? 'alert' : 'default'}
-          href="/requests?filter=overdue"
+          href="/studio/requests?filter=overdue"
         />
       </div>
 
@@ -196,7 +196,7 @@ export function AdminDashboard({ data, onRefresh }: AdminDashboardProps) {
       {/* Pending Approvals */}
       <DashboardSection
         title="Pending Approvals"
-        viewAllHref="/assets?status=pending_review"
+        viewAllHref="/studio/assets?status=pending_review"
       >
         {pendingAssets.length === 0 ? (
           <EmptyState
@@ -212,12 +212,12 @@ export function AdminDashboard({ data, onRefresh }: AdminDashboardProps) {
                 id={asset.id}
                 title={asset.title}
                 subtitle={`${asset.project?.name} · by ${asset.uploader?.name}`}
-                href={`/assets/${asset.id}`}
+                href={`/studio/assets/${asset.id}`}
                 isLoading={loadingAssetId === asset.id}
                 actions={[
                   {
                     label: 'Review',
-                    onClick: () => window.location.href = `/assets/${asset.id}`,
+                    onClick: () => window.location.href = `/studio/assets/${asset.id}`,
                     variant: 'secondary',
                   },
                   {

@@ -123,7 +123,7 @@ export function AssetsPage() {
           {filteredAssets.map((asset) => (
             <Link
               key={asset.id}
-              to={`/assets/${asset.id}`}
+              to={`/studio/assets/${asset.id}`}
               className="group block rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 overflow-hidden transition-colors"
             >
               {/* Thumbnail */}

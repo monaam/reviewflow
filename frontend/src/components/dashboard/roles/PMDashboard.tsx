@@ -53,7 +53,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
         <AlertBanner
           message={`${pendingCount} asset${pendingCount > 1 ? 's' : ''} awaiting your approval`}
           variant="info"
-          href="/assets?status=pending_review"
+          href="/studio/assets?status=pending_review"
           linkText="Review now"
           onDismiss={() => setDismissedAlert(true)}
         />
@@ -65,26 +65,26 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
           title="My Projects"
           value={data.stats.my_projects || 0}
           icon={FolderKanban}
-          href="/projects"
+          href="/studio/projects"
         />
         <StatCard
           title="Pending Approval"
           value={pendingCount}
           icon={Clock}
-          href="/assets?status=pending_review"
+          href="/studio/assets?status=pending_review"
         />
         <StatCard
           title="Requests Created"
           value={data.stats.requests_created || 0}
           icon={ClipboardList}
-          href="/requests"
+          href="/studio/requests"
         />
         <StatCard
           title="Overdue Requests"
           value={overdueCount}
           icon={AlertTriangle}
           variant={overdueCount > 0 ? 'alert' : 'default'}
-          href="/requests?filter=overdue"
+          href="/studio/requests?filter=overdue"
         />
       </div>
 
@@ -92,7 +92,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
       {myProjects.length > 0 && (
         <DashboardSection
           title="My Projects Health"
-          viewAllHref="/projects"
+          viewAllHref="/studio/projects"
         >
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {myProjects.map((project: Project) => (
@@ -116,7 +116,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
         {/* Pending Approvals */}
         <DashboardSection
           title="Pending My Approval"
-          viewAllHref="/assets?status=pending_review"
+          viewAllHref="/studio/assets?status=pending_review"
         >
           {pendingAssets.length === 0 ? (
             <EmptyState
@@ -132,12 +132,12 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
                   id={asset.id}
                   title={asset.title}
                   subtitle={`${asset.project?.name} · by ${asset.uploader?.name}`}
-                  href={`/assets/${asset.id}`}
+                  href={`/studio/assets/${asset.id}`}
                   isLoading={loadingAssetId === asset.id}
                   actions={[
                     {
                       label: 'Review',
-                      onClick: () => window.location.href = `/assets/${asset.id}`,
+                      onClick: () => window.location.href = `/studio/assets/${asset.id}`,
                       variant: 'secondary',
                     },
                     {
@@ -155,7 +155,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
         {/* Overdue Requests */}
         <DashboardSection
           title="Overdue Requests"
-          viewAllHref="/requests?filter=overdue"
+          viewAllHref="/studio/requests?filter=overdue"
         >
           {overdueRequests.length === 0 ? (
             <EmptyState
@@ -168,7 +168,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
               {overdueRequests.slice(0, 5).map((request: CreativeRequest) => (
                 <Link
                   key={request.id}
-                  to={`/requests/${request.id}`}
+                  to={`/studio/requests/${request.id}`}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="min-w-0 flex-1">

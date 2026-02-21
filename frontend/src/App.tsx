@@ -43,7 +43,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
 
   if (user?.role !== 'admin') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/studio" replace />;
   }
 
   return <>{children}</>;
@@ -74,8 +74,9 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
+        {/* Studio routes (authenticated) */}
         <Route
-          path="/"
+          path="/studio"
           element={
             <ProtectedRoute>
               <Layout />
@@ -115,7 +116,18 @@ function App() {
           />
         </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Redirects from old routes to /studio/ */}
+        <Route path="/" element={<Navigate to="/studio" replace />} />
+        <Route path="/projects/*" element={<Navigate to={`/studio/projects`} replace />} />
+        <Route path="/assets/*" element={<Navigate to="/studio/assets" replace />} />
+        <Route path="/requests/*" element={<Navigate to="/studio/requests" replace />} />
+        <Route path="/queue" element={<Navigate to="/studio/queue" replace />} />
+        <Route path="/review-queue" element={<Navigate to="/studio/review-queue" replace />} />
+        <Route path="/notifications" element={<Navigate to="/studio/notifications" replace />} />
+        <Route path="/profile" element={<Navigate to="/studio/profile" replace />} />
+        <Route path="/admin/*" element={<Navigate to="/studio/admin/users" replace />} />
+
+        <Route path="*" element={<Navigate to="/studio" replace />} />
       </Routes>
     </BrowserRouter>
   );

@@ -139,7 +139,7 @@ export function RequestsPage() {
             return (
               <Link
                 key={request.id}
-                to={`/requests/${request.id}`}
+                to={`/studio/requests/${request.id}`}
                 className={cardLinkClass}
               >
                 <div className="flex items-start justify-between gap-4">

@@ -105,7 +105,7 @@ export function NotificationBell() {
           {notifications.length > 0 && (
             <div className="border-t border-gray-200 dark:border-gray-700">
               <Link
-                to="/notifications"
+                to="/studio/notifications"
                 onClick={() => setIsOpen(false)}
                 className="block px-4 py-3 text-sm text-center text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
               >

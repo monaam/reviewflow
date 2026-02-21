@@ -52,18 +52,18 @@ function getNotificationLink(notification: Notification): string {
   const { data } = notification;
 
   if (data.asset_id) {
-    return `/assets/${data.asset_id}`;
+    return `/studio/assets/${data.asset_id}`;
   }
 
   if (data.request_id) {
-    return `/requests/${data.request_id}`;
+    return `/studio/requests/${data.request_id}`;
   }
 
   if (data.project_id) {
-    return `/projects/${data.project_id}`;
+    return `/studio/projects/${data.project_id}`;
   }
 
-  return '/';
+  return '/studio';
 }
 
 export function NotificationItem({
