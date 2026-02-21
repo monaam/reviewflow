@@ -35,7 +35,7 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
       <div className="flex items-center h-16 px-4">
-        <span className="text-xl font-semibold text-gray-900 dark:text-white">ReviewFlow</span>
+        <span className="text-xl font-semibold text-primary-600 dark:text-primary-400">Briefloop</span>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
@@ -46,7 +46,7 @@ export function Sidebar() {
             className={({ isActive }) =>
               `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 isActive
-                  ? 'text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-800'
+                  ? 'text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
               }`
             }
@@ -70,7 +70,7 @@ export function Sidebar() {
                 className={({ isActive }) =>
                   `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? 'text-gray-900 dark:text-white bg-gray-200 dark:bg-gray-800'
+                      ? 'text-primary-700 dark:text-primary-300 bg-primary-50 dark:bg-primary-900/30'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`
                 }
@@ -85,7 +85,7 @@ export function Sidebar() {
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         <div className="flex items-center mb-3">
-          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-300">
+          <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-sm font-medium text-primary-600 dark:text-primary-400">
             {user?.name?.charAt(0).toUpperCase()}
           </div>
           <div className="ml-3">
