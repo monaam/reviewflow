@@ -10,6 +10,7 @@ import { DocumentToolbar } from '../components/assetRenderers/DocumentToolbar';
 import { assetsApi } from '../api/assets';
 import { Asset } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { routes } from '../utils/routes';
 
 /**
  * Full-page document editor for creating new documents or new versions.
@@ -102,7 +103,7 @@ export function DocumentEditorPage() {
           content: htmlContent,
           version_notes: versionNotes || undefined,
         });
-        navigate(`/assets/${result.id}`);
+        navigate(routes.studio.asset(result.id));
       } else {
         if (!title.trim()) {
           setError('Title is required.');
@@ -114,7 +115,7 @@ export function DocumentEditorPage() {
           description: description || undefined,
           content: htmlContent,
         });
-        navigate(`/assets/${result.id}`);
+        navigate(routes.studio.asset(result.id));
       }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
@@ -125,9 +126,9 @@ export function DocumentEditorPage() {
 
   const handleCancel = () => {
     if (isNewVersion && asset) {
-      navigate(`/assets/${asset.id}`);
+      navigate(routes.studio.asset(asset.id));
     } else {
-      navigate(`/projects/${id}`);
+      navigate(routes.studio.project(id!));
     }
   };
 
