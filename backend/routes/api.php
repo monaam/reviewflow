@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/register', [AuthController::class, 'signup'])->middleware('throttle:5,1');
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
+Route::post('/auth/verify-email', [AuthController::class, 'verifyEmail']);
 
 // Video streaming with range request support
 Route::get('/stream/{path}', [StreamController::class, 'stream'])->where('path', '.*');
@@ -36,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification'])->middleware('throttle:3,1');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index']);

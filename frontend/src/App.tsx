@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/Login';
 import { SignupPage } from './pages/Signup';
+import { ForgotPasswordPage } from './pages/ForgotPassword';
+import { ResetPasswordPage } from './pages/ResetPassword';
+import { VerifyEmailPage } from './pages/VerifyEmail';
 import { LandingPage } from './pages/Landing';
 import { DashboardPage } from './pages/Dashboard';
 import { ProjectsPage } from './pages/Projects';
@@ -103,6 +106,9 @@ function App() {
         />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
         <Route
           path="/studio"
