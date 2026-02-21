@@ -36,7 +36,8 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-64 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
       <div className="flex items-center h-16 px-4">
-        <span className="text-xl font-semibold text-primary-600 dark:text-primary-400">Briefloop</span>
+        <img src="/logo.svg" alt="Briefloop" className="h-10 w-auto dark:hidden" />
+        <img src="/logo-dark.svg" alt="Briefloop" className="h-10 w-auto hidden dark:block" />
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">

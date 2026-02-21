@@ -31,8 +31,9 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-600">Briefloop</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+          <img src="/logo.svg" alt="Briefloop" className="h-16 w-auto mx-auto dark:hidden" />
+          <img src="/logo-dark.svg" alt="Briefloop" className="h-16 w-auto mx-auto hidden dark:block" />
+          <p className="mt-3 text-gray-600 dark:text-gray-400">
             Creative Review & Approval Platform
           </p>
         </div>
