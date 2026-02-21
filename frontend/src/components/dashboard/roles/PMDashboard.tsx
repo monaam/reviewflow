@@ -133,12 +133,12 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
                   id={asset.id}
                   title={asset.title}
                   subtitle={`${asset.project?.name} · by ${asset.uploader?.name}`}
-                  href={`/assets/${asset.id}`}
+                  href={routes.studio.asset(asset.id)}
                   isLoading={loadingAssetId === asset.id}
                   actions={[
                     {
                       label: 'Review',
-                      onClick: () => window.location.href = `/assets/${asset.id}`,
+                      onClick: () => window.location.href = routes.studio.asset(asset.id),
                       variant: 'secondary',
                     },
                     {
@@ -169,7 +169,7 @@ export function PMDashboard({ data, onRefresh }: PMDashboardProps) {
               {overdueRequests.slice(0, 5).map((request: CreativeRequest) => (
                 <Link
                   key={request.id}
-                  to={`/requests/${request.id}`}
+                  to={routes.studio.request(request.id)}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="min-w-0 flex-1">

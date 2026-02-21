@@ -97,7 +97,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
                 return (
                   <Link
                     key={request.id}
-                    to={`/requests/${request.id}`}
+                    to={routes.studio.request(request.id)}
                     className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
                     <div className="min-w-0 flex-1">
@@ -149,11 +149,11 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
                   id={asset.id}
                   title={asset.title}
                   subtitle={asset.project?.name}
-                  href={`/assets/${asset.id}`}
+                  href={routes.studio.asset(asset.id)}
                   actions={[
                     {
                       label: 'Upload Revision',
-                      onClick: () => window.location.href = `/assets/${asset.id}`,
+                      onClick: () => window.location.href = routes.studio.asset(asset.id),
                       variant: 'primary',
                     },
                   ]}
@@ -182,7 +182,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
               {recentUploads.slice(0, 5).map((asset: Asset) => (
                 <Link
                   key={asset.id}
-                  to={`/assets/${asset.id}`}
+                  to={routes.studio.asset(asset.id)}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -241,7 +241,7 @@ export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
               {myProjects.slice(0, 5).map((project: Project) => (
                 <Link
                   key={project.id}
-                  to={`/projects/${project.id}`}
+                  to={routes.studio.project(project.id)}
                   className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   <div className="min-w-0 flex-1">

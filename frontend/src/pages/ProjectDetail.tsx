@@ -222,7 +222,7 @@ export function ProjectDetailPage() {
             )}
             {canUpload && (
               <button
-                onClick={() => navigate(`/projects/${id}/documents/new`)}
+                onClick={() => navigate(routes.studio.projectDocumentNew(id!))}
                 className="btn-secondary"
               >
                 <FileEdit className="w-4 h-4 mr-2" />
@@ -501,7 +501,7 @@ function AssetCard({ asset }: { asset: Asset }) {
 
   return (
     <Link
-      to={`/assets/${asset.id}`}
+      to={routes.studio.asset(asset.id)}
       className="block rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors overflow-hidden"
     >
       <div className="aspect-video bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
@@ -541,7 +541,7 @@ function RequestCard({ request }: { request: CreativeRequest }) {
 
   return (
     <Link
-      to={`/requests/${request.id}`}
+      to={routes.studio.request(request.id)}
       className="block p-4 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
     >
       <div className="flex items-start justify-between">

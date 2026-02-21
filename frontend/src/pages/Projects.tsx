@@ -9,6 +9,7 @@ import { formatEnumLabel, cardLinkClass } from '../utils/formatters';
 import { canCreateProject as canCreateProjectRole } from '../utils/permissions';
 import { useFetch, useListFilter } from '../hooks';
 import { formatRelativeTime } from '../utils/date';
+import { routes } from '../utils/routes';
 
 export function ProjectsPage() {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ export function ProjectsPage() {
           {filteredProjects.map((project) => (
             <Link
               key={project.id}
-              to={`/projects/${project.id}`}
+              to={routes.studio.project(project.id)}
               className={cardLinkClass}
             >
               <div className="flex items-start justify-between mb-3">
@@ -147,7 +148,7 @@ export function ProjectsPage() {
           onClose={() => setShowCreateModal(false)}
           onCreated={(project) => {
             setShowCreateModal(false);
-            navigate(`/projects/${project.id}`);
+            navigate(routes.studio.project(project.id));
           }}
         />
       )}

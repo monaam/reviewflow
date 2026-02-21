@@ -107,7 +107,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <Link
-                    to={`/assets/${asset.id}`}
+                    to={routes.studio.asset(asset.id)}
                     className="font-medium text-gray-900 dark:text-white hover:underline truncate block"
                   >
                     {asset.title}
@@ -136,7 +136,7 @@ export function ReviewerDashboard({ data, onRefresh }: ReviewerDashboardProps) {
                         Approve
                       </button>
                       <Link
-                        to={`/assets/${asset.id}`}
+                        to={routes.studio.asset(asset.id)}
                         className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-gray-900 text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200 rounded-lg transition-colors"
                       >
                         Review

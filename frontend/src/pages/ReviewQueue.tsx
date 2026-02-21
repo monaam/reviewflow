@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useListFilter } from '../hooks/useListFilter';
 import { getAssetTypeIcon } from '../config/assetTypeRegistry';
 import { formatRelativeTime } from '../utils/date';
+import { routes } from '../utils/routes';
 
 export function ReviewQueuePage() {
   const { user } = useAuthStore();
@@ -146,7 +147,7 @@ export function ReviewQueuePage() {
             return (
               <Link
                 key={asset.id}
-                to={`/assets/${asset.id}`}
+                to={routes.studio.asset(asset.id)}
                 className="card p-4 hover:shadow-md transition-shadow flex items-center gap-4"
               >
                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">

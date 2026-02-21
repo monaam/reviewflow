@@ -7,6 +7,7 @@ import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState
 import { useFetch, useListFilter } from '../hooks';
 import { isOverdue } from '../utils/formatters';
 import { formatRelativeTime } from '../utils/date';
+import { routes } from '../utils/routes';
 
 export function CreativeQueuePage() {
   const [filter, setFilter] = useState('all');
@@ -100,7 +101,7 @@ export function CreativeQueuePage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <Link
-                      to={`/requests/${request.id}`}
+                      to={routes.studio.request(request.id)}
                       className="text-lg font-semibold text-gray-900 dark:text-white hover:text-primary-600"
                     >
                       {request.title}
@@ -139,7 +140,7 @@ export function CreativeQueuePage() {
                       Start Working
                     </button>
                   )}
-                  <Link to={`/requests/${request.id}`} className="btn-secondary">
+                  <Link to={routes.studio.request(request.id)} className="btn-secondary">
                     View Details
                   </Link>
                 </div>
