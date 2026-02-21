@@ -11,9 +11,21 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface SignupRequest {
+  name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
+
 export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await apiClient.post('/auth/login', data);
+    return response.data;
+  },
+
+  signup: async (data: SignupRequest): Promise<LoginResponse> => {
+    const response = await apiClient.post('/auth/register', data);
     return response.data;
   },
 

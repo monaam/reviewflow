@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/Login';
+import { SignupPage } from './pages/Signup';
+import { LandingPage } from './pages/Landing';
 import { DashboardPage } from './pages/Dashboard';
 import { ProjectsPage } from './pages/Projects';
 import { ProjectDetailPage } from './pages/ProjectDetail';
@@ -21,6 +23,24 @@ import { useAuthStore } from './stores/authStore';
 import { useThemeStore } from './stores/themeStore';
 import { routes } from './utils/routes';
 import './index.css';
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to={routes.studio.dashboard()} replace />;
+  }
+
+  return <>{children}</>;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -73,7 +93,16 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          }
+        />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
 
         <Route
           path="/studio"
@@ -126,7 +155,7 @@ function App() {
         <Route path="/profile" element={<Navigate to={routes.studio.profile()} replace />} />
         <Route path="/admin/*" element={<Navigate to={routes.studio.adminUsers()} replace />} />
 
-        <Route path="*" element={<Navigate to={routes.studio.dashboard()} replace />} />
+        <Route path="*" element={<Navigate to={routes.home()} replace />} />
       </Routes>
     </BrowserRouter>
   );

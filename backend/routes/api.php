@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/register', [AuthController::class, 'signup'])->middleware('throttle:5,1');
 
 // Video streaming with range request support
 Route::get('/stream/{path}', [StreamController::class, 'stream'])->where('path', '.*');
