@@ -65,7 +65,7 @@ class AssetPolicy
         }
 
         if ($user->isCreative()) {
-            return $asset->uploaded_by === $user->id;
+            return $asset->project->isMember($user);
         }
 
         return false;

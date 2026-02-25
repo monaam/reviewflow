@@ -386,10 +386,24 @@ class AssetControllerTest extends TestCase
             ->assertJsonPath('status', 'pending_review');
     }
 
-    public function test_creative_cannot_upload_version_to_others_asset(): void
+    public function test_creative_can_upload_version_to_others_asset_in_same_project(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
         $asset = $this->createAssetWithVersion($project, $this->pm);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/versions", [
+            'file' => $this->createTestFile('image'),
+        ]);
+
+        $response->assertCreated();
+    }
+
+    public function test_creative_cannot_upload_version_to_asset_in_other_project(): void
+    {
+        $otherCreative = User::factory()->creative()->create();
+        $project = $this->createProjectWithMembers($this->pm, [$otherCreative]);
+        $asset = $this->createAssetWithVersion($project, $otherCreative);
 
         $this->actingAsCreative();
         $response = $this->postJson("/api/assets/{$asset->id}/versions", [

@@ -80,6 +80,12 @@ const conditions = {
     if (role === 'creative' && ctx.user?.id === ctx.asset.uploaded_by) return true;
     return false;
   },
+
+  /** Check if user can upload new versions (admin, PM, or any creative - not reviewer) */
+  canUploadVersion: (ctx: ActionContext): boolean => {
+    const role = ctx.user?.role;
+    return role === 'admin' || role === 'pm' || role === 'creative';
+  },
 };
 
 /**
@@ -131,14 +137,14 @@ export const assetActions: ActionDefinition[] = [
     showInDropdown: false,
   },
 
-  // Upload version - primary for creative
+  // Upload version - primary for admin, pm, and creative
   {
     id: 'upload-version',
     label: 'New Version',
     icon: Upload,
     roles: ['admin', 'pm', 'creative'],
-    primaryForRoles: ['creative'],
-    conditions: [conditions.canManageAsset],
+    primaryForRoles: ['admin', 'pm', 'creative'],
+    conditions: [conditions.canUploadVersion],
     enabledConditions: [conditions.notLocked],
     variant: 'secondary',
     showInDropdown: false,
