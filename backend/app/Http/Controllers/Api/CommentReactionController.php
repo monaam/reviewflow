@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Models\CommentReaction;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CommentReactionController extends Controller
 {
+    public function __construct(
+        protected NotificationDispatcher $notificationDispatcher
+    ) {}
+
     public function toggle(Request $request, Comment $comment): JsonResponse
     {
         $request->validate([
@@ -29,6 +34,8 @@ class CommentReactionController extends Controller
                 'user_id' => $request->user()->id,
                 'emoji' => $request->emoji,
             ]);
+
+            $this->notificationDispatcher->notifyCommentReaction($comment, $request->user(), $request->emoji);
         }
 
         $reactions = $comment->reactions()->with('user:id,name')->get();
