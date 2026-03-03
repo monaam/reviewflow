@@ -75,6 +75,11 @@ class Comment extends Model implements HasMedia
             ->withTimestamps();
     }
 
+    public function reactions(): HasMany
+    {
+        return $this->hasMany(CommentReaction::class);
+    }
+
     public function isReply(): bool
     {
         return $this->parent_id !== null;

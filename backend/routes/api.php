@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\CommentImageController;
+use App\Http\Controllers\Api\CommentReactionController;
 use App\Http\Controllers\Api\CreativeRequestController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\NotificationController;
@@ -77,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
     Route::post('/comments/{comment}/resolve', [CommentController::class, 'resolve']);
     Route::post('/comments/{comment}/unresolve', [CommentController::class, 'unresolve']);
+    Route::post('/comments/{comment}/reactions', [CommentReactionController::class, 'toggle']);
 
     // Comment Images
     Route::post('/comment-images/temp', [CommentImageController::class, 'uploadTemp']);

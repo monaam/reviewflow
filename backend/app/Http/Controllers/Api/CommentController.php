@@ -34,7 +34,7 @@ class CommentController extends Controller
         }
 
         $query = $asset->comments()
-            ->with(['user', 'resolver', 'mentions', 'media', 'replies.user', 'replies.resolver', 'replies.mentions', 'replies.media'])
+            ->with(['user', 'resolver', 'mentions', 'media', 'reactions.user', 'replies.user', 'replies.resolver', 'replies.mentions', 'replies.media', 'replies.reactions.user'])
             ->whereNull('parent_id'); // Only top-level comments
 
         // Reviewers only see their own comments and replies to their comments
@@ -64,7 +64,7 @@ class CommentController extends Controller
 
         // Get comments (only top-level, with replies nested)
         $commentsQuery = $asset->comments()
-            ->with(['user', 'resolver', 'mentions', 'media', 'replies.user', 'replies.resolver', 'replies.mentions', 'replies.media'])
+            ->with(['user', 'resolver', 'mentions', 'media', 'reactions.user', 'replies.user', 'replies.resolver', 'replies.mentions', 'replies.media', 'replies.reactions.user'])
             ->whereNull('parent_id'); // Only top-level comments
 
         // Reviewers only see their own comments and replies to their comments
