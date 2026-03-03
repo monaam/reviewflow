@@ -440,7 +440,7 @@ interface EmojiPickerProps {
 const EmojiPicker: FC<EmojiPickerProps> = ({ onSelect, onClose }) => {
   return (
     <div
-      className="absolute right-0 bottom-full mb-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1.5 flex gap-0.5"
+      className="absolute right-0 bottom-full mb-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1.5 flex gap-0.5"
       onClick={(e) => e.stopPropagation()}
     >
       {REACTION_EMOJIS.map((emoji) => (
