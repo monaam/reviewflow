@@ -294,6 +294,7 @@ export type NotificationType =
   | 'comment.created'
   | 'comment.reply'
   | 'comment.mention'
+  | 'comment.reaction'
   | 'asset.uploaded'
   | 'asset.new_version'
   | 'asset.approved'

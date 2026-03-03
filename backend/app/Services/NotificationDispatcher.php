@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\AssetApprovedNotification;
 use App\Notifications\AssetSentToClientNotification;
 use App\Notifications\AssetUploadedNotification;
+use App\Notifications\CommentReactionNotification;
 use App\Notifications\CommentReplyNotification;
 use App\Notifications\MentionNotification;
 use App\Notifications\NewCommentNotification;
@@ -164,6 +165,16 @@ class NotificationDispatcher
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new RequestStatusChangedNotification($request, $oldStatus, $actor));
         }
+    }
+
+    public function notifyCommentReaction(Comment $comment, User $actor, string $emoji): void
+    {
+        // Don't notify if reacting to own comment
+        if ($comment->user_id === $actor->id) {
+            return;
+        }
+
+        $comment->user->notify(new CommentReactionNotification($comment, $actor, $emoji));
     }
 
     public function notifyMentionedUsers(Comment $comment, Collection $mentionedUsers, User $actor): void

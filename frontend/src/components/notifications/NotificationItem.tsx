@@ -11,6 +11,7 @@ import {
   UserPlus,
   RefreshCw,
   Globe,
+  SmilePlus,
   X,
 } from 'lucide-react';
 import { Notification, NotificationType } from '../../types';
@@ -26,6 +27,7 @@ const iconMap: Record<NotificationType, typeof MessageSquare> = {
   'comment.created': MessageSquare,
   'comment.reply': Reply,
   'comment.mention': AtSign,
+  'comment.reaction': SmilePlus,
   'asset.uploaded': Upload,
   'asset.new_version': FileUp,
   'asset.approved': CheckCircle,
@@ -39,6 +41,7 @@ const colorMap: Record<NotificationType, string> = {
   'comment.created': 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
   'comment.reply': 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
   'comment.mention': 'text-primary-500 bg-primary-50 dark:bg-primary-900/20',
+  'comment.reaction': 'text-pink-500 bg-pink-50 dark:bg-pink-900/20',
   'asset.uploaded': 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
   'asset.new_version': 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
   'asset.approved': 'text-green-500 bg-green-50 dark:bg-green-900/20',
