@@ -1,31 +1,59 @@
-import { useState } from 'react';
-import { Plus, Pencil, UserCheck, UserX } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Pencil, UserCheck, UserX, Loader2 } from 'lucide-react';
 import { adminApi } from '../api/admin';
-import { User } from '../types';
+import { User, PaginatedResponse } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { useFetch } from '../hooks';
 import { formatRelativeTime } from '../utils/date';
 
 export function AdminUsersPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [filter, setFilter] = useState('all');
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
 
-  const { data: users, isLoading, refetch } = useFetch({
-    fetcher: () => {
-      const params = filter !== 'all' ? { role: filter } : {};
-      return adminApi.getUsers(params).then(r => r.data);
-    },
-    deps: [filter],
-    initial: [] as User[],
-  });
+  const loadUsers = useCallback(async (page = 1) => {
+    try {
+      if (page === 1) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      const params: Record<string, string | number> = { page };
+      if (filter !== 'all') params.role = filter;
+
+      const response: PaginatedResponse<User> = await adminApi.getUsers(params);
+
+      if (page === 1) {
+        setUsers(response.data);
+      } else {
+        setUsers((prev) => [...prev, ...response.data]);
+      }
+
+      setCurrentPage(response.current_page);
+      setLastPage(response.last_page);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    loadUsers(1);
+  }, [loadUsers]);
 
   const handleToggleActive = async (user: User) => {
     const action = user.is_active ? 'deactivate' : 'reactivate';
     if (user.is_active && !confirm(`Are you sure you want to deactivate ${user.name}? They will lose access immediately but all their data (assets, comments, projects) will be preserved.`)) return;
     try {
       await adminApi.updateUser(user.id, { is_active: !user.is_active });
-      refetch();
+      loadUsers(1);
     } catch (error) {
       console.error(`Failed to ${action} user:`, error);
     }
@@ -163,12 +191,31 @@ export function AdminUsersPage() {
         </table>
       </div>
 
+      {currentPage < lastPage && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={() => loadUsers(currentPage + 1)}
+            disabled={isLoadingMore}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            {isLoadingMore ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Load more'
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Create Modal */}
       {showCreateModal && (
         <UserModal
           onClose={() => setShowCreateModal(false)}
           onSaved={() => {
-            refetch();
+            loadUsers(1);
             setShowCreateModal(false);
           }}
         />
@@ -180,7 +227,7 @@ export function AdminUsersPage() {
           user={editUser}
           onClose={() => setEditUser(null)}
           onSaved={() => {
-            refetch();
+            loadUsers(1);
             setEditUser(null);
           }}
         />

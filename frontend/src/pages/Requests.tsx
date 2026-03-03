@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ClipboardList, Calendar, AlertTriangle } from 'lucide-react';
+import { ClipboardList, Calendar, AlertTriangle, Loader2 } from 'lucide-react';
 import { requestsApi } from '../api/requests';
-import { CreativeRequest } from '../types';
+import { CreativeRequest, PaginatedResponse } from '../types';
 import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
 import { isReviewer as isReviewerRole } from '../utils/permissions';
-import { useFetch, useListFilter } from '../hooks';
+import { useListFilter } from '../hooks';
 import { isOverdue, cardLinkClass } from '../utils/formatters';
 import { formatRelativeTime } from '../utils/date';
 import { routes } from '../utils/routes';
@@ -15,22 +15,51 @@ export function RequestsPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+  const [requests, setRequests] = useState<CreativeRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
 
   const isReviewer = isReviewerRole(user?.role);
   const statusFilter = searchParams.get('status') || 'all';
   const filterType = searchParams.get('filter') || '';
 
-  const { data: requests, isLoading } = useFetch({
-    fetcher: () => {
-      const params: Record<string, string> = {};
+  const loadRequests = useCallback(async (page = 1) => {
+    if (isReviewer) return;
+
+    try {
+      if (page === 1) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      const params: Record<string, string | number> = { page };
       if (statusFilter !== 'all') params.status = statusFilter;
       if (filterType) params.filter = filterType;
-      return requestsApi.listAll(params).then(r => r.data);
-    },
-    deps: [statusFilter, filterType],
-    initial: [] as CreativeRequest[],
-    enabled: !isReviewer,
-  });
+
+      const response: PaginatedResponse<CreativeRequest> = await requestsApi.listAll(params);
+
+      if (page === 1) {
+        setRequests(response.data);
+      } else {
+        setRequests((prev) => [...prev, ...response.data]);
+      }
+
+      setCurrentPage(response.current_page);
+      setLastPage(response.last_page);
+    } catch (error) {
+      console.error('Failed to load requests:', error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, [statusFilter, filterType, isReviewer]);
+
+  useEffect(() => {
+    loadRequests(1);
+  }, [loadRequests]);
 
   const setFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(searchParams);
@@ -134,64 +163,85 @@ export function RequestsPage() {
           }
         />
       ) : (
-        <div className="space-y-3">
-          {filteredRequests.map((request) => {
-            const overdue = isOverdue(request.deadline);
-            return (
-              <Link
-                key={request.id}
-                to={routes.studio.request(request.id)}
-                className={cardLinkClass}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                        {request.title}
-                      </h3>
-                      <StatusBadge status={request.status} type="request" />
-                      <StatusBadge status={request.priority} type="priority" />
+        <>
+          <div className="space-y-3">
+            {filteredRequests.map((request) => {
+              const overdue = isOverdue(request.deadline);
+              return (
+                <Link
+                  key={request.id}
+                  to={routes.studio.request(request.id)}
+                  className={cardLinkClass}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                          {request.title}
+                        </h3>
+                        <StatusBadge status={request.status} type="request" />
+                        <StatusBadge status={request.priority} type="priority" />
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">
+                        {request.description}
+                      </p>
+                      <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
+                        <span>{request.project?.name}</span>
+                        {request.assignee && (
+                          <>
+                            <span>·</span>
+                            <span>Assigned to {request.assignee.name}</span>
+                          </>
+                        )}
+                        <span>·</span>
+                        <span>by {request.creator?.name}</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-3">
-                      {request.description}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
-                      <span>{request.project?.name}</span>
-                      {request.assignee && (
-                        <>
-                          <span>·</span>
-                          <span>Assigned to {request.assignee.name}</span>
-                        </>
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <div
+                        className={`flex items-center gap-1.5 text-sm ${
+                          overdue && request.status !== 'completed'
+                            ? 'text-gray-700 dark:text-gray-300 font-medium'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {overdue && request.status !== 'completed' ? 'Overdue · ' : ''}
+                          {formatRelativeTime(request.deadline)}
+                        </span>
+                      </div>
+                      {request.assets && request.assets.length > 0 && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          {request.assets.length} asset{request.assets.length > 1 ? 's' : ''} linked
+                        </span>
                       )}
-                      <span>·</span>
-                      <span>by {request.creator?.name}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <div
-                      className={`flex items-center gap-1.5 text-sm ${
-                        overdue && request.status !== 'completed'
-                          ? 'text-gray-700 dark:text-gray-300 font-medium'
-                          : 'text-gray-500 dark:text-gray-400'
-                      }`}
-                    >
-                      <Calendar className="w-4 h-4" />
-                      <span>
-                        {overdue && request.status !== 'completed' ? 'Overdue · ' : ''}
-                        {formatRelativeTime(request.deadline)}
-                      </span>
-                    </div>
-                    {request.assets && request.assets.length > 0 && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
-                        {request.assets.length} asset{request.assets.length > 1 ? 's' : ''} linked
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {currentPage < lastPage && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => loadRequests(currentPage + 1)}
+                disabled={isLoadingMore}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  'Load more'
+                )}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

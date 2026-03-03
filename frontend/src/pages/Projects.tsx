@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, FolderKanban, Calendar, Users } from 'lucide-react';
+import { Plus, FolderKanban, Calendar, Users, Loader2 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
-import { Project } from '../types';
+import { Project, PaginatedResponse } from '../types';
 import { LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
 import { formatEnumLabel, cardLinkClass } from '../utils/formatters';
 import { canCreateProject as canCreateProjectRole } from '../utils/permissions';
-import { useFetch, useListFilter } from '../hooks';
+import { useListFilter } from '../hooks';
 import { formatRelativeTime } from '../utils/date';
 import { routes } from '../utils/routes';
 
@@ -17,15 +17,44 @@ export function ProjectsPage() {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
 
-  const { data: projects, isLoading, refetch } = useFetch({
-    fetcher: () => {
-      const params = filter !== 'all' ? { status: filter } : {};
-      return projectsApi.list(params).then(r => r.data);
-    },
-    deps: [filter],
-    initial: [] as Project[],
-  });
+  const loadProjects = useCallback(async (page = 1) => {
+    try {
+      if (page === 1) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
+
+      const params: Record<string, string | number> = { page };
+      if (filter !== 'all') params.status = filter;
+
+      const response: PaginatedResponse<Project> = await projectsApi.list(params);
+
+      if (page === 1) {
+        setProjects(response.data);
+      } else {
+        setProjects((prev) => [...prev, ...response.data]);
+      }
+
+      setCurrentPage(response.current_page);
+      setLastPage(response.last_page);
+    } catch (error) {
+      console.error('Failed to load projects:', error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    loadProjects(1);
+  }, [loadProjects]);
 
   const canCreateProject = canCreateProjectRole(user?.role);
 
@@ -92,54 +121,75 @@ export function ProjectsPage() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProjects.map((project) => (
-            <Link
-              key={project.id}
-              to={routes.studio.project(project.id)}
-              className={cardLinkClass}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                    {project.name}
-                  </h3>
-                  {project.client_name && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                      {project.client_name}
-                    </p>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProjects.map((project) => (
+              <Link
+                key={project.id}
+                to={routes.studio.project(project.id)}
+                className={cardLinkClass}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                      {project.name}
+                    </h3>
+                    {project.client_name && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        {project.client_name}
+                      </p>
+                    )}
+                  </div>
+                  <span className="ml-3 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 capitalize">
+                    {formatEnumLabel(project.status)}
+                  </span>
+                </div>
+
+                {project.description && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+                    {project.description}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <FolderKanban className="w-3.5 h-3.5" />
+                    {project.assets_count || 0}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5" />
+                    {project.members?.length || 0}
+                  </span>
+                  {project.deadline && (
+                    <span className="flex items-center gap-1 ml-auto">
+                      <Calendar className="w-3.5 h-3.5" />
+                      {formatRelativeTime(project.deadline)}
+                    </span>
                   )}
                 </div>
-                <span className="ml-3 px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 capitalize">
-                  {formatEnumLabel(project.status)}
-                </span>
-              </div>
+              </Link>
+            ))}
+          </div>
 
-              {project.description && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
-                  {project.description}
-                </p>
-              )}
-
-              <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
-                <span className="flex items-center gap-1">
-                  <FolderKanban className="w-3.5 h-3.5" />
-                  {project.assets_count || 0}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" />
-                  {project.members?.length || 0}
-                </span>
-                {project.deadline && (
-                  <span className="flex items-center gap-1 ml-auto">
-                    <Calendar className="w-3.5 h-3.5" />
-                    {formatRelativeTime(project.deadline)}
-                  </span>
+          {currentPage < lastPage && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => loadProjects(currentPage + 1)}
+                disabled={isLoadingMore}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  'Load more'
                 )}
-              </div>
-            </Link>
-          ))}
-        </div>
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Create Project Modal */}
@@ -152,6 +202,7 @@ export function ProjectsPage() {
           }}
         />
       )}
+
     </div>
   );
 }

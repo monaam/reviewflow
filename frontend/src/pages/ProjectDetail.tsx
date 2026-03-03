@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,11 +12,12 @@ import {
   Trash2,
   UserPlus,
   UserMinus,
+  Loader2,
 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { assetsApi } from '../api/assets';
 import { requestsApi } from '../api/requests';
-import { Project, Asset, CreativeRequest } from '../types';
+import { Project, Asset, CreativeRequest, PaginatedResponse } from '../types';
 
 import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
@@ -58,6 +59,9 @@ export function ProjectDetailPage() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoadingMoreAssets, setIsLoadingMoreAssets] = useState(false);
+  const [assetsCurrentPage, setAssetsCurrentPage] = useState(1);
+  const [assetsLastPage, setAssetsLastPage] = useState(1);
 
   const isReviewer = isReviewerRole(user?.role);
 
@@ -69,7 +73,7 @@ export function ProjectDetailPage() {
 
   useEffect(() => {
     if (id) {
-      fetchAssets();
+      fetchAssets(1);
     }
   }, [id, filter]);
 
@@ -91,14 +95,28 @@ export function ProjectDetailPage() {
     }
   };
 
-  const fetchAssets = async () => {
+  const fetchAssets = async (page = 1) => {
     try {
-      const params: Record<string, string> = {};
+      if (page > 1) {
+        setIsLoadingMoreAssets(true);
+      }
+
+      const params: Record<string, string | number> = { page };
       if (filter !== 'all') params.status = filter;
-      const assetsData = await assetsApi.list(id!, params);
-      setAssets(assetsData.data);
+      const response: PaginatedResponse<Asset> = await assetsApi.list(id!, params);
+
+      if (page === 1) {
+        setAssets(response.data);
+      } else {
+        setAssets((prev) => [...prev, ...response.data]);
+      }
+
+      setAssetsCurrentPage(response.current_page);
+      setAssetsLastPage(response.last_page);
     } catch (error) {
       console.error('Failed to fetch assets:', error);
+    } finally {
+      setIsLoadingMoreAssets(false);
     }
   };
 
@@ -337,11 +355,32 @@ export function ProjectDetailPage() {
               }
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredAssets.map((asset) => (
-                <AssetCard key={asset.id} asset={asset} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredAssets.map((asset) => (
+                  <AssetCard key={asset.id} asset={asset} />
+                ))}
+              </div>
+
+              {assetsCurrentPage < assetsLastPage && (
+                <div className="mt-6 flex justify-center">
+                  <button
+                    onClick={() => fetchAssets(assetsCurrentPage + 1)}
+                    disabled={isLoadingMoreAssets}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  >
+                    {isLoadingMoreAssets ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load more'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
