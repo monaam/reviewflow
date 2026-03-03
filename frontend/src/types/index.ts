@@ -117,6 +117,14 @@ export interface TextAnchor {
   selectedText: string;
 }
 
+export interface CommentReaction {
+  id: string;
+  comment_id: string;
+  user_id: string;
+  emoji: string;
+  user?: User;
+}
+
 export interface Comment {
   id: string;
   asset_id: string;
@@ -143,6 +151,7 @@ export interface Comment {
   replies?: Comment[];
   mentions?: User[];
   media?: CommentMedia[];
+  reactions?: CommentReaction[];
 }
 
 export interface CreativeRequest {

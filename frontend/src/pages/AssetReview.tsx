@@ -266,6 +266,34 @@ export function AssetReviewPage() {
     }
   };
 
+  const handleToggleReaction = async (commentId: string, emoji: string) => {
+    try {
+      const updatedReactions = await assetsApi.toggleReaction(commentId, emoji);
+      // Update reactions in timeline for both top-level comments and replies
+      setTimeline(timeline.map((item) => {
+        if (item.type !== 'comment') return item;
+        const comment = item.data as Comment;
+        if (comment.id === commentId) {
+          return { ...item, data: { ...comment, reactions: updatedReactions } };
+        }
+        if (comment.replies) {
+          return {
+            ...item,
+            data: {
+              ...comment,
+              replies: comment.replies.map((reply) =>
+                reply.id === commentId ? { ...reply, reactions: updatedReactions } : reply
+              ),
+            },
+          };
+        }
+        return item;
+      }));
+    } catch (error) {
+      console.error('Failed to toggle reaction:', error);
+    }
+  };
+
   const handleReply = async (parentId: string, content: string, tempImageIds?: string[]) => {
     try {
       const reply = await assetsApi.createComment(id!, {
@@ -597,6 +625,7 @@ export function AssetReviewPage() {
           onResolveComment={handleResolveComment}
           onToggleShowAllVersions={toggleAllVersionsComments}
           onSubmitReply={handleReply}
+          onToggleReaction={handleToggleReaction}
           getCommentActions={getCommentActions}
         />
       </div>

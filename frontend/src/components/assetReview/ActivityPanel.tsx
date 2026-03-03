@@ -10,8 +10,9 @@ import {
   EyeOff,
   Reply,
   Globe,
+  SmilePlus,
 } from 'lucide-react';
-import { TimelineItem, Comment, AssetVersion, ApprovalLog, TempCommentImage, TextAnchor } from '../../types';
+import { TimelineItem, Comment, CommentReaction, AssetVersion, ApprovalLog, TempCommentImage, TextAnchor } from '../../types';
 import { supportsTemporalAnnotations } from '../../config/assetTypeRegistry';
 import { formatTime } from '../../utils/time';
 import { Rectangle } from '../../hooks/useAssetReviewState';
@@ -20,6 +21,9 @@ import { MentionText } from '../common/MentionText';
 import { CommentImageUpload } from '../common/CommentImageUpload';
 import { CommentImages } from '../common/CommentImages';
 import { formatRelativeTime } from '../../utils/date';
+import { useAuthStore } from '../../stores/authStore';
+
+const REACTION_EMOJIS = ['\u{1F44D}', '\u{1F44E}', '\u{2764}\u{FE0F}', '\u{1F604}', '\u{1F389}', '\u{1F440}', '\u{1F525}', '\u{1F4AF}'];
 
 interface ActivityPanelProps {
   timeline: TimelineItem[];
@@ -43,6 +47,7 @@ interface ActivityPanelProps {
   onResolveComment: (commentId: string, isResolved: boolean) => void;
   onToggleShowAllVersions: () => void;
   onSubmitReply: (parentId: string, content: string, tempImageIds?: string[]) => Promise<void>;
+  onToggleReaction: (commentId: string, emoji: string) => void;
 
   // Comment actions (from useAssetActions hook)
   getCommentActions: (comment: Comment) => { canDelete: boolean; canResolve: boolean };
@@ -72,6 +77,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   onResolveComment,
   onToggleShowAllVersions,
   onSubmitReply,
+  onToggleReaction,
   getCommentActions,
 }) => {
   // Reply state
@@ -84,9 +90,15 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   const mainCommentFormRef = useRef<HTMLDivElement>(null);
   const replyFormRef = useRef<HTMLDivElement>(null);
 
-  const handleStartReply = (commentId: string) => {
+  const handleStartReply = (commentId: string, prefillMention?: string) => {
     setReplyingToId(commentId);
-    setReplyContent('');
+    setReplyContent(prefillMention || '');
+  };
+
+  const handleStartReplyToReply = (reply: Comment) => {
+    if (!reply.parent_id || !reply.user) return;
+    const mention = `@user:${reply.user_id} `;
+    handleStartReply(reply.parent_id, mention);
   };
 
   const handleCancelReply = () => {
@@ -193,6 +205,7 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
                 onDelete={() => onDeleteComment(comment.id)}
                 onResolve={() => onResolveComment(comment.id, comment.is_resolved)}
                 onReply={() => handleStartReply(comment.id)}
+                onToggleReaction={(emoji) => onToggleReaction(comment.id, emoji)}
                 getCommentActions={getCommentActions}
                 isReply={false}
               />
@@ -211,6 +224,8 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
                       onClick={() => onCommentClick(reply)}
                       onDelete={() => onDeleteComment(reply.id)}
                       onResolve={() => onResolveComment(reply.id, reply.is_resolved)}
+                      onReply={() => handleStartReplyToReply(reply)}
+                      onToggleReaction={(emoji) => onToggleReaction(reply.id, emoji)}
                       getCommentActions={getCommentActions}
                       isReply={true}
                     />
@@ -390,6 +405,116 @@ const ApprovalItem: FC<ApprovalItemProps> = ({ approval, createdAt }) => {
   );
 };
 
+// Reaction helpers
+
+interface GroupedReaction {
+  emoji: string;
+  count: number;
+  userNames: string[];
+  hasReacted: boolean;
+}
+
+function groupReactions(reactions: CommentReaction[] | undefined, currentUserId: string | undefined): GroupedReaction[] {
+  if (!reactions || reactions.length === 0) return [];
+
+  const groups: Record<string, { count: number; userNames: string[]; hasReacted: boolean }> = {};
+  for (const r of reactions) {
+    if (!groups[r.emoji]) {
+      groups[r.emoji] = { count: 0, userNames: [], hasReacted: false };
+    }
+    groups[r.emoji].count++;
+    if (r.user?.name) groups[r.emoji].userNames.push(r.user.name);
+    if (r.user_id === currentUserId) groups[r.emoji].hasReacted = true;
+  }
+
+  return Object.entries(groups).map(([emoji, data]) => ({ emoji, ...data }));
+}
+
+// Emoji picker popover
+
+interface EmojiPickerProps {
+  onSelect: (emoji: string) => void;
+  onClose: () => void;
+}
+
+const EmojiPicker: FC<EmojiPickerProps> = ({ onSelect, onClose }) => {
+  return (
+    <div
+      className="absolute right-0 bottom-full mb-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1.5 flex gap-0.5"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {REACTION_EMOJIS.map((emoji) => (
+        <button
+          key={emoji}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(emoji);
+            onClose();
+          }}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-base transition-transform hover:scale-125"
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// Reactions bar
+
+interface ReactionBarProps {
+  reactions: CommentReaction[] | undefined;
+  onToggleReaction: (emoji: string) => void;
+  isReply: boolean;
+}
+
+const ReactionBar: FC<ReactionBarProps> = ({ reactions, onToggleReaction, isReply }) => {
+  const { user } = useAuthStore();
+  const [showPicker, setShowPicker] = useState(false);
+  const grouped = groupReactions(reactions, user?.id);
+
+  return (
+    <div className={`flex items-center gap-1 flex-wrap mt-1.5 ${isReply ? 'text-[10px]' : 'text-xs'}`}>
+      {grouped.map(({ emoji, count, userNames, hasReacted }) => (
+        <button
+          key={emoji}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleReaction(emoji);
+          }}
+          className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full border transition-colors ${
+            hasReacted
+              ? 'border-primary-300 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+              : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400'
+          }`}
+          title={userNames.join(', ')}
+        >
+          <span>{emoji}</span>
+          <span>{count}</span>
+        </button>
+      ))}
+      <div className="relative">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowPicker(!showPicker);
+          }}
+          className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          title="Add reaction"
+        >
+          <SmilePlus className={isReply ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+        </button>
+        {showPicker && (
+          <EmojiPicker
+            onSelect={(emoji) => onToggleReaction(emoji)}
+            onClose={() => setShowPicker(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
 interface CommentItemProps {
   comment: Comment;
   isSelected: boolean;
@@ -400,6 +525,7 @@ interface CommentItemProps {
   onDelete: () => void;
   onResolve: () => void;
   onReply?: () => void;
+  onToggleReaction: (emoji: string) => void;
   getCommentActions: (comment: Comment) => { canDelete: boolean; canResolve: boolean };
   isReply: boolean;
 }
@@ -414,6 +540,7 @@ const CommentItem: FC<CommentItemProps> = ({
   onDelete,
   onResolve,
   onReply,
+  onToggleReaction,
   getCommentActions,
   isReply,
 }) => {
@@ -440,15 +567,15 @@ const CommentItem: FC<CommentItemProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {/* Reply button - only for top-level comments */}
-          {!isReply && onReply && (
+          {/* Reply button */}
+          {onReply && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onReply();
               }}
               className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-primary-500"
-              title="Reply to comment"
+              title={isReply ? 'Reply mentioning this user' : 'Reply to comment'}
             >
               <Reply className="w-4 h-4" />
             </button>
@@ -499,6 +626,13 @@ const CommentItem: FC<CommentItemProps> = ({
       {comment.media && comment.media.length > 0 && (
         <CommentImages media={comment.media} maxVisibleThumbnails={isReply ? 3 : 4} />
       )}
+
+      {/* Reactions */}
+      <ReactionBar
+        reactions={comment.reactions}
+        onToggleReaction={onToggleReaction}
+        isReply={isReply}
+      />
 
       <div className={`flex items-center gap-2 mt-2 text-gray-500 flex-wrap ${isReply ? 'text-[10px]' : 'text-xs'}`}>
         {showAllVersionsComments && (

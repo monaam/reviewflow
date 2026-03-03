@@ -1,6 +1,6 @@
 import { AxiosProgressEvent } from 'axios';
 import apiClient from './client';
-import { Asset, AssetVersion, Comment, MentionableUser, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem, TempCommentImage } from '../types';
+import { Asset, AssetVersion, Comment, CommentReaction, MentionableUser, PaginatedResponse, VersionHistoryResponse, DownloadResponse, TimelineItem, TempCommentImage } from '../types';
 
 export interface CreateAssetRequest {
   file: File;
@@ -169,6 +169,11 @@ export const assetsApi = {
 
   unresolveComment: async (commentId: string): Promise<Comment> => {
     const response = await apiClient.post(`/comments/${commentId}/unresolve`);
+    return response.data;
+  },
+
+  toggleReaction: async (commentId: string, emoji: string): Promise<CommentReaction[]> => {
+    const response = await apiClient.post(`/comments/${commentId}/reactions`, { emoji });
     return response.data;
   },
 
