@@ -640,6 +640,7 @@ export function AssetReviewPage() {
       {state.activeModal === 'upload' && (
         <UploadVersionModal
           assetId={id!}
+          assetType={asset.type}
           onClose={closeModal}
           onSuccess={() => {
             fetchAsset();

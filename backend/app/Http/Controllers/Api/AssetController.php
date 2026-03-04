@@ -389,6 +389,25 @@ class AssetController extends Controller
         $validated = $request->validated();
 
         $file = $request->file('file');
+
+        // Validate that the uploaded file matches the asset's type
+        $detectedType = $this->assetTypeRegistry->determineType($file);
+        if ($detectedType !== $asset->type) {
+            return response()->json([
+                'message' => "File type mismatch. This asset expects a {$asset->type} file.",
+                'errors' => ['file' => ["Expected a {$asset->type} file, but received a {$detectedType} file."]],
+            ], 422);
+        }
+
+        // Run type-specific validation (file size, MIME type)
+        $validationErrors = $this->assetTypeRegistry->validate($file);
+        if (!empty($validationErrors)) {
+            return response()->json([
+                'message' => 'File validation failed.',
+                'errors' => ['file' => $validationErrors],
+            ], 422);
+        }
+
         $newVersion = $asset->current_version + 1;
 
         // Upload file

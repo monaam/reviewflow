@@ -355,7 +355,7 @@ class AssetControllerTest extends TestCase
     public function test_can_upload_new_version(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
-        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset = $this->createAssetWithVersion($project, $this->creative, 'image');
 
         $this->actingAsCreative();
         $response = $this->postJson("/api/assets/{$asset->id}/versions", [
@@ -374,7 +374,7 @@ class AssetControllerTest extends TestCase
     public function test_uploading_version_resets_status_to_pending(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
-        $asset = $this->createAssetWithVersion($project, $this->creative);
+        $asset = $this->createAssetWithVersion($project, $this->creative, 'image');
         $asset->update(['status' => 'revision_requested']);
 
         $this->actingAsCreative();
@@ -389,7 +389,7 @@ class AssetControllerTest extends TestCase
     public function test_creative_can_upload_version_to_others_asset_in_same_project(): void
     {
         $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
-        $asset = $this->createAssetWithVersion($project, $this->pm);
+        $asset = $this->createAssetWithVersion($project, $this->pm, 'image');
 
         $this->actingAsCreative();
         $response = $this->postJson("/api/assets/{$asset->id}/versions", [
@@ -403,7 +403,7 @@ class AssetControllerTest extends TestCase
     {
         $otherCreative = User::factory()->creative()->create();
         $project = $this->createProjectWithMembers($this->pm, [$otherCreative]);
-        $asset = $this->createAssetWithVersion($project, $otherCreative);
+        $asset = $this->createAssetWithVersion($project, $otherCreative, 'image');
 
         $this->actingAsCreative();
         $response = $this->postJson("/api/assets/{$asset->id}/versions", [
@@ -411,6 +411,83 @@ class AssetControllerTest extends TestCase
         ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_cannot_upload_version_with_different_file_type(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative, 'image');
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/versions", [
+            'file' => $this->createTestFile('pdf'),
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonPath('message', 'File type mismatch. This asset expects a image file.');
+    }
+
+    public function test_cannot_upload_video_version_to_image_asset(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative, 'image');
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/versions", [
+            'file' => $this->createTestFile('video'),
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonPath('message', 'File type mismatch. This asset expects a image file.');
+    }
+
+    public function test_cannot_upload_image_version_to_pdf_asset(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative, 'pdf');
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/versions", [
+            'file' => $this->createTestFile('image'),
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonPath('message', 'File type mismatch. This asset expects a pdf file.');
+    }
+
+    public function test_cannot_upload_version_to_locked_asset(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative, 'image');
+        $asset->update(['is_locked' => true, 'locked_by' => $this->pm->id, 'locked_at' => now()]);
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/versions", [
+            'file' => $this->createTestFile('image'),
+        ]);
+
+        $response->assertForbidden()
+            ->assertJsonPath('message', 'Cannot upload new version. Asset is locked.');
+    }
+
+    public function test_version_upload_includes_version_notes(): void
+    {
+        $project = $this->createProjectWithMembers($this->pm, [$this->creative]);
+        $asset = $this->createAssetWithVersion($project, $this->creative, 'image');
+
+        $this->actingAsCreative();
+        $response = $this->postJson("/api/assets/{$asset->id}/versions", [
+            'file' => $this->createTestFile('image'),
+            'version_notes' => 'Updated the hero banner colors',
+        ]);
+
+        $response->assertCreated();
+
+        $this->assertDatabaseHas('asset_versions', [
+            'asset_id' => $asset->id,
+            'version_number' => 2,
+            'version_notes' => 'Updated the hero banner colors',
+        ]);
     }
 
     public function test_can_list_asset_versions(): void

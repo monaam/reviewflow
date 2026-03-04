@@ -74,12 +74,18 @@ trait ApiTestHelpers
         return $project;
     }
 
-    protected function createAssetWithVersion(Project $project, User $uploader): Asset
+    protected function createAssetWithVersion(Project $project, User $uploader, ?string $type = null): Asset
     {
-        $asset = Asset::factory()->create([
+        $attributes = [
             'project_id' => $project->id,
             'uploaded_by' => $uploader->id,
-        ]);
+        ];
+
+        if ($type) {
+            $attributes['type'] = $type;
+        }
+
+        $asset = Asset::factory()->create($attributes);
 
         AssetVersion::factory()->create([
             'asset_id' => $asset->id,
