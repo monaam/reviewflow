@@ -4,8 +4,16 @@ import { assetsApi } from '../../api/assets';
 import { useUploadProgress } from '../../hooks';
 import { UploadProgress } from '../common/UploadProgress';
 
+const ACCEPT_BY_TYPE: Record<string, string> = {
+  image: 'image/*',
+  video: 'video/*',
+  pdf: 'application/pdf,.pdf',
+  design: '.ai,.psd,.eps,.indd,.sketch,.fig,.xd',
+};
+
 interface UploadVersionModalProps {
   assetId: string;
+  assetType?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -15,6 +23,7 @@ interface UploadVersionModalProps {
  */
 export const UploadVersionModal: FC<UploadVersionModalProps> = ({
   assetId,
+  assetType,
   onClose,
   onSuccess,
 }) => {
@@ -61,7 +70,7 @@ export const UploadVersionModal: FC<UploadVersionModalProps> = ({
             type="file"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="input"
-            accept="image/*,video/*,application/pdf"
+            accept={assetType ? ACCEPT_BY_TYPE[assetType] || '*/*' : 'image/*,video/*,application/pdf,.ai,.psd,.eps,.indd,.sketch,.fig,.xd'}
             disabled={isLoading}
           />
         </div>
