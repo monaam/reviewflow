@@ -38,10 +38,10 @@ interface AssetPreviewProps {
 
   // Callbacks
   onMediaLoad: () => void;
-  onMouseDown: (e: React.MouseEvent) => void;
-  onMouseMove: (e: React.MouseEvent) => void;
-  onMouseUp: () => void;
-  onMouseLeave: () => void;
+  onMouseDown?: (e: React.MouseEvent) => void;
+  onMouseMove?: (e: React.MouseEvent) => void;
+  onMouseUp?: () => void;
+  onMouseLeave?: () => void;
   onTimeUpdate: (time: number) => void;
   onDurationChange: (duration: number) => void;
   onPlayChange: (isPlaying: boolean) => void;
@@ -152,7 +152,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
     <div className="flex-1 flex flex-col bg-gray-900 relative">
       <div
         ref={containerRef}
-        className="flex-1 relative cursor-crosshair overflow-hidden flex items-center justify-center"
+        className={`flex-1 relative overflow-hidden flex items-center justify-center ${onMouseDown ? 'cursor-crosshair' : ''}`}
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}

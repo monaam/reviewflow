@@ -11,6 +11,7 @@ import {
   Reply,
   Globe,
   SmilePlus,
+  MapPin,
 } from 'lucide-react';
 import { TimelineItem, Comment, CommentReaction, AssetVersion, ApprovalLog, TempCommentImage, TextAnchor } from '../../types';
 import { supportsTemporalAnnotations } from '../../config/assetTypeRegistry';
@@ -51,6 +52,11 @@ interface ActivityPanelProps {
 
   // Comment actions (from useAssetActions hook)
   getCommentActions: (comment: Comment) => { canDelete: boolean; canResolve: boolean };
+
+  // Mobile props
+  isMobile?: boolean;
+  onAnnotateClick?: () => void;
+  onInputFocus?: () => void;
 }
 
 /**
@@ -79,6 +85,9 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   onSubmitReply,
   onToggleReaction,
   getCommentActions,
+  isMobile,
+  onAnnotateClick,
+  onInputFocus,
 }) => {
   // Reply state
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
@@ -139,9 +148,9 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
   });
 
   return (
-    <div className="w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+    <div className={`${isMobile ? 'w-full' : 'w-96 border-l border-gray-200 dark:border-gray-700'} bg-white dark:bg-gray-800 flex flex-col`}>
+      {/* Header - hidden on mobile since drawer has tabs */}
+      <div className={`p-4 border-b border-gray-200 dark:border-gray-700 ${isMobile ? 'hidden' : ''}`}>
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 dark:text-white flex items-center">
             <MessageSquare className="w-5 h-5 mr-2" />
@@ -290,13 +299,23 @@ export const ActivityPanel: FC<ActivityPanelProps> = ({
             Text selected: &ldquo;{selectedTextAnchor.selectedText.length > 80 ? selectedTextAnchor.selectedText.slice(0, 80) + '...' : selectedTextAnchor.selectedText}&rdquo;
           </div>
         )}
+        {isMobile && onAnnotateClick && (
+          <button
+            onClick={onAnnotateClick}
+            className="mb-2 flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-400 active:scale-[0.98] transition-transform"
+          >
+            <MapPin className="w-4 h-4" />
+            Add Annotation
+          </button>
+        )}
         <MentionInput
           value={newComment}
           onChange={onCommentChange}
           assetId={assetId}
           placeholder="Add a comment... Use @ to mention someone"
           className="mb-2"
-          rows={3}
+          rows={isMobile ? 2 : 3}
+          onFocus={onInputFocus}
         />
         <CommentImageUpload
           images={pendingImages}

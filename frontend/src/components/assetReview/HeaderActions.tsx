@@ -8,6 +8,7 @@ interface HeaderActionsProps {
   showActionsMenu: boolean;
   showTimeline: boolean;
   isLocking: boolean;
+  isMobile?: boolean;
 
   onActionClick: (actionId: string) => void;
   onToggleActionsMenu: () => void;
@@ -24,10 +25,48 @@ export const HeaderActions: FC<HeaderActionsProps> = ({
   showActionsMenu,
   showTimeline,
   isLocking,
+  isMobile,
   onActionClick,
   onToggleActionsMenu,
   onCloseActionsMenu,
 }) => {
+  // On mobile: single dropdown with ALL actions merged
+  if (isMobile) {
+    const allActions = [...primaryActions, ...dropdownActions];
+    return (
+      <div className="relative">
+        <button
+          onClick={onToggleActionsMenu}
+          className="p-2 rounded-lg text-gray-600 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800"
+          title="Actions"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+        {showActionsMenu && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={onCloseActionsMenu} />
+            <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 max-h-[70vh] overflow-y-auto">
+              <div className="py-1">
+                {allActions.map((action) => (
+                  <DropdownActionButton
+                    key={action.id}
+                    action={action}
+                    onClick={() => {
+                      onActionClick(action.id);
+                      onCloseActionsMenu();
+                    }}
+                    isLoading={action.id === 'lock' && isLocking}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop: original layout
   return (
     <div className="flex items-center gap-2">
       {/* Primary actions (excluding approve/revision/upload/send-to-client/publish which get special treatment) */}
