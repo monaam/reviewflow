@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { BottomTabBar } from './BottomTabBar';
 import { MobileHeader } from './MobileHeader';
+import { AnimatedOutlet } from './AnimatedOutlet';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { ThemeToggle } from '../theme/ThemeToggle';
 import { useEcho } from '../../hooks/useEcho';
@@ -33,8 +34,8 @@ export function Layout() {
         )}
 
         {/* Main content — add bottom padding on mobile for tab bar */}
-        <main className={`flex-1 overflow-auto bg-white dark:bg-gray-900 ${isMobile ? 'pb-[calc(3.5rem+env(safe-area-inset-bottom))]' : ''}`}>
-          <Outlet />
+        <main className={`flex-1 bg-white dark:bg-gray-900 ${isMobile ? 'relative overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom))]' : 'overflow-auto'}`}>
+          {isMobile ? <AnimatedOutlet /> : <Outlet />}
         </main>
       </div>
 

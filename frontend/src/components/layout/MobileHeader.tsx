@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { NotificationBell } from '../notifications/NotificationBell';
-import { ThemeToggle } from '../theme/ThemeToggle';
+import { ROOT_PATHS } from '../../utils/routes';
 
 const PAGE_TITLES: Record<string, string> = {
   '/studio': 'Home',
@@ -16,16 +16,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/studio/admin/settings': 'Settings',
   '/studio/more': 'More',
 };
-
-const ROOT_PATHS = new Set([
-  '/studio',
-  '/studio/projects',
-  '/studio/assets',
-  '/studio/requests',
-  '/studio/queue',
-  '/studio/review-queue',
-  '/studio/more',
-]);
 
 export function MobileHeader() {
   const location = useLocation();
