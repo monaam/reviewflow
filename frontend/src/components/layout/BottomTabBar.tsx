@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -34,9 +34,18 @@ function getTabsForRole(role: string): TabItem[] {
   return [...common, roleTab, { name: 'More', href: '/studio/more', icon: MoreHorizontal }];
 }
 
+// Pattern: /studio/assets/:id (but not /studio/assets)
+const ASSET_REVIEW_PATTERN = /^\/studio\/assets\/[^/]+$/;
+
 export function BottomTabBar() {
   const { user } = useAuthStore();
+  const location = useLocation();
   const tabs = getTabsForRole(user?.role || 'reviewer');
+
+  // Hide on asset review page — MobileReviewDrawer replaces the tab bar
+  if (ASSET_REVIEW_PATTERN.test(location.pathname)) {
+    return null;
+  }
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 pb-[env(safe-area-inset-bottom)] lg:hidden">

@@ -28,6 +28,7 @@ import {
   EditRequestModal,
   ReassignModal,
 } from '../components/modals';
+import { Modal } from '../components/modals/Modal';
 
 export function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -405,60 +406,55 @@ function UploadAssetModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          Upload Asset for Request
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="file" className="label">
-              File
-            </label>
-            <input
-              id="file"
-              type="file"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  setFile(f);
-                  if (!title) {
-                    setTitle(f.name.replace(/\.[^/.]+$/, ''));
-                  }
+    <Modal title="Upload Asset for Request" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="file" className="label">
+            File
+          </label>
+          <input
+            id="file"
+            type="file"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) {
+                setFile(f);
+                if (!title) {
+                  setTitle(f.name.replace(/\.[^/.]+$/, ''));
                 }
-              }}
-              className="input"
-              accept="image/*,video/*,application/pdf"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="title" className="label">
-              Asset Title
-            </label>
-            <input
-              id="title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || !file || !title}
-              className="btn-primary"
-            >
-              {isLoading ? 'Uploading...' : 'Upload'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              }
+            }}
+            className="input"
+            accept="image/*,video/*,application/pdf"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="title" className="label">
+            Asset Title
+          </label>
+          <input
+            id="title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
+        <div className="flex justify-end gap-3">
+          <button type="button" onClick={onClose} className="btn-secondary">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isLoading || !file || !title}
+            className="btn-primary"
+          >
+            {isLoading ? 'Uploading...' : 'Upload'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

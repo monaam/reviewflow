@@ -4,6 +4,7 @@ import { Plus, FolderKanban, Calendar, Users, Loader2 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { Project, PaginatedResponse } from '../types';
 import { LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
+import { Modal } from '../components/modals/Modal';
 import { useAuthStore } from '../stores/authStore';
 import { formatEnumLabel, cardLinkClass } from '../utils/formatters';
 import { canCreateProject as canCreateProjectRole } from '../utils/permissions';
@@ -253,93 +254,85 @@ function CreateProjectModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 max-w-md w-full mx-4">
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-            Create New Project
-          </h2>
-
-          {error && (
-            <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="label">
-                Project Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="description" className="label">
-                Description
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="input"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="clientName" className="label">
-                Client Name
-              </label>
-              <input
-                id="clientName"
-                type="text"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                className="input"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="deadline" className="label">
-                Deadline
-              </label>
-              <input
-                id="deadline"
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="input"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-secondary"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating...' : 'Create'}
-              </button>
-            </div>
-          </form>
+    <Modal title="Create New Project" onClose={onClose}>
+      {error && (
+        <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm">
+          {error}
         </div>
-      </div>
-    </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="label">
+            Project Name
+          </label>
+          <input
+            id="name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="description" className="label">
+            Description
+          </label>
+          <textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="input"
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="clientName" className="label">
+            Client Name
+          </label>
+          <input
+            id="clientName"
+            type="text"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            className="input"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="deadline" className="label">
+            Deadline
+          </label>
+          <input
+            id="deadline"
+            type="date"
+            value={deadline}
+            onChange={(e) => setDeadline(e.target.value)}
+            className="input"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary"
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creating...' : 'Create'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

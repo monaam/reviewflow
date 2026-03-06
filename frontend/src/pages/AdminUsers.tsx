@@ -94,7 +94,7 @@ export function AdminUsersPage() {
         ))}
       </div>
 
-      {/* Users Table — desktop */}
+      {/* Users Table - desktop */}
       <div className="card overflow-hidden hidden md:block">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
@@ -192,7 +192,7 @@ export function AdminUsersPage() {
         </table>
       </div>
 
-      {/* Users Cards — mobile */}
+      {/* Users Cards - mobile */}
       <div className="md:hidden space-y-3">
         {isLoading ? (
           <div className="py-12 text-center">
@@ -256,6 +256,7 @@ export function AdminUsersPage() {
             </div>
           ))
         )}
+      </div>
 
       {currentPage < lastPage && (
         <div className="mt-6 flex justify-center">
@@ -302,15 +303,13 @@ export function AdminUsersPage() {
   );
 }
 
-function UserModal({
-  user,
-  onClose,
-  onSaved,
-}: {
+interface UserModalProps {
   user?: User;
   onClose: () => void;
   onSaved: () => void;
-}) {
+}
+
+function UserModal({ user, onClose, onSaved }: UserModalProps) {
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
