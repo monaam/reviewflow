@@ -65,21 +65,21 @@ export function ProjectsPage() {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-6 sm:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
             Projects
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
             Manage your creative projects
           </p>
         </div>
         {canCreateProject && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="btn-primary"
+            className="btn-primary hidden sm:inline-flex"
           >
             <Plus className="w-4 h-4 mr-2" />
             New Project
@@ -190,6 +190,16 @@ export function ProjectsPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Mobile FAB */}
+      {canCreateProject && (
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="fixed right-4 bottom-20 z-40 w-14 h-14 rounded-full bg-primary-500 text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform sm:hidden"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
       )}
 
       {/* Create Project Modal */}

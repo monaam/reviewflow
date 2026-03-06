@@ -99,7 +99,7 @@ export function RequestDetailPage() {
   // Reviewers don't have access to requests
   if (isReviewer) {
     return (
-      <div className="p-6 max-w-4xl mx-auto">
+      <div className="px-4 py-6 sm:p-6 max-w-4xl mx-auto">
         <EmptyState
           icon={FileText}
           title="Access Restricted"
@@ -137,7 +137,7 @@ export function RequestDetailPage() {
       <div className="mb-6">
         <Link
           to={routes.studio.project(request.project_id)}
-          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
+          className="hidden sm:inline-flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Back to Project

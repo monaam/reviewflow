@@ -60,7 +60,7 @@ export function AdminUsersPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="px-4 py-6 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">

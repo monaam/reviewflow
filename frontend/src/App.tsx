@@ -16,6 +16,7 @@ import { NotificationsPage } from './pages/Notifications';
 import { AdminUsersPage } from './pages/AdminUsers';
 import { AdminSettingsPage } from './pages/AdminSettings';
 import { ProfileSettingsPage } from './pages/ProfileSettings';
+import { MoreMenuPage } from './pages/MoreMenu';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { useAuthStore } from './stores/authStore';
 import { useThemeStore } from './stores/themeStore';
@@ -96,6 +97,7 @@ function App() {
           <Route path="review-queue" element={<ReviewQueuePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<ProfileSettingsPage />} />
+          <Route path="more" element={<MoreMenuPage />} />
 
           {/* Admin Routes */}
           <Route

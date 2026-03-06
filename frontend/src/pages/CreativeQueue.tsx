@@ -43,12 +43,12 @@ export function CreativeQueuePage() {
   });
 
   return (
-    <div className="p-6">
+    <div className="px-4 py-6 sm:p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
           My Queue
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
           Requests assigned to you, sorted by deadline
         </p>
       </div>
@@ -97,12 +97,12 @@ export function CreativeQueuePage() {
                 isOverdue(request.deadline, request.status) ? 'border-red-300 dark:border-red-700' : ''
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
                     <Link
                       to={routes.studio.request(request.id)}
-                      className="text-lg font-semibold text-gray-900 dark:text-white hover:text-primary-600"
+                      className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white hover:text-primary-600"
                     >
                       {request.title}
                     </Link>
@@ -110,11 +110,11 @@ export function CreativeQueuePage() {
                     <StatusBadge status={request.status} type="request" />
                   </div>
 
-                  <p className="text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
                     {request.description}
                   </p>
 
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-3 sm:gap-4 text-sm text-gray-500 flex-wrap">
                     <span>Project: {request.project?.name}</span>
                     <span className="flex items-center">
                       <Clock className="w-4 h-4 mr-1" />
@@ -130,18 +130,19 @@ export function CreativeQueuePage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2">
                   {request.status === 'pending' && (
                     <button
                       onClick={() => handleStart(request.id)}
                       className="btn-primary"
                     >
-                      <PlayCircle className="w-4 h-4 mr-2" />
-                      Start Working
+                      <PlayCircle className="w-4 h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Start Working</span>
                     </button>
                   )}
                   <Link to={routes.studio.request(request.id)} className="btn-secondary">
-                    View Details
+                    <span className="hidden sm:inline">View Details</span>
+                    <span className="sm:hidden">View</span>
                   </Link>
                 </div>
               </div>

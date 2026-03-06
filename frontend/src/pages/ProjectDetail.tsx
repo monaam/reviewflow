@@ -175,23 +175,23 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-6 sm:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <Link
           to={routes.studio.projects()}
-          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
+          className="hidden sm:inline-flex items-center text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
           Projects
         </Link>
 
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
               {project.name}
             </h1>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-3 sm:gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
               {project.client_name && (
                 <span>{project.client_name}</span>
               )}
@@ -210,14 +210,14 @@ export function ProjectDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {canEditProject && (
               <button
                 onClick={() => setShowEditModal(true)}
                 className="btn-secondary"
               >
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit
+                <Edit2 className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Edit</span>
               </button>
             )}
             {canDeleteProject && (
@@ -225,8 +225,8 @@ export function ProjectDetailPage() {
                 onClick={() => setShowDeleteModal(true)}
                 className="btn-secondary"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
+                <Trash2 className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Delete</span>
               </button>
             )}
             {canCreateRequest && (
@@ -234,8 +234,8 @@ export function ProjectDetailPage() {
                 onClick={() => setShowRequestModal(true)}
                 className="btn-secondary"
               >
-                <ClipboardList className="w-4 h-4 mr-2" />
-                New Request
+                <ClipboardList className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">New Request</span>
               </button>
             )}
             {canUpload && (
@@ -243,8 +243,8 @@ export function ProjectDetailPage() {
                 onClick={() => navigate(routes.studio.projectDocumentNew(id!))}
                 className="btn-secondary"
               >
-                <FileEdit className="w-4 h-4 mr-2" />
-                Write Document
+                <FileEdit className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Write Document</span>
               </button>
             )}
             {canUpload && (
@@ -252,23 +252,23 @@ export function ProjectDetailPage() {
                 onClick={() => setShowUploadModal(true)}
                 className="btn-primary"
               >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Asset
+                <Upload className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Upload Asset</span>
               </button>
             )}
           </div>
         </div>
 
         {project.description && (
-          <p className="mt-4 text-gray-500 dark:text-gray-400">
+          <p className="mt-4 text-sm sm:text-base text-gray-500 dark:text-gray-400">
             {project.description}
           </p>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-800 mb-6">
-        <nav className="flex gap-6">
+      <div className="border-b border-gray-200 dark:border-gray-800 mb-6 overflow-x-auto">
+        <nav className="flex gap-4 sm:gap-6">
           <button
             onClick={() => setActiveTab('assets')}
             className={`pb-3 text-sm font-medium border-b-2 transition-colors ${

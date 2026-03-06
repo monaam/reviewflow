@@ -23,6 +23,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "fabric": "^7.1.0",
+    "framer-motion": "^12.35.0",
     "laravel-echo": "^2.3.0",
     "lucide-react": "^0.562.0",
     "pdfjs-dist": "^5.4.296",

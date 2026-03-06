@@ -61,7 +61,7 @@ export function ProfileSettingsPage() {
   };
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="px-4 py-6 sm:p-6 max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Profile Settings
