@@ -9,6 +9,7 @@ import {
 import { PdfRenderer } from '../assetRenderers';
 import { PdfControls } from '../assetRenderers';
 import { formatRelativeTime } from '../../utils/date';
+import { useIsMobile } from '../../hooks/useMediaQuery';
 
 // Sync tolerance in seconds - videos will sync if they drift more than this
 const SYNC_TOLERANCE = 0.1;
@@ -37,6 +38,8 @@ export default function VersionComparison({
     initialRightVersion ?? sortedVersions[sortedVersions.length - 1].version_number
   );
 
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState<'left' | 'right'>('left');
   const [syncPlayback, setSyncPlayback] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -395,6 +398,124 @@ export default function VersionComparison({
     );
   };
 
+  const syncControls = (
+    <>
+      {supportsTemporalAnnotations(assetType) && (
+        <>
+          <label className="flex items-center gap-2 text-sm text-gray-300">
+            <input
+              type="checkbox"
+              checked={syncPlayback}
+              onChange={(e) => setSyncPlayback(e.target.checked)}
+              className="rounded bg-gray-700 border-gray-600"
+            />
+            Sync playback
+          </label>
+
+          {syncPlayback && (
+            <button
+              onClick={togglePlayback}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {isPlaying ? 'Pause' : 'Play'}
+            </button>
+          )}
+        </>
+      )}
+
+      {assetType === 'pdf' && (
+        <label className="flex items-center gap-2 text-sm text-gray-300">
+          <input
+            type="checkbox"
+            checked={syncPdfPages}
+            onChange={(e) => setSyncPdfPages(e.target.checked)}
+            className="rounded bg-gray-700 border-gray-600"
+          />
+          Sync pages
+        </label>
+      )}
+    </>
+  );
+
+  if (isMobile) {
+    const activeVersion = activeTab === 'left' ? leftAsset : rightAsset;
+    const activeVideoRef = activeTab === 'left' ? leftVideoRef : rightVideoRef;
+    const activeSide = activeTab;
+    const activeVersionNumber = activeTab === 'left' ? leftVersion : rightVersion;
+    const activeSetVersion = activeTab === 'left' ? setLeftVersion : setRightVersion;
+    const excludeVersion = activeTab === 'left' ? rightVersion : leftVersion;
+
+    return (
+      <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 border-b border-gray-700">
+          <h2 className="text-base font-semibold text-white">Compare</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-700 rounded transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Sync controls */}
+        {(supportsTemporalAnnotations(assetType) || assetType === 'pdf') && (
+          <div className="flex items-center gap-3 px-3 py-2 border-b border-gray-700">
+            {syncControls}
+          </div>
+        )}
+
+        {/* Tab bar */}
+        <div className="flex items-center border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab('left')}
+            className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${
+              activeTab === 'left'
+                ? 'text-white border-b-2 border-blue-500'
+                : 'text-gray-400'
+            }`}
+          >
+            Version {leftVersion}
+          </button>
+          <button
+            onClick={swapVersions}
+            className="p-2 text-gray-400 hover:text-white transition-colors"
+            title="Swap versions"
+          >
+            <ArrowLeftRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setActiveTab('right')}
+            className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${
+              activeTab === 'right'
+                ? 'text-white border-b-2 border-blue-500'
+                : 'text-gray-400'
+            }`}
+          >
+            Version {rightVersion}
+          </button>
+        </div>
+
+        {/* Version selector */}
+        <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700">
+          {renderVersionSelector(activeVersionNumber, activeSetVersion, excludeVersion)}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-h-0 p-3">
+          {renderContent(activeVersion, activeVideoRef, activeSide)}
+        </div>
+
+        {renderVersionMeta(activeVersion) && (
+          <div className="px-3 pb-3">
+            {renderVersionMeta(activeVersion)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
       {/* Header */}
@@ -402,41 +523,7 @@ export default function VersionComparison({
         <h2 className="text-xl font-semibold text-white">Version Comparison</h2>
 
         <div className="flex items-center gap-4">
-          {supportsTemporalAnnotations(assetType) && (
-            <>
-              <label className="flex items-center gap-2 text-sm text-gray-300">
-                <input
-                  type="checkbox"
-                  checked={syncPlayback}
-                  onChange={(e) => setSyncPlayback(e.target.checked)}
-                  className="rounded bg-gray-700 border-gray-600"
-                />
-                Sync playback
-              </label>
-
-              {syncPlayback && (
-                <button
-                  onClick={togglePlayback}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-white text-sm"
-                >
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  {isPlaying ? 'Pause' : 'Play'}
-                </button>
-              )}
-            </>
-          )}
-
-          {assetType === 'pdf' && (
-            <label className="flex items-center gap-2 text-sm text-gray-300">
-              <input
-                type="checkbox"
-                checked={syncPdfPages}
-                onChange={(e) => setSyncPdfPages(e.target.checked)}
-                className="rounded bg-gray-700 border-gray-600"
-              />
-              Sync pages
-            </label>
-          )}
+          {syncControls}
 
           <button
             onClick={onClose}
