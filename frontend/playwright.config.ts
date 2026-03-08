@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
@@ -13,8 +13,18 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
-      use: { browserName: 'chromium' },
+      name: 'desktop-chrome',
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /\.mobile\.spec\./,
+    },
+    {
+      name: 'mobile-chrome',
+      use: {
+        ...devices['iPhone 14'],
+        // Override to use chromium instead of webkit
+        browserName: 'chromium',
+      },
+      testMatch: /\.mobile\.spec\./,
     },
   ],
 });

@@ -9,3 +9,4 @@ export { default as CommentImages } from './CommentImages';
 export { default as ImageLightbox } from './ImageLightbox';
 export { MentionInput } from './MentionInput';
 export { MentionText } from './MentionText';
+export { BottomSheet } from './BottomSheet';

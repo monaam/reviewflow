@@ -6,6 +6,23 @@
   body {
     @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 m-0;
     font-family: system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide scrollbars on mobile for app-like feel */
+  @media (max-width: 1023px) {
+    * {
+      scrollbar-width: none;
+    }
+    *::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  /* Prevent overscroll bounce on the body */
+  html {
+    overscroll-behavior: none;
   }
 }
 

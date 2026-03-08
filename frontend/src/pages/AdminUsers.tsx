@@ -3,6 +3,7 @@ import { Plus, Pencil, UserCheck, UserX, Loader2 } from 'lucide-react';
 import { adminApi } from '../api/admin';
 import { User, PaginatedResponse } from '../types';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { Modal } from '../components/modals/Modal';
 import { formatRelativeTime } from '../utils/date';
 
 export function AdminUsersPage() {
@@ -60,7 +61,7 @@ export function AdminUsersPage() {
   };
 
   return (
-    <div className="p-6">
+    <div className="px-4 py-6 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -77,7 +78,7 @@ export function AdminUsersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {['all', 'admin', 'pm', 'creative', 'reviewer'].map((role) => (
           <button
             key={role}
@@ -93,8 +94,8 @@ export function AdminUsersPage() {
         ))}
       </div>
 
-      {/* Users Table */}
-      <div className="card overflow-hidden">
+      {/* Users Table - desktop */}
+      <div className="card overflow-hidden hidden md:block">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
@@ -191,6 +192,72 @@ export function AdminUsersPage() {
         </table>
       </div>
 
+      {/* Users Cards - mobile */}
+      <div className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="py-12 text-center">
+            <LoadingSpinner size="md" className="mx-auto" />
+          </div>
+        ) : users.length === 0 ? (
+          <div className="py-12 text-center text-gray-500">No users found</div>
+        ) : (
+          users.map((user) => (
+            <div
+              key={user.id}
+              className="card p-4"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium shrink-0">
+                  {user.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {user.name}
+                  </div>
+                  <div className="text-sm text-gray-500 truncate">{user.email}</div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 uppercase">
+                      {user.role}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        user.is_active
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}
+                    >
+                      {user.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                    <span className="text-xs text-gray-400 ml-auto">
+                      {formatRelativeTime(user.created_at)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => handleToggleActive(user)}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    title={user.is_active ? 'Deactivate' : 'Activate'}
+                  >
+                    {user.is_active ? (
+                      <UserX className="w-4 h-4" />
+                    ) : (
+                      <UserCheck className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setEditUser(user)}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {currentPage < lastPage && (
         <div className="mt-6 flex justify-center">
           <button
@@ -236,15 +303,13 @@ export function AdminUsersPage() {
   );
 }
 
-function UserModal({
-  user,
-  onClose,
-  onSaved,
-}: {
+interface UserModalProps {
   user?: User;
   onClose: () => void;
   onSaved: () => void;
-}) {
+}
+
+function UserModal({ user, onClose, onSaved }: UserModalProps) {
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [password, setPassword] = useState('');
@@ -278,89 +343,83 @@ function UserModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          {user ? 'Edit User' : 'Add User'}
-        </h2>
+    <Modal title={user ? 'Edit User' : 'Add User'} onClose={onClose}>
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-            {error}
-          </div>
-        )}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="label">
+            Name
+          </label>
+          <input
+            id="name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="label">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
+        <div>
+          <label htmlFor="email" className="label">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="input"
+            required
+          />
+        </div>
 
-          <div>
-            <label htmlFor="email" className="label">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
+        <div>
+          <label htmlFor="password" className="label">
+            Password {user && '(leave blank to keep current)'}
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input"
+            required={!user}
+            minLength={8}
+          />
+        </div>
 
-          <div>
-            <label htmlFor="password" className="label">
-              Password {user && '(leave blank to keep current)'}
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              required={!user}
-              minLength={8}
-            />
-          </div>
+        <div>
+          <label htmlFor="role" className="label">
+            Role
+          </label>
+          <select
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value as typeof role)}
+            className="input"
+          >
+            <option value="admin">Admin</option>
+            <option value="pm">Project Manager</option>
+            <option value="creative">Creative</option>
+            <option value="reviewer">Reviewer</option>
+          </select>
+        </div>
 
-          <div>
-            <label htmlFor="role" className="label">
-              Role
-            </label>
-            <select
-              id="role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as typeof role)}
-              className="input"
-            >
-              <option value="admin">Admin</option>
-              <option value="pm">Project Manager</option>
-              <option value="creative">Creative</option>
-              <option value="reviewer">Reviewer</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" disabled={isLoading} className="btn-primary">
-              {isLoading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex justify-end gap-3 pt-4">
+          <button type="button" onClick={onClose} className="btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" disabled={isLoading} className="btn-primary">
+            {isLoading ? 'Saving...' : 'Save'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

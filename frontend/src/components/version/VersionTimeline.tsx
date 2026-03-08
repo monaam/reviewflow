@@ -149,7 +149,7 @@ export default function VersionTimeline({ assetId, onVersionSelect, currentVersi
             <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-700"></div>
 
             <div className="space-y-4">
-              {history.timeline.map((event, index) => {
+              {history.timeline.map((event) => {
                 const user = getEventUser(event);
                 const details = getEventDetails(event);
                 const isVersionEvent = event.type === 'version';

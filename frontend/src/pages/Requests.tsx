@@ -96,7 +96,7 @@ export function RequestsPage() {
   // Reviewers don't have access to requests
   if (isReviewer) {
     return (
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="px-4 py-6 sm:p-8 max-w-7xl mx-auto">
         <EmptyState
           icon={ClipboardList}
           title="Access Restricted"
@@ -107,11 +107,11 @@ export function RequestsPage() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="px-4 py-6 sm:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Requests</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Requests</h1>
+        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
           Browse and manage creative requests across your projects
         </p>
       </div>
@@ -173,9 +173,9 @@ export function RequestsPage() {
                   to={routes.studio.request(request.id)}
                   className={cardLinkClass}
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
                         <h3 className="font-medium text-gray-900 dark:text-white truncate">
                           {request.title}
                         </h3>
@@ -197,7 +197,7 @@ export function RequestsPage() {
                         <span>by {request.creator?.name}</span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    <div className="flex sm:flex-col items-start sm:items-end gap-2 flex-shrink-0">
                       <div
                         className={`flex items-center gap-1.5 text-sm ${
                           overdue && request.status !== 'completed'

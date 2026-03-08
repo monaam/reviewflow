@@ -32,6 +32,7 @@ declare module 'laravel-echo' {
     leaving(callback: (user: unknown) => void): this;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   export default class Echo<T extends string = 'reverb'> {
     constructor(options: EchoOptions);
     channel(channel: string): Channel;

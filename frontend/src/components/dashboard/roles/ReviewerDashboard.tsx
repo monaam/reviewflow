@@ -13,8 +13,6 @@ import { LoadingSpinner } from '../../common/LoadingSpinner';
 import { StatCard } from '../StatCard';
 import { DashboardSection } from '../DashboardSection';
 import { EmptyState } from '../EmptyState';
-import { QuickActionCard } from '../QuickActionCard';
-import { StatusBadge } from '../../common/StatusBadge';
 import { formatRelativeTime } from '../../../utils/date';
 import { routes } from '../../../utils/routes';
 

@@ -29,3 +29,18 @@ export const routes = {
     adminSettings: () => `${STUDIO_PREFIX}/admin/settings`,
   },
 } as const;
+
+/** Paths that correspond to bottom-tab root pages (no slide transition). */
+export const ROOT_PATHS = new Set([
+  '/studio',
+  '/studio/projects',
+  '/studio/assets',
+  '/studio/requests',
+  '/studio/queue',
+  '/studio/review-queue',
+  '/studio/more',
+]);
+
+export function isRootPath(pathname: string): boolean {
+  return ROOT_PATHS.has(pathname);
+}

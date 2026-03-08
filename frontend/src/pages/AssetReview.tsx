@@ -7,12 +7,15 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
-import { useAssetActions, useAssetReviewState, useTemporalSeek, ModalType } from '../hooks';
+import { useAssetActions, useAssetReviewState, useTemporalSeek } from '../hooks';
+import { useIsMobile } from '../hooks/useMediaQuery';
 import { supportsTemporalAnnotations, supportsTextAnnotations, isContentBasedType } from '../config/assetTypeRegistry';
 import {
   AssetPreview,
   ActivityPanel,
   HeaderActions,
+  MobileReviewDrawer,
+  MobileAnnotationMode,
 } from '../components/assetReview';
 import {
   ApproveModal,
@@ -33,6 +36,10 @@ export function AssetReviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
+
+  // Mobile annotation mode
+  const [isAnnotating, setIsAnnotating] = useState(false);
 
   // Data state
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -398,7 +405,7 @@ export function AssetReviewPage() {
   const handleDelete = async () => {
     try {
       await assetsApi.delete(id!);
-      navigate(routes.studio.project(asset?.project_id!));
+      navigate(routes.studio.project(asset!.project_id));
     } catch (error) {
       console.error('Failed to delete asset:', error);
     }
@@ -478,49 +485,54 @@ export function AssetReviewPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex items-center gap-4">
-          <Link
-            to={routes.studio.project(asset.project_id)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {asset.title}
-            </h1>
-            <p className="text-sm text-gray-500">
-              {asset.project?.name} · v{selectedVersion}
-            </p>
+    <div className="h-full flex flex-col relative">
+      {/* Header — compact on mobile */}
+      {!(isMobile && isAnnotating) && (
+        <div className={`flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isMobile ? 'px-2 h-11' : 'p-4'}`}>
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <Link
+              to={routes.studio.project(asset.project_id)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg hidden sm:block"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div className="min-w-0">
+              <h1 className={`font-semibold text-gray-900 dark:text-white truncate ${isMobile ? 'text-sm' : 'text-lg'}`}>
+                {asset.title}
+              </h1>
+              {!isMobile && (
+                <p className="text-sm text-gray-500">
+                  {asset.project?.name} · v{selectedVersion}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <StatusBadge status={asset.status} type="asset" />
+            {asset.is_locked && !isMobile && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
+                <Lock className="w-4 h-4" />
+                Locked
+              </span>
+            )}
+            <HeaderActions
+              primaryActions={primaryActions}
+              dropdownActions={dropdownActions}
+              showActionsMenu={state.showActionsMenu}
+              showTimeline={state.showTimeline}
+              isLocking={state.isLocking}
+              isMobile={isMobile}
+              onActionClick={handleAction}
+              onToggleActionsMenu={toggleActionsMenu}
+              onCloseActionsMenu={closeActionsMenu}
+            />
           </div>
         </div>
+      )}
 
-        <div className="flex items-center gap-2">
-          <StatusBadge status={asset.status} type="asset" />
-          {asset.is_locked && (
-            <span className="flex items-center gap-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-sm">
-              <Lock className="w-4 h-4" />
-              Locked
-            </span>
-          )}
-          <HeaderActions
-            primaryActions={primaryActions}
-            dropdownActions={dropdownActions}
-            showActionsMenu={state.showActionsMenu}
-            showTimeline={state.showTimeline}
-            isLocking={state.isLocking}
-            onActionClick={handleAction}
-            onToggleActionsMenu={toggleActionsMenu}
-            onCloseActionsMenu={closeActionsMenu}
-          />
-        </div>
-      </div>
-
-      {/* Published Links */}
-      {asset.status === 'published' && asset.published_links && asset.published_links.length > 0 && (
+      {/* Published Links — hidden during annotation mode */}
+      {!isAnnotating && asset.status === 'published' && asset.published_links && asset.published_links.length > 0 && (
         <div className="px-4 py-2 bg-teal-50 dark:bg-teal-900/20 border-b border-teal-100 dark:border-teal-800/30 flex items-center gap-3 flex-wrap">
           <span className="text-xs font-medium text-teal-700 dark:text-teal-300">Published on:</span>
           {asset.published_links.map((link) => {
@@ -544,7 +556,7 @@ export function AssetReviewPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Asset Preview */}
         <AssetPreview
           asset={asset}
@@ -565,10 +577,10 @@ export function AssetReviewPage() {
           zoomLevel={state.zoomLevel}
           pdfFitMode={state.pdfFitMode}
           onMediaLoad={updateMediaBounds}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={cancelDrawing}
+          onMouseDown={isMobile ? undefined : handleMouseDown}
+          onMouseMove={isMobile ? undefined : handleMouseMove}
+          onMouseUp={isMobile ? undefined : handleMouseUp}
+          onMouseLeave={isMobile ? undefined : cancelDrawing}
           onTimeUpdate={setCurrentTime}
           onDurationChange={setDuration}
           onPlayChange={setIsPlaying}
@@ -593,8 +605,20 @@ export function AssetReviewPage() {
           onVersionSelect={setSelectedVersion}
         />
 
-        {/* Timeline Panel (Collapsible) */}
-        {state.showTimeline && (
+        {/* Mobile: Annotation mode overlay */}
+        {isMobile && isAnnotating && (
+          <MobileAnnotationMode
+            mediaRef={mediaRef}
+            onComplete={(rect) => {
+              setSelectedRect(rect);
+              setIsAnnotating(false);
+            }}
+            onCancel={() => setIsAnnotating(false)}
+          />
+        )}
+
+        {/* Desktop: Timeline Panel (Collapsible) */}
+        {!isMobile && state.showTimeline && (
           <div className="w-80 bg-gray-900 border-l border-gray-700 overflow-y-auto">
             <VersionTimeline
               assetId={asset.id}
@@ -604,8 +628,37 @@ export function AssetReviewPage() {
           </div>
         )}
 
-        {/* Activity Panel */}
-        <ActivityPanel
+        {/* Desktop: Activity Panel */}
+        {!isMobile && (
+          <ActivityPanel
+            timeline={timeline}
+            selectedVersion={selectedVersion}
+            assetType={asset.type}
+            assetId={asset.id}
+            selectedCommentId={state.selectedCommentId}
+            selectedRect={state.selectedRect}
+            selectedTextAnchor={state.selectedTextAnchor}
+            newComment={newComment}
+            showAllVersionsComments={state.showAllVersionsComments}
+            pendingImages={pendingImages}
+            onCommentChange={setNewComment}
+            onPendingImagesChange={setPendingImages}
+            onSubmitComment={handleSubmitComment}
+            onClearAnnotation={resetAnnotation}
+            onCommentClick={handleCommentClick}
+            onDeleteComment={handleDeleteComment}
+            onResolveComment={handleResolveComment}
+            onToggleShowAllVersions={toggleAllVersionsComments}
+            onSubmitReply={handleReply}
+            onToggleReaction={handleToggleReaction}
+            getCommentActions={getCommentActions}
+          />
+        )}
+      </div>
+
+      {/* Mobile: Bottom drawer */}
+      {isMobile && !isAnnotating && (
+        <MobileReviewDrawer
           timeline={timeline}
           selectedVersion={selectedVersion}
           assetType={asset.type}
@@ -627,8 +680,10 @@ export function AssetReviewPage() {
           onSubmitReply={handleReply}
           onToggleReaction={handleToggleReaction}
           getCommentActions={getCommentActions}
+          onVersionSelect={setSelectedVersion}
+          onStartAnnotation={() => setIsAnnotating(true)}
         />
-      </div>
+      )}
 
       {/* Modals */}
       {state.activeModal === 'approve' && (

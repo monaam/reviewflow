@@ -26,7 +26,7 @@ interface CreativeDashboardProps {
   onRefresh: () => void;
 }
 
-export function CreativeDashboard({ data, onRefresh }: CreativeDashboardProps) {
+export function CreativeDashboard({ data }: CreativeDashboardProps) {
   const [dismissedAlert, setDismissedAlert] = useState(false);
 
   const revisionCount = data.stats.revision_requested || 0;
