@@ -69,11 +69,12 @@ test.describe('Mobile Asset Review', () => {
   test('actions menu shows all options', async ({ page }) => {
     await page.getByRole('button', { name: 'Actions' }).click();
 
+    // These actions are always available for admin regardless of asset type
     await expect(page.getByText('Timeline')).toBeVisible();
     await expect(page.getByText('Lock')).toBeVisible();
-    await expect(page.getByText('Download').first()).toBeVisible();
     await expect(page.getByText('Edit')).toBeVisible();
     await expect(page.getByText('Delete')).toBeVisible();
+    // Download is only shown for file-based assets (not documents)
   });
 
   test('browser back navigates away from review', async ({ page }) => {
