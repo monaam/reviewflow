@@ -38,6 +38,7 @@ export const HeaderActions: FC<HeaderActionsProps> = ({
         <button
           onClick={onToggleActionsMenu}
           className="p-2 rounded-lg text-gray-600 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800"
+          aria-label="Actions"
           title="Actions"
         >
           <MoreVertical className="w-5 h-5" />

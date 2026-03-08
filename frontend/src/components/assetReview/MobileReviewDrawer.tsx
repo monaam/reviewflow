@@ -1,10 +1,8 @@
 import { FC, useRef, useEffect, useState, useCallback } from 'react';
-import { motion, useMotionValue, useTransform, animate, PanInfo } from 'framer-motion';
-import { MessageSquare, Clock, Layers, MapPin, X } from 'lucide-react';
+import { motion, useMotionValue, animate, PanInfo } from 'framer-motion';
+import { MessageSquare, Layers, MapPin } from 'lucide-react';
 import { TimelineItem, Comment, TempCommentImage, TextAnchor } from '../../types';
 import { Rectangle } from '../../hooks/useAssetReviewState';
-import { MentionInput } from '../common/MentionInput';
-import { CommentImageUpload } from '../common/CommentImageUpload';
 import { ActivityPanel } from './ActivityPanel';
 import { VersionTimeline } from '../version';
 import { supportsSpatialAnnotations } from '../../config/assetTypeRegistry';
@@ -80,7 +78,6 @@ export const MobileReviewDrawer: FC<MobileReviewDrawerProps> = ({
   const [activeTab, setActiveTab] = useState<DrawerTab>('comments');
   const [currentSnap, setCurrentSnap] = useState<SnapPoint>('peek');
   const containerRef = useRef<HTMLDivElement>(null);
-  const commentFormRef = useRef<HTMLDivElement>(null);
 
   // Get snap point heights
   const getSnapHeight = useCallback((snap: SnapPoint) => {
@@ -152,9 +149,6 @@ export const MobileReviewDrawer: FC<MobileReviewDrawerProps> = ({
     distances.sort((a, b) => a.d - b.d);
     animateToSnap(distances[0].snap);
   };
-
-  // Compute drawer height for content sizing
-  const drawerHeight = useTransform(y, (latest) => window.innerHeight - latest);
 
   const handleInputFocus = () => {
     if (currentSnap === 'peek') {

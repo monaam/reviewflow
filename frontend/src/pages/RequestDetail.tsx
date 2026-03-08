@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { requestsApi } from '../api/requests';
 import { assetsApi } from '../api/assets';
-import { CreativeRequest, Asset } from '../types';
+import { CreativeRequest } from '../types';
 import { StatusBadge, LoadingSpinner, EmptyState } from '../components/common';
 import { useAuthStore } from '../stores/authStore';
 import { formatEnumLabel, isOverdue as checkOverdue } from '../utils/formatters';
@@ -91,7 +91,7 @@ export function RequestDetailPage() {
   const handleDelete = async () => {
     try {
       await requestsApi.delete(id!);
-      navigate(routes.studio.project(request?.project_id!));
+      navigate(routes.studio.project(request!.project_id));
     } catch (error) {
       console.error('Failed to delete request:', error);
     }

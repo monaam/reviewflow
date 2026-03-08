@@ -27,7 +27,7 @@ const variants = {
 
 const transition = {
   duration: 0.25,
-  ease: [0.32, 0.72, 0, 1],
+  ease: [0.32, 0.72, 0, 1] as const,
 };
 
 export function AnimatedOutlet() {

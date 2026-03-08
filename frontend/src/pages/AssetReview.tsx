@@ -7,7 +7,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useAuthStore } from '../stores/authStore';
 import { VersionTimeline, VersionComparison } from '../components/version';
-import { useAssetActions, useAssetReviewState, useTemporalSeek, ModalType } from '../hooks';
+import { useAssetActions, useAssetReviewState, useTemporalSeek } from '../hooks';
 import { useIsMobile } from '../hooks/useMediaQuery';
 import { supportsTemporalAnnotations, supportsTextAnnotations, isContentBasedType } from '../config/assetTypeRegistry';
 import {
@@ -405,7 +405,7 @@ export function AssetReviewPage() {
   const handleDelete = async () => {
     try {
       await assetsApi.delete(id!);
-      navigate(routes.studio.project(asset?.project_id!));
+      navigate(routes.studio.project(asset!.project_id));
     } catch (error) {
       console.error('Failed to delete asset:', error);
     }

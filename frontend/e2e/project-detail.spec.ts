@@ -68,7 +68,7 @@ test.describe('Project Detail Page', () => {
     await expect(page.locator('.animate-spin')).toBeHidden({ timeout: 10000 });
 
     await expect(
-      page.getByText('Upload').or(page.getByRole('button', { name: /upload/i })),
+      page.getByTestId('upload-asset-btn'),
     ).toBeVisible();
   });
 

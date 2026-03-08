@@ -141,8 +141,6 @@ export const MentionInput: FC<MentionInputProps> = ({
 
     setDisplayValue(newDisplayValue);
 
-    // Convert to storage format
-    const storageValue = parseForStorage(newDisplayValue, nameToUserMap.current);
     // Also add this user to the map in case they weren't there
     nameToUserMap.current.set(user.name, user);
     idToNameMap.current.set(user.id, user.name);

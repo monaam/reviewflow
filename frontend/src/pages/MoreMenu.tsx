@@ -7,7 +7,6 @@ import {
   Moon,
   Sun,
   CheckSquare,
-  ClipboardList,
   ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';

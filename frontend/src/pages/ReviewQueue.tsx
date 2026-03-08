@@ -5,14 +5,12 @@ import { projectsApi } from '../api/projects';
 import { assetsApi } from '../api/assets';
 import { Project, Asset } from '../types';
 import { StatusBadge, LoadingSpinner, SearchInput, FilterButtonGroup, EmptyState } from '../components/common';
-import { useAuthStore } from '../stores/authStore';
 import { useListFilter } from '../hooks/useListFilter';
 import { getAssetTypeIcon } from '../config/assetTypeRegistry';
 import { formatRelativeTime } from '../utils/date';
 import { routes } from '../utils/routes';
 
 export function ReviewQueuePage() {
-  const { user } = useAuthStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [pendingAssets, setPendingAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);

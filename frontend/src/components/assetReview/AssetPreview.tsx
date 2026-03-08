@@ -3,7 +3,6 @@ import { Asset, AssetVersion, Comment, TextAnchor } from '../../types';
 import {
   getAssetTypeHandler,
   supportsSpatialAnnotations,
-  supportsTextAnnotations,
   getMediaUrlForType,
 } from '../../config/assetTypeRegistry';
 import { AnnotationOverlay, PdfControls, DocumentRenderer } from '../assetRenderers';
@@ -77,6 +76,7 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
   mediaRef,
   mediaBounds,
   selectedVersion,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isDrawing,
   currentRect,
   selectedRect,

@@ -6,7 +6,6 @@ import {
   ClipboardList,
   AlertTriangle,
   CheckCircle,
-  Inbox,
 } from 'lucide-react';
 import { DashboardData, Asset, CreativeRequest, Project } from '../../../types';
 import { assetsApi } from '../../../api/assets';

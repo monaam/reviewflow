@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -251,6 +251,7 @@ export function ProjectDetailPage() {
               <button
                 onClick={() => setShowUploadModal(true)}
                 className="btn-primary"
+                data-testid="upload-asset-btn"
               >
                 <Upload className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Upload Asset</span>
@@ -534,7 +535,7 @@ export function ProjectDetailPage() {
 }
 
 function AssetCard({ asset }: { asset: Asset }) {
-  const Icon = getAssetTypeIcon(asset.type);
+  const AssetIcon = getAssetTypeIcon(asset.type);
   const thumbnailUrl = asset.latest_version?.display_thumbnail_url;
   const canShowThumbnail = thumbnailUrl && supportsThumbnail(asset.type);
 
@@ -555,7 +556,7 @@ function AssetCard({ asset }: { asset: Asset }) {
             }}
           />
         ) : null}
-        <Icon className={`w-10 h-10 text-gray-300 dark:text-gray-600 ${canShowThumbnail ? 'hidden' : ''}`} />
+        <AssetIcon className={`w-10 h-10 text-gray-300 dark:text-gray-600 ${canShowThumbnail ? 'hidden' : ''}`} />
       </div>
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
