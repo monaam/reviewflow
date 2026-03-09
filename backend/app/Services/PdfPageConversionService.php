@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 class PdfPageConversionService
 {
     protected string $disk;
-    protected int $dpi = 200;
+    protected int $dpi = 150;
     protected int $maxPages = 200;
 
     public function __construct()
@@ -75,14 +75,15 @@ class PdfPageConversionService
             $imagick = new \Imagick();
             $imagick->setResolution($this->dpi, $this->dpi);
             $imagick->readImage($fullPdfPath . "[{$pageIndex}]");
-            $imagick->setImageFormat('png');
             $imagick->setImageAlphaChannel(\Imagick::ALPHACHANNEL_REMOVE);
             $imagick->setImageBackgroundColor('white');
             $imagick->mergeImageLayers(\Imagick::LAYERMETHOD_FLATTEN);
+            $imagick->setImageFormat('jpeg');
+            $imagick->setImageCompressionQuality(85);
 
             $geometry = $imagick->getImageGeometry();
 
-            $filename = 'page-' . ($pageIndex + 1) . '-' . Str::uuid() . '.png';
+            $filename = 'page-' . ($pageIndex + 1) . '-' . Str::uuid() . '.jpg';
             $imagePath = $outputDirectory . '/' . $filename;
             $fullImagePath = Storage::disk($this->disk)->path($imagePath);
 
