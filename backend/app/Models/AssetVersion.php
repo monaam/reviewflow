@@ -24,6 +24,7 @@ class AssetVersion extends Model
         'content',
         'thumbnail_url',
         'thumbnail_path',
+        'pdf_pages_status',
         'version_notes',
         'uploaded_by',
     ];
@@ -45,6 +46,11 @@ class AssetVersion extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    public function pdfPages(): HasMany
+    {
+        return $this->hasMany(PdfPage::class)->orderBy('page_number');
     }
 
     public function comments(): HasMany

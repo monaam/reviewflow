@@ -188,6 +188,8 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
           // Add PDF-specific props (cast needed for extended props)
           if (asset.type === 'pdf') {
             const PdfRendererComponent = Renderer as FC<AssetRendererProps & {
+              assetId: string;
+              versionNumber: number;
               currentPage?: number;
               zoomLevel?: number;
               fitMode?: 'width' | 'height' | 'none';
@@ -216,6 +218,8 @@ export const AssetPreview: FC<AssetPreviewProps> = ({
               <PdfRendererComponent
                 key={mediaUrl}
                 {...baseProps}
+                assetId={asset.id}
+                versionNumber={selectedVersion}
                 currentPage={currentPage}
                 zoomLevel={zoomLevel}
                 fitMode={pdfFitMode}

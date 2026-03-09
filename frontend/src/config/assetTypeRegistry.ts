@@ -3,7 +3,7 @@ import { AssetTypeHandler } from '../types/assetTypes';
 import {
   ImageRenderer,
   VideoRenderer,
-  PdfRenderer,
+  PdfImageRenderer,
   DesignRenderer,
   VideoControls,
   PdfControls,
@@ -55,7 +55,7 @@ export const assetTypeRegistry: Record<string, AssetTypeHandler> = {
       supportsSpatialAnnotations: true,
       supportsTemporalAnnotations: false,
     },
-    Renderer: PdfRenderer,
+    Renderer: PdfImageRenderer,
     Controls: PdfControls as unknown as AssetTypeHandler['Controls'],
     getMediaUrl: toRelativeStorageUrl,
     supportsThumbnail: true,

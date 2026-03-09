@@ -76,6 +76,7 @@ export interface AssetVersion {
   content: string | null;
   thumbnail_url?: string | null;
   display_thumbnail_url?: string | null;
+  pdf_pages_status?: 'pending' | 'processing' | 'completed' | 'failed' | null;
   version_notes: string | null;
   uploaded_by: string;
   created_at: string;
