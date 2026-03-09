@@ -5,9 +5,9 @@ import { usePdfPages } from '../../hooks/usePdfPages';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { PdfRenderer } from './PdfRenderer';
 
-interface PdfImageRendererProps extends AssetRendererProps {
-  assetId: string;
-  versionNumber: number;
+export interface PdfImageRendererProps extends AssetRendererProps {
+  assetId?: string;
+  versionNumber?: number;
   currentPage?: number;
   zoomLevel?: number;
   fitMode?: PdfFitMode;
@@ -29,7 +29,8 @@ export const PdfImageRenderer: FC<PdfImageRendererProps> = ({
   onTotalPagesChange,
   overlay,
 }) => {
-  const { data, isLoading } = usePdfPages(assetId, versionNumber);
+  const hasIds = Boolean(assetId && versionNumber);
+  const { data, isLoading } = usePdfPages(assetId ?? '', versionNumber ?? 1, hasIds);
   const [availableWidth, setAvailableWidth] = useState<number>(0);
   const [availableHeight, setAvailableHeight] = useState<number>(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -67,11 +68,12 @@ export const PdfImageRenderer: FC<PdfImageRendererProps> = ({
     onLoad?.();
   }, [mediaRef, onLoad]);
 
-  // Fall back to PDF.js renderer for: failed, unavailable, or legacy PDFs without conversion
+  // Fall back to PDF.js renderer for: no IDs, failed, unavailable, or legacy PDFs
   const shouldFallback =
-    !isLoading &&
-    data &&
-    (data.status === 'failed' || data.status === 'unavailable');
+    !hasIds ||
+    (!isLoading &&
+      data &&
+      (data.status === 'failed' || data.status === 'unavailable'));
 
   if (shouldFallback) {
     return (

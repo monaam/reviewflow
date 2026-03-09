@@ -78,8 +78,6 @@ class ConvertPdfPagesJob implements ShouldQueue
                 'asset_version_id' => $this->assetVersionId,
                 'error' => $e->getMessage(),
             ]);
-
-            throw $e;
         }
     }
 
