@@ -22,6 +22,7 @@ use App\Models\Comment;
 use App\Models\CreativeRequest;
 use App\Models\Project;
 use App\Models\VersionLock;
+use App\Jobs\ConvertPdfPagesJob;
 use App\Jobs\GenerateThumbnailJob;
 use App\Services\AssetTypes\AssetTypeRegistry;
 use App\Services\AssetTypes\DocumentHandler;
@@ -173,6 +174,16 @@ class AssetController extends Controller
             GenerateThumbnailJob::dispatch(
                 $assetVersion->id,
                 $type,
+                $uploadResult['path'],
+                $project->id
+            );
+        }
+
+        // Dispatch PDF page conversion job
+        if ($type === 'pdf') {
+            $assetVersion->update(['pdf_pages_status' => 'pending']);
+            ConvertPdfPagesJob::dispatch(
+                $assetVersion->id,
                 $uploadResult['path'],
                 $project->id
             );
@@ -435,6 +446,16 @@ class AssetController extends Controller
             );
         }
 
+        // Dispatch PDF page conversion job
+        if ($asset->type === 'pdf') {
+            $assetVersion->update(['pdf_pages_status' => 'pending']);
+            ConvertPdfPagesJob::dispatch(
+                $assetVersion->id,
+                $uploadResult['path'],
+                $asset->project_id
+            );
+        }
+
         // Update asset
         // Admin/PM uploads go directly to in_review
         $newStatus = $request->user()->isAdmin() || $request->user()->isPM()
@@ -672,6 +693,51 @@ class AssetController extends Controller
             'filename' => $filename,
             'version' => $versionNumber,
             'file_size' => $assetVersion->file_size,
+        ]);
+    }
+
+    public function pdfPages(Request $request, Asset $asset, int $versionNumber): JsonResponse
+    {
+        $this->authorize('view', $asset);
+
+        $assetVersion = $asset->versions()->where('version_number', $versionNumber)->first();
+
+        if (!$assetVersion) {
+            return response()->json(['message' => 'Version not found.'], 404);
+        }
+
+        $status = $assetVersion->pdf_pages_status;
+
+        if (!$status || $status === 'pending' || $status === 'processing') {
+            return response()->json([
+                'status' => $status ?? 'unavailable',
+                'total_pages' => null,
+                'pages' => [],
+            ]);
+        }
+
+        if ($status === 'failed') {
+            return response()->json([
+                'status' => 'failed',
+                'total_pages' => null,
+                'pages' => [],
+            ]);
+        }
+
+        $pages = $assetVersion->pdfPages->map(function ($page) {
+            $appUrl = rtrim(config('app.url'), '/');
+            return [
+                'page_number' => $page->page_number,
+                'image_url' => $appUrl . '/api/stream/' . $page->image_path,
+                'width' => $page->width,
+                'height' => $page->height,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'completed',
+            'total_pages' => $pages->count(),
+            'pages' => $pages,
         ]);
     }
 

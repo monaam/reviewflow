@@ -6,7 +6,7 @@ import {
   getMediaUrlForType,
   supportsTemporalAnnotations,
 } from '../../config/assetTypeRegistry';
-import { PdfRenderer } from '../assetRenderers';
+import { PdfImageRenderer } from '../assetRenderers';
 import { PdfControls } from '../assetRenderers';
 import { formatRelativeTime } from '../../utils/date';
 import { useIsMobile } from '../../hooks/useMediaQuery';
@@ -15,6 +15,7 @@ import { useIsMobile } from '../../hooks/useMediaQuery';
 const SYNC_TOLERANCE = 0.1;
 
 interface VersionComparisonProps {
+  assetId: string;
   versions: AssetVersion[];
   assetType: AssetType;
   initialLeftVersion?: number;
@@ -23,6 +24,7 @@ interface VersionComparisonProps {
 }
 
 export default function VersionComparison({
+  assetId,
   versions,
   assetType,
   initialLeftVersion,
@@ -348,10 +350,12 @@ export default function VersionComparison({
       return (
         <div className="h-full bg-gray-900 rounded overflow-hidden flex flex-col">
           <div className="flex-1 min-h-0">
-            <PdfRenderer
+            <PdfImageRenderer
               fileUrl={mediaUrl}
               title={`Version ${version.version_number}`}
               mediaRef={pdfRef}
+              assetId={assetId}
+              versionNumber={version.version_number}
               currentPage={currentPage}
               zoomLevel={zoomLevel}
               fitMode={fitMode}

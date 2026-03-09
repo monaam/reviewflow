@@ -69,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/assets/{asset}/unlock', [AssetController::class, 'unlock']);
     Route::get('/assets/{asset}/download/{version?}', [AssetController::class, 'download']);
     Route::get('/assets/{asset}/history', [AssetController::class, 'history']);
+    Route::get('/assets/{asset}/versions/{versionNumber}/pages', [AssetController::class, 'pdfPages']);
 
     // Comments
     Route::get('/assets/{asset}/comments', [CommentController::class, 'index']);

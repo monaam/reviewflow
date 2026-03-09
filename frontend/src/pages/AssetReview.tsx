@@ -732,6 +732,7 @@ export function AssetReviewPage() {
       )}
       {state.activeModal === 'compare' && asset.versions && asset.versions.length > 1 && (
         <VersionComparison
+          assetId={asset.id}
           versions={asset.versions}
           assetType={asset.type}
           initialRightVersion={selectedVersion}
