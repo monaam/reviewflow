@@ -48,9 +48,9 @@ const conditions = {
     return ctx.asset.status === 'in_review';
   },
 
-  /** Check if asset can be approved (in_review or client_review) */
+  /** Check if asset can be approved or have revisions requested */
   canBeApproved: (ctx: ActionContext): boolean => {
-    return ['in_review', 'client_review'].includes(ctx.asset.status);
+    return ['in_review', 'client_review', 'revision_requested'].includes(ctx.asset.status);
   },
 
   /** Check if asset has multiple versions */

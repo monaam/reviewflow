@@ -83,8 +83,8 @@ export const BottomSheet: FC<BottomSheetProps> = ({
               </div>
             )}
 
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+            {/* Scrollable content — extra bottom padding to clear mobile tab bar */}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
               {children}
             </div>
           </motion.div>

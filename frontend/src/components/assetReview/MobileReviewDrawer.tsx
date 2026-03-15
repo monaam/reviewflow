@@ -79,34 +79,39 @@ export const MobileReviewDrawer: FC<MobileReviewDrawerProps> = ({
   const [currentSnap, setCurrentSnap] = useState<SnapPoint>('peek');
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Use visualViewport on iOS Safari for accurate visible height
+  const getViewportHeight = useCallback(() => {
+    return window.visualViewport?.height ?? window.innerHeight;
+  }, []);
+
   // Get snap point heights
   const getSnapHeight = useCallback((snap: SnapPoint) => {
-    const vh = window.innerHeight;
+    const vh = getViewportHeight();
     switch (snap) {
       case 'peek': return PEEK_HEIGHT;
       case 'half': return Math.round(vh * 0.5);
       case 'full': return Math.round(vh * 0.85);
     }
-  }, []);
+  }, [getViewportHeight]);
 
   const y = useMotionValue(0);
 
   // Animate to a snap point
   const animateToSnap = useCallback((snap: SnapPoint) => {
-    const vh = window.innerHeight;
+    const vh = getViewportHeight();
     const targetHeight = getSnapHeight(snap);
     // y represents offset from full height position. Higher y = smaller drawer.
     const targetY = vh - targetHeight;
     animate(y, targetY, { type: 'spring', stiffness: 400, damping: 40 });
     setCurrentSnap(snap);
     onSnapChange?.(snap);
-  }, [y, getSnapHeight, onSnapChange]);
+  }, [y, getSnapHeight, getViewportHeight, onSnapChange]);
 
   // Initialize position
   useEffect(() => {
-    const vh = window.innerHeight;
+    const vh = getViewportHeight();
     y.set(vh - PEEK_HEIGHT);
-  }, [y]);
+  }, [y, getViewportHeight]);
 
   // React to parent snap requests
   useEffect(() => {
@@ -117,7 +122,7 @@ export const MobileReviewDrawer: FC<MobileReviewDrawerProps> = ({
 
   // Drag end handler — snap to nearest point
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    const vh = window.innerHeight;
+    const vh = getViewportHeight();
     const currentY = y.get();
     const velocity = info.velocity.y;
 
@@ -170,11 +175,11 @@ export const MobileReviewDrawer: FC<MobileReviewDrawerProps> = ({
     <motion.div
       ref={containerRef}
       className="fixed inset-x-0 bottom-0 z-40 lg:hidden"
-      style={{ y, height: '100vh' }}
+      style={{ y, height: '100dvh' }}
       drag="y"
       dragConstraints={{
-        top: window.innerHeight - getSnapHeight('full'),
-        bottom: window.innerHeight - getSnapHeight('peek'),
+        top: getViewportHeight() - getSnapHeight('full'),
+        bottom: getViewportHeight() - getSnapHeight('peek'),
       }}
       dragElastic={0.1}
       dragMomentum={false}
