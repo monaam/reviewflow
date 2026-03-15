@@ -13,6 +13,7 @@ class HtmlSanitizer
         'ul', 'ol', 'li',
         'blockquote', 'code', 'pre',
         'a', 'br',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
     ];
 
     /**
@@ -20,6 +21,8 @@ class HtmlSanitizer
      */
     private const ALLOWED_ATTRIBUTES = [
         'a' => ['href', 'title', 'target', 'rel'],
+        'th' => ['colspan', 'rowspan'],
+        'td' => ['colspan', 'rowspan'],
     ];
 
     /**

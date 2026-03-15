@@ -6,6 +6,10 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import LinkExtension from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import { Table } from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableHeader from '@tiptap/extension-table-header';
+import TableCell from '@tiptap/extension-table-cell';
 import { DocumentToolbar } from '../components/assetRenderers/DocumentToolbar';
 import { assetsApi } from '../api/assets';
 import { Asset } from '../types';
@@ -44,6 +48,10 @@ export function DocumentEditorPage() {
       StarterKit,
       Underline,
       LinkExtension.configure({ openOnClick: false }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
       Placeholder.configure({
         placeholder: 'Start writing your document...',
       }),
