@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Lock } from 'lucide-react';
 import { assetsApi } from '../api/assets';
 import { Asset, Comment, TimelineItem, TempCommentImage } from '../types';
@@ -35,6 +35,7 @@ import { routes } from '../utils/routes';
 export function AssetReviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuthStore();
   const isMobile = useIsMobile();
 
@@ -490,12 +491,18 @@ export function AssetReviewPage() {
       {!(isMobile && isAnnotating) && (
         <div className={`flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 ${isMobile ? 'px-2 h-11' : 'p-4'}`}>
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <Link
-              to={routes.studio.project(asset.project_id)}
+            <button
+              onClick={() => {
+                if (location.key !== 'default') {
+                  navigate(-1);
+                } else {
+                  navigate(routes.studio.project(asset.project_id));
+                }
+              }}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg hidden sm:block"
             >
               <ArrowLeft className="w-5 h-5" />
-            </Link>
+            </button>
             <div className="min-w-0">
               <h1 className={`font-semibold text-gray-900 dark:text-white truncate ${isMobile ? 'text-sm' : 'text-lg'}`}>
                 {asset.title}
